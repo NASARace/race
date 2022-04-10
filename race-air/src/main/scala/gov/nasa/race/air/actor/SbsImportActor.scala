@@ -192,11 +192,11 @@ class SbsImportActor(val config: Config) extends SbsImporter with SocketImporter
       try {
         f
       } catch {
-        case _: IOException =>
+        case iox: IOException =>
           if (!isDone.get || !isTerminating) {
             if (reconnects < maxReconnects) {
               reconnects += 1
-              warning("reconnecting socket acquisition thread..")
+              warning(s"reconnecting socket acquisition thread after $iox ...")
 
               if (reconnect()) {
                 initSocket()
@@ -235,7 +235,7 @@ class SbsImportActor(val config: Config) extends SbsImporter with SocketImporter
           if (!processSocketInput {
             while (recLimit == 0) { // no single record in buffer, try to read more
               val nMax = buf.length - limit
-              if (nMax <= 0) throw new RuntimeException(s"no linefeed within $buf.length bytes")
+              if (nMax <= 0) throw new RuntimeException(s"no linefeed within ${buf.length} bytes")
               limit += read(buf, limit, nMax) // append - no need to move contents
               recLimit = recordLimit(buf, limit)
             }

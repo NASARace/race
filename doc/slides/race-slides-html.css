@@ -251,6 +251,12 @@ img.scale100 {
 
 /* most browsers have problems with image scale when printint */
 @media print {
+  img.scale15 {
+      height: 10vh;
+  }
+  img.scale20 {
+    height: 15vh;
+  }
   img.scale25 {
       height: 20vh;
   }

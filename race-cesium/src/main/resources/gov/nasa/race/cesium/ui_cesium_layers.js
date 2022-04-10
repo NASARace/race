@@ -95,26 +95,45 @@ function handleLayerMessage(layer) {
 }
 
 function loadLayer(layerEntry) {
-    let viewer = uiCesium.viewer;
-
     let resource = new Cesium.Resource({
         url: layerEntry.layer.url,
         proxy: new Cesium.DefaultProxy('proxy') // proxy through RACE since KML is notorious for including non-CORS links
     });
 
+    var fut = _loadDataSource(layerEntry, resource);
+    if (fut) {
+        fut.then(ds => {
+            console.log("layer loaded " + ds.name);
+            ds.show = layerEntry.show;
+            layerEntry.dataSource = ds;
+            layerEntry.status = layerEntry.show ? SHOWING : LOADED;
+            ui.updateListItem(layerView, layerEntry);
 
-    Cesium.KmlDataSource.load(resource, { // FIXME - what about other layer types
-        camera: viewer.scene.camera,
-        canvas: viewer.scene.canvas
-    }).then(ds => {
-        console.log("layer loaded " + ds.name);
-        ds.show = layerEntry.show;
-        layerEntry.dataSource = ds;
-        layerEntry.status = layerEntry.show ? SHOWING : LOADED;
-        ui.updateListItem(layerView, layerEntry);
+            uiCesium.viewer.dataSources.add(ds);
+        });
+    }
+}
 
-        viewer.dataSources.add(ds);
-    });
+function _loadDataSource(layerEntry, resource) {
+    let viewer = uiCesium.viewer;
+    let url = layerEntry.layer.url;
+
+    if (url.includes('.kml') || url.includes('.kmz')) {
+        return Cesium.KmlDataSource.load(resource, {
+            camera: viewer.scene.camera,
+            canvas: viewer.scene.canvas
+        });
+
+    } else if (url.includes('.geojson') || url.includes('.topojson')) { // TODO - need to get render params from server
+        return new Cesium.GeoJsonDataSource.load(resource, {
+            stroke: Cesium.Color.HOTPINK,
+            fill: Cesium.Color.PINK,
+            strokeWidth: 1,
+            markerSymbol: '?'
+        });
+    }
+
+    return undefined; // don't know layer type
 }
 
 //--- user interface

@@ -108,22 +108,23 @@ object ConfigUtils {
 
     def getVaultableStringOrElse(key: String, defaultValue: String): String = {
       try {
-        val s = conf.getString(key)
-        if (s.startsWith(CRYPT_MARKER)) {
-          ConfigVault.getStringOrElse(s.substring(CRYPT_MARKER.length),defaultValue)
-        } else s
+        getVaultableString(key)
       } catch {
         case _: ConfigException.Missing => defaultValue
       }
     }
 
+    def getVaultableInt(key: String): Int = {
+      var s = conf.getString(key)
+      if (s.startsWith(CRYPT_MARKER)) {
+        s = ConfigVault.getString(s.substring(CRYPT_MARKER.length))
+      }
+      s.toInt
+    }
+
     def getVaultableIntOrElse(key: String, defaultValue: Int): Int = {
       try {
-        var s = conf.getString(key)
-        if (s.startsWith(CRYPT_MARKER)) {
-          s = ConfigVault.getString(s.substring(CRYPT_MARKER.length))
-        }
-        s.toInt
+        getVaultableInt(key)
       } catch {
         case _: ConfigException.Missing => defaultValue
       }

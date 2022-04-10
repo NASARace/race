@@ -47,7 +47,7 @@ abstract class SocketDataAcquisitionThread(name: String) extends Thread(name) {
 trait SocketImporter extends RaceActor {
 
   val host = config.getVaultableStringOrElse("host",defaultHost)
-  val port = config.getVaultableIntOrElse("port",defaultPort) // no default, needs to be specified
+  val port = config.getVaultableIntOrElse("port", defaultPort)
   val initBufferSize = config.getIntOrElse("buffer-size", 4096)
 
   var socket: Option[Socket] = None
@@ -57,11 +57,14 @@ trait SocketImporter extends RaceActor {
   //--- override in concrete types
   protected def createDataAcquisitionThread (sock: Socket): Option[SocketDataAcquisitionThread]
   protected def defaultHost: String = "localhost"
-  protected def defaultPort: Int
+  protected def defaultPort: Int = 4242
+
+  // override if we need to set socket state (soTimeout etc.)
+  protected def createSocket(): Socket = new Socket(host, port)
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Boolean = {
     try {
-      val sock = new Socket(host, port)
+      val sock = createSocket()
       socket = Some(sock)
 
       thread = createDataAcquisitionThread(sock)

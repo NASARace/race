@@ -43,7 +43,7 @@ import scala.util.{Failure, Success, Try}
   */
 trait ProxyRaceRoute extends RaceRouteInfo {
 
-  val maxRequestSize = config.getIntOrElse("max-request-size", 2000000)
+  val maxRequestSize = config.getIntOrElse("max-request-size", 20000000)
   val maxRequestTimeout = config.getFiniteDurationOrElse("max-request-timeout", 5.seconds)
 
   /**

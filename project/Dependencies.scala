@@ -43,16 +43,16 @@ object Dependencies {
   val logback = "ch.qos.logback" % "logback-classic" %  "1.3.0-alpha5" // "1.2.3"
 
   //--- Typesafe config
-  val typesafeConfig = "com.typesafe" % "config" % "1.4.1"  // akka still depends on 1.3.3
+  val typesafeConfig = "com.typesafe" % "config" % "1.4.2"  // akka still depends on 1.3.3
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
-  val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.2.0-RC2" // "2.0.0" collides with typesafe:ssl-config-core
+  val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.2.0-RC2" // "2.1.1" collides with typesafe:ssl-config-core
 
   //--- new scala reflection (TypeTags etc.)
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
 
   //--- scalaTags HTML generator
-  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.9.4"
+  val scalaTags = "com.lihaoyi" %% "scalatags" % "0.11.1"
 
   //--- scala automatic resource management (https://github.com/jsuereth/scala-arm)
   //val scalaArm = "com.jsuereth" %% "scala-arm" % "2.0"
@@ -75,7 +75,7 @@ object Dependencies {
   val defaultTestLibs = Seq(scalaTest,scalaTestPlus,flexmarkAll,scalaCheck,pegDown)
 
   // Apache Avro serialization (for archiving/unarchiving)
-  val avro = "org.apache.avro" % "avro" % "1.10.2"
+  val avro = "org.apache.avro" % "avro" % "1.11.0"
 
   // scodec
   //val scodecBits = "org.scodec" %% "scodec-bits" % "1.1.5"
@@ -111,7 +111,7 @@ object Dependencies {
   // NOTE this has to be a known version and verified instance so that we don't
   // enter credentials processed by a un-verified jar
   //val jsch = "com.jcraft" % "jsch" % "0.1.55"
-  val jsch = "com.github.mwiede" % "jsch" % "0.1.68"
+  val jsch = "com.github.mwiede" % "jsch" % "0.2.0"
 
   //--- argon2 based password hashes ()
   val argon2 = "de.mkammerer" % "argon2-jvm" % "2.10.1"
@@ -123,7 +123,7 @@ object Dependencies {
   val jimfs = "com.google.jimfs" % "jimfs" % "1.2"
 
   //--- Akka
-  val akkaVersion = "2.6.18"
+  val akkaVersion = "2.6.19"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -137,14 +137,14 @@ object Dependencies {
   val akkaAll = Seq(akkaActor)
 
   //--- Aeron (for akka-remote)
-  val aeronDriver =  "io.aeron" % "aeron-driver" % "1.35.1"
-  val aeronClient = "io.aeron" % "aeron-client" % "1.35.1"
+  val aeronDriver =  "io.aeron" % "aeron-driver" % "1.37.0"
+  val aeronClient = "io.aeron" % "aeron-client" % "1.37.0"
 
   val akkaRemoting = Seq(akkaRemote,aeronDriver,aeronClient)
 
 
   //--- ActiveMQ
-  val amqVersion = "5.16.3"
+  val amqVersion = "5.17.0"
   val amqOrg = "org.apache.activemq"
   val amqBroker = amqOrg % "activemq-broker" % amqVersion
 
@@ -168,7 +168,7 @@ object Dependencies {
   // (the new server with old client is supposedly fine). Since there are many old servers out there, we can't
   // use the latest client yet
 
-val kafkaVersion = "3.0.0"
+val kafkaVersion = "3.1.0"
 
   val kafkaClients = "org.apache.kafka" % "kafka-clients" % kafkaVersion
   //  excludeAll(
@@ -194,7 +194,7 @@ val kafkaVersion = "3.0.0"
   val omgDDS = "org.omg.dds" % "java5-psm" % "1.0"
 
   //--- LWJGL Java wrapper for OpenGL,Vulkan,,OpenCL,OpenAL and others
-  val lwjglVersion = "3.2.3"
+  val lwjglVersion = "3.3.1"
   lazy val lwjglNativeClassifier = OS.build match {
     case _:Linux => "natives-linux"
     case _:OSX => "natives-macos"

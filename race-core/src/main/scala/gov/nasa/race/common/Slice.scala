@@ -110,6 +110,7 @@ trait ByteSlice {
   @inline def getIntRange: IntRange = IntRange(off,len)
 
   def toByteArray: Array[Byte] = data.clone
+  override def toString: String = new String(data,off,len)
 
   def copyDataRange (copyOff: Int, copyLen: Int): Array[Byte] = {
     val a = createNewArray(copyLen)

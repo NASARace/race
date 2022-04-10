@@ -34,7 +34,7 @@ trait SourceQueueOwner[T] {
   val srcBufSize = config.getIntOrElse("source-queue", 16)
   val srcPolicy = config.getStringOrElse( "source-policy", "dropTail") match {
     case "dropHead" => OverflowStrategy.dropHead
-    case "dropNew" => OverflowStrategy.dropNew
+    case "dropNew" => OverflowStrategy.dropNew // dropNew is deprecated
     case "dropTail" => OverflowStrategy.dropTail
     case "dropBuffer" => OverflowStrategy.dropBuffer
     case "fail" => OverflowStrategy.fail

@@ -18,9 +18,9 @@
 package gov.nasa.race.common
 
 import java.util
-
 import com.jcraft.jsch.{UIKeyboardInteractive, UserInfo}
 
+import java.io.{BufferedInputStream, BufferedReader, InputStreamReader}
 import scala.annotation.tailrec
 import scala.io.StdIn
 
@@ -116,8 +116,26 @@ class ConsoleUserInfoAdapter extends UserInfoAdapter {
   final val msgColor = scala.Console.WHITE
   final val resetColor = scala.Console.RESET
 
+  private var readLine: ()=>String = {null}
+  private var readPw: ()=>Array[Char] = {null}
+
   val console = System.console
-  if (console == null) throw new RuntimeException("no system console")
+  if (console == null) {
+    System.err.println("\\u001b[31mWARNING - no system console, cannot read passwords masked.\\u001b[0m")
+
+    readLine = () => {
+      (new BufferedReader(new InputStreamReader(System.in))).readLine()
+    }
+    readPw = () => {
+      val cs = readLine().toCharArray
+      if (cs != null && cs.nonEmpty) System.out.print("\\u001b[2K\r") // at least erase current line
+      cs
+    }
+
+  } else {
+    readLine = ()=>{console.readLine()}
+    readPw = ()=>{console.readPassword()}
+  }
 
   override def promptYesNo(message: String): Boolean = {
     print(s"$msgColor$message [y/n]$resetColor ")
@@ -145,9 +163,13 @@ class ConsoleUserInfoAdapter extends UserInfoAdapter {
       showMessage(prompts(idx))
       UserInfoAdapter.requestUserInput {
         res(idx) = if (echos(idx)) {
-          console.readLine()
+          readLine()
         } else {
-          val cs = console.readPassword()
+          if (console == null) {
+            System.err.print("\\u001b[31mWARNING - no console, password will not be masked\\u001b[0m")
+            System.err.flush()
+          }
+          val cs = readPw()
           val s = new String(cs)
           s
         }
@@ -162,7 +184,8 @@ class ConsoleUserInfoAdapter extends UserInfoAdapter {
     storeAction(null)
     showMessage(prompt)
     UserInfoAdapter.requestUserInput {
-      val cs = console.readPassword()
+      if (console == null) System.err.println("WARNING - no console, password will not be masked")
+      val cs = readPw()
       if (cs.length > 0) {
         storeAction(cs)
         getAction != null

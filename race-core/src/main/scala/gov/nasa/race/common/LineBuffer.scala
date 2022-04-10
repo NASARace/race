@@ -94,17 +94,17 @@ class LineBuffer (val is: InputStream, val maxBufsize: Int = Int.MaxValue, val i
     buf = newData
   }
 
+  // this is the actual data acquisition from the underlying input stream
   @tailrec protected final def fetchMoreData(): Unit = {
     val nFree = buf.length - dataLimit
-    val nRead = is.read(buf,dataLimit,nFree)
-    if (nRead > 0) {
+    val nRead = is.read(buf,dataLimit,nFree)  // <<<<<< this is the blocking point
+
+    if (nRead >= 0) {
       dataLimit += nRead
+      if (nRead < nFree) fetchMoreData()
+
     } else {
-      if (nRead < 0){
-        isEnd = true
-      } else {
-        fetchMoreData()
-      }
+      isEnd = true // done here - the underlying InputStream is closed
     }
   }
 

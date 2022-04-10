@@ -178,7 +178,7 @@ function scrollToSlide (idx) {
 document.addEventListener("keydown", e => {
   var kc = e.keyCode;
 
-  if (kc == 13 || kc == 32){  // Enter: next slide, Shift+Enter: prev slide
+  if (kc == 13 || kc == 32 || kc == 34){  // Enter: next slide, Shift+Enter: prev slide
     scrollToSlide( e.shiftKey ? curIdx-1 : curIdx+1);
     e.preventDefault();
   }
@@ -190,13 +190,13 @@ document.addEventListener("keydown", e => {
     scrollToSlide( curIdx + 1);
     e.preventDefault();
   }
-  else if (kc == 102) { // 'f' toggle full screen
+  else if (kc == 70) { // 'f' toggle full screen
     toggleFullScreen();
   }
-  else if (kc == 116){  // 't' toggles timer
+  else if (kc == 84){  // 't' toggles timer
     toggleTimer();
   }
-  else if (kc == 115) { // 's' toggles show
+  else if (kc == 83) { // 's' toggles show
     toggleSlideshow();
   }
   else if (kc >=48 && kc <= 57){ // jump to slide 0..9

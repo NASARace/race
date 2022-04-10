@@ -9,6 +9,8 @@ NASA Ames Research Center
 </p>
 
 
+(use &lt;pgDown&gt;, &lt;space&gt; or &lt;enter&gt; keys to scroll to next page)
+
 ## Slides
 @:navigationTree { entries = [ { target = "#" } ] }
 
@@ -100,7 +102,7 @@ NASA Ames Research Center
   <img src="../images/swim-stats-config.svg" class="left scale15"/>
   <img src="../images/swim-stats.svg" class="right scale45"/>
 </div>
-<div class="run">1: ./race --vault ../conf config/air/swim-msg-stats.conf</div><a class="srv" href="http://localhost:8080/race/statistics"></a>
+<div class="run">1: ./race --vault ../conf config/air/swim-msg-stats.conf</div><a class="srv" href="http://localhost:9000/race/statistics"></a>
 
 
 ## Example 5: Is There a Problem with the Data?
@@ -182,8 +184,8 @@ goal: automatically detect parallel approaches that are angled-in exceeding
 * data model can include discrete event updates (counters) and streams (links)
 
 <div>
-  <img src="../images/share-actors.svg" class="left scale65"/>
-  <img src="../images/share-browser.png" class="right scale45"/>
+  <img src="../images/share-actors.svg" class="left scale55"/>
+  <img src="../images/share-browser.png" class="right scale40"/>
 </div>
 
 
