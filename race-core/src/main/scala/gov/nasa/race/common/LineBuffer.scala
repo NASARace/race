@@ -23,15 +23,21 @@ import scala.annotation.tailrec
   * a buffer for line-oriented InputStreams, used as a basis for byte array based parsers.
   * the buffer always holds at least one line (if there is one left)
   *
+  * Note that we only use '\n' as line ending - the client has to strip other delimiters (such as '\r')
+  * Note also that we do ignore delimiters within double quoted sections
+  *
   * This is a more efficient alternative to using BufferedInputStream and tokenizers that extract strings
   */
 class LineBuffer (val is: InputStream, val maxBufsize: Int = Int.MaxValue, val initBufsize: Int=4096) extends ByteSlice {
+
+  final val RECORD_DELIMITER = '\n'
 
   protected var buf: Array[Byte] = new Array[Byte](initBufsize)  // has to be var in case current buf is not long enough to hold line
   protected var recStart: Int = 0 // start of current line
   protected var recLimit: Int = 0 // (exclusive) end index of current line
   protected var dataLimit: Int = 0 // (exclusive) end index of data in buf
   protected var isEnd = false // no more data in InputStream
+  protected var nLines = 0 // number of lines read so far
 
   //--- ByteSlice interface
   def data: Array[Byte] = buf
@@ -63,7 +69,7 @@ class LineBuffer (val is: InputStream, val maxBufsize: Int = Int.MaxValue, val i
       if (b == '"') {
         i = skipQuoted(i)
       } else {
-        if (b == '\r' || b == '\n') return i  // whatever comes first. Unfortunately they can appear single or combined as \r\n
+        if (b == RECORD_DELIMITER) return i
         i += 1
       }
     }
@@ -86,7 +92,7 @@ class LineBuffer (val is: InputStream, val maxBufsize: Int = Int.MaxValue, val i
   }
 
   protected def growBuffer(): Unit = {
-    val newLen = buf.length * 2
+    val newLen = buf.length + initBufsize // grow linearly, line length is not supposed to differ by orders of magnitude
     if (newLen > maxBufsize) throw new RuntimeException("max line buffer size exceeded")
 
     val newData = new Array[Byte](newLen)
@@ -95,19 +101,33 @@ class LineBuffer (val is: InputStream, val maxBufsize: Int = Int.MaxValue, val i
   }
 
   // this is the actual data acquisition from the underlying input stream
+  // this only gets called after shifting residual data to the beginning of the buffer (recStart = 0), and it will only
+  // return if we got at least one record (recLimit > recStart)
   @tailrec protected final def fetchMoreData(): Unit = {
     val nFree = buf.length - dataLimit
     val nRead = is.read(buf,dataLimit,nFree)  // <<<<<< this is the blocking point
 
     if (nRead >= 0) {
-      dataLimit += nRead
-      if (nRead < nFree) fetchMoreData()
+      if (nRead > 0) {
+        dataLimit += nRead
+        recLimit = getRecLimit(recStart)
+        if (recLimit > 0) {
+          return   // we got at least one record, process it
+        } else { // we got no recLimit
+          if (nRead == nFree) growBuffer() // we didn't have enough space for a new line
+        }
+      }
 
-    } else {
+      if (nRead < nFree) {
+        fetchMoreData()  // we didn't get enough data
+      }
+
+    } else { // nRead < 0
       isEnd = true // done here - the underlying InputStream is closed
     }
   }
 
+  // this will shift residual data to head of buffer, reset recStart to 0 and update dataLimit to residual length
   protected def fillBuffer(): Unit = {
     if (dataLimit > recLimit) {  // left-shift remaining data to beginning of buffer
       if (recStart > 0) {
@@ -124,55 +144,44 @@ class LineBuffer (val is: InputStream, val maxBufsize: Int = Int.MaxValue, val i
     fetchMoreData()
   }
 
-  def getRecStart(): Int = {
-    if (nLines == 0) { // first line - don't skip anything
-      0
-    } else {  // we must have had a previous recLimit
-      var i = recLimit
-      val b = buf(i)
-      if (b == '\r') {  // skip over optionally following '\n'
-        i += 1
-        if (i == dataLimit) {
-          recLimit = i // make sure fillBuffer copies the remainder
-          fillBuffer()
-          i = 0
-        }
-        if (buf(i) == '\n') { // bingo - the accompanying '\n' was in the next chunk
-          i+1
-        } else { // this was a single '\r'
-          i
-        }
-      } else if (b == '\n') { // a single '\n'
-        i+1
-      } else {
-        throw new RuntimeException("no previous line terminator") // can't get here - if this wasn't the first line there had to be a terminator
+  /**
+    * return true if there is a next line, in which case the ByteSlice interface has to hold the data.
+    * Note that we do not include the line ending, but all other data (including '\r') is preserved
+    */
+  def nextLine(): Boolean = {
+    while (!isEnd) {
+      if (recLimit <= 0 || recLimit >= dataLimit) { // we need more data
+        fillBuffer()
+
+      } else { // check if there is another record in the buffer
+        recStart = recLimit+1
+        recLimit = getRecLimit(recStart)
+      }
+
+      if (recLimit > 0) {  // we got at least one non-empty line
+        nLines += 1
+        return true
       }
     }
+    false // if we get here there is no more data
   }
+}
 
-  protected var nLines = 0
+/**
+  * a LineBuffer that automatically strips '\r' from end of line in our ByteSlice implementation
+  */
+class CanonicalLineBuffer (is: InputStream, maxBufsize: Int = Int.MaxValue, initBufsize: Int=4096) extends LineBuffer(is, maxBufsize, initBufsize) {
+  protected var _off = 0
+  protected var _len = 0
 
-  def nextLine(): Boolean = {
-    if (!isEnd) {
-      if (recLimit == dataLimit) { // buffer not yet initialized or fully consumed
-        fillBuffer()
-        if (isEnd && dataLimit <= recStart) return false // no more data
-      }
+  override def off: Int = _off
+  override def len: Int = _len
 
-      recStart = getRecStart()
-      recLimit = getRecLimit(recStart)
-
-      while (recLimit < 0) { // buf has only partial data of next record
-        val nLeft = dataLimit - recStart
-        fillBuffer() // this always resets recStart
-        recLimit = getRecLimit(nLeft)
-        if (recLimit < 0) growBuffer()
-      }
-
-      if (dataLimit > 0){
-        nLines += 1
-        true
-      } else false
+  override def nextLine(): Boolean = {
+    if (super.nextLine()) {
+      _off = recStart
+      _len = recLimit - recStart - (if (buf(recLimit-1) == '\r') 2 else 1)
+      true
     } else false
   }
 }

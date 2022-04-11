@@ -16,42 +16,48 @@
  */
 package gov.nasa.race.common
 
-import gov.nasa.race.test.RaceSpec
+import gov.nasa.race.test.{ChunkInputStream, RaceSpec}
+import gov.nasa.race.util.FileUtils
 import org.scalatest.flatspec.AnyFlatSpec
 
-import java.io.{File, FileInputStream}
+import java.io.{File, FileInputStream, InputStream}
 import java.util.zip.GZIPInputStream
 
 /**
   * reg test for LineBuffer
   */
 class LineBufferSpec extends AnyFlatSpec with RaceSpec {
+  val expectedLines = FileUtils.fileContentsAsLineArray(baseResourceFile("sbs.csv"))
 
-  "a LineBuffer" should "read a known plain input file" in {
-    val is = new FileInputStream(baseResourceFile("sbs.csv"))
-
+  def readLines (is: InputStream): Unit = {
     val lb = new LineBuffer(is,10000, 512)
     var i=0
+    var line: String = null
     while (lb.nextLine()) {
-      println(s"${i+1}: [${lb.off},${lb.len} <${lb.dataLength}] = \t\t'${lb.asString}'")
+      line = lb.asString.stripLineEnd
+      //println(s"${i+1}: [${lb.off},${lb.len} <${lb.dataLength}] = \t\t'$line'")
+      assert(line == expectedLines(i))
       i += 1
     }
 
-    assert(i == 200)
+    assert(i == 2000)
+    assert(i == expectedLines.length)
+  }
+
+  "a LineBuffer" should "read a known plain input file" in {
+    val is = new FileInputStream(baseResourceFile("sbs.csv"))
+    readLines(is)
   }
 
   "a LineBuffer" should "read a known compressed input file" in {
     val fis = new FileInputStream(baseResourceFile("sbs.csv.gz"))
     val is = new GZIPInputStream(fis)
-
-    val lb = new LineBuffer(is,1000000, 512)
-    var i=0
-    while (lb.nextLine()) {
-      println(s"${i+1}: [${lb.off},${lb.len} <${lb.dataLength}] = '${lb.asString}'")
-      i += 1
-    }
-
-    assert(i == 100)
+    readLines(is)
   }
 
+  "a LineBuffer" should "read all lines from a randomly chunked input stream" in {
+    val fis = new FileInputStream(baseResourceFile("sbs.csv"))
+    val is = new ChunkInputStream(fis,120,42)
+    readLines(is)
+  }
 }

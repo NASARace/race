@@ -37,7 +37,7 @@ class SocketLineAcquisitionThread (name: String, socket: Socket, initSize: Int, 
 
   override def run(): Unit = {
     val is = socket.getInputStream
-    val buf = new LineBuffer(is, initSize, maxSize)
+    val buf = new CanonicalLineBuffer(is, initSize, maxSize)
 
     while (!isDone.get()) {
       try {

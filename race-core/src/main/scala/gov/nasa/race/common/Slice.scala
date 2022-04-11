@@ -18,6 +18,7 @@ package gov.nasa.race.common
 
 import java.io.OutputStream
 
+
 /**
   * generic base type for an immutable byte array range object
   *
@@ -110,7 +111,7 @@ trait ByteSlice {
   @inline def getIntRange: IntRange = IntRange(off,len)
 
   def toByteArray: Array[Byte] = data.clone
-  override def toString: String = new String(data,off,len)
+  override def toString: String = if (len > 0) new String(data,off,len) else ""
 
   def copyDataRange (copyOff: Int, copyLen: Int): Array[Byte] = {
     val a = createNewArray(copyLen)
@@ -154,6 +155,40 @@ trait MutByteSlice extends ByteSlice {
 
   @inline def setFrom (other: ByteSlice): Unit = set(other.data,other.off,other.len)
 
+  /** strip all whitespace from both ends */
+  def setStrippedFrom (other: ByteSlice): Unit = {
+    data = other.data
+
+    val bs = data
+    val oOff = other.off
+    var i = oOff + other.len - 1
+    while (i >= oOff && Character.isWhitespace(bs(i))) i -= 1  // strip end
+
+    if (i >= oOff) {  // there has to be something in this line
+      var j = oOff
+      while (j <= i && Character.isWhitespace(bs(j))) j += 1
+      off = j
+      len = i - j + 1
+
+    } else { // line is empty, preserve off
+      off = oOff
+      len = 0
+    }
+  }
+
+  /** strip all whitespace from end */
+  def setTrailingStrippedFrom (other: ByteSlice): Unit = {
+    data = other.data
+
+    val bs = data
+    val oOff = other.off
+    var i = other.off + other.len -1
+
+    while (i >= oOff && Character.isWhitespace(bs(i))) i -= 1
+    off = other.off
+    len = i - off + 1
+  }
+
   def trimSelf (v: Byte) = {
     var i = off
     val iMax = off + len
@@ -192,11 +227,18 @@ trait MutByteSlice extends ByteSlice {
   }
 }
 
+object RawByteSlice {
+  def apply (bs: Array[Byte], off: Int, len: Int): RawByteSlice = new RawByteSlice(bs,off,len)
+  def apply (bs: Array[Byte]): RawByteSlice = new RawByteSlice(bs,0,bs.length)
+  def apply (s: String): RawByteSlice = RawByteSlice(s.getBytes())
+}
 
 /**
   * concrete type for invariant raw byte slices
   */
-class RawByteSlice (val data: Array[Byte], val off: Int, val len: Int) extends ByteSlice
+class RawByteSlice (val data: Array[Byte], val off: Int, val len: Int) extends ByteSlice {
+  def this(bs: Array[Byte]) = this(bs,0,bs.length)
+}
 
 
 object MutRawByteSlice {

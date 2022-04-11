@@ -143,8 +143,8 @@ class SbsUpdater (adjuster: Option[DateAdjuster] = None, defaultZone: ZoneId = Z
 
                 if (lat.isDefined && lon.isDefined && alt.isDefined) { // Ok, we have something to update
                   nUpdates += 1
-                  ac.publishDate = date
                   val status = if (ac.publishDate.isDefined) 0 else TrackedObject.NewFlag
+                  ac.publishDate = date // we only record the last time for which we got a position
 
                   val fpos = new FlightPos(ac.icao24String, ac.cs, LatLonPos(lat, lon, alt), ac.spd, ac.hdg, ac.vr, date, status)
                   //println(s"@@@ update with ${acCache.size} / ${acCache.values.filter(_.isComplete).size}")

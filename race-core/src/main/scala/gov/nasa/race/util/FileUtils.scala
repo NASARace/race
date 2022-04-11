@@ -81,6 +81,11 @@ object FileUtils {
   }
   @inline def fileContentsAsBytes(pathName: String): Option[Array[Byte]] = fileContentsAsBytes(new File(pathName))
 
+  def fileContentsAsLineArray(file: File): Array[String] = {
+    val src = new BufferedSource(new FileInputStream(file))
+    src.getLines().toArray
+  }
+
   def getTextFileAttribute (file: File, name: String): Option[String] = {
     val view = Files.getFileAttributeView( file.toPath, classOf[UserDefinedFileAttributeView])
     try { // Java < 17 on macOS causes exceptions if the attribute is not there
