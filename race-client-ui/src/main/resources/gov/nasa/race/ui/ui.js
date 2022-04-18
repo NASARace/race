@@ -661,7 +661,7 @@ function _initializeSliderWidgets() {
 
         track.addEventListener("mousemove", drag);
         document.addEventListener("mouseup", stopDrag);
-        event.preventDefault();
+        _consumeEvent(event);
 
         function drag(event) {
             let e = event.currentTarget; // ui_slider_track
@@ -682,17 +682,19 @@ function _initializeSliderWidgets() {
         function stopDrag(event) {
             track.removeEventListener("mousemove", drag);
             document.removeEventListener("mouseup", stopDrag);
-            event.preventDefault();
+            _consumeEvent(event);
         }
     }
 
     function clickTrack(event) {
         let e = event.target;
-        let x = event.offsetX - e._uiRangeOffX;
-        let v = e._uiMinValue + (x * e._uiScale);
-        let vv = _computeSliderValue(e, v);
-        setSliderValue(e, vv);
-        _consumeEvent(event);
+        if (e.classList.contains("ui_slider_track")) { // ignore drags causing clicks with the wrong target
+            let x = event.offsetX - e._uiRangeOffX;
+            let v = e._uiMinValue + (x * e._uiScale);
+            let vv = _computeSliderValue(e, v);
+            setSliderValue(e, vv);
+            _consumeEvent(event);
+        }
     }
 
     function clickMin(event) {
@@ -895,18 +897,31 @@ export function getChoice(o) {
 function _initializeCheckboxes() {
     for (let e of document.getElementsByClassName("ui_checkbox")) {
         let labelText = e.dataset.label;
-        if (_hasNoChildElements(e) && labelText) {
-            let btn = _createElement("DIV", "ui_checkbox_button");
-            btn.addEventListener("click", _clickCheckBox);
-            e.appendChild(btn);
-
-            let lbl = _createElement("DIV", "ui_checkbox_label", labelText);
-            lbl.addEventListener("click", _clickCheckBox);
-            e.appendChild(lbl);
-
+        if (_hasNoChildElements(e)) {
+            _addCheckBoxComponents(e, labelText);
             e.setAttribute("tabindex", "0");
         }
     }
+}
+
+function _addCheckBoxComponents(e, labelText) {
+    let btn = _createElement("DIV", "ui_checkbox_button");
+    btn.addEventListener("click", _clickCheckBox);
+    e.appendChild(btn);
+
+    if (labelText) {
+        let lbl = _createElement("DIV", "ui_checkbox_label", labelText);
+        lbl.addEventListener("click", _clickCheckBox);
+        e.appendChild(lbl);
+    }
+}
+
+export function createCheckBox(initState, clickHandler, labelText) {
+    let e = _createElement("DIV", "ui_checkbox");
+    if (initState) _addClass(e, "checked");
+    _addCheckBoxComponents(e, labelText);
+    if (clickHandler) e.addEventListener("click", clickHandler);
+    return e;
 }
 
 function _clickCheckBox(event) {
@@ -943,6 +958,11 @@ export function getCheckBox(o) {
     return undefined;
 }
 
+export function isCheckbox(o) {
+    let e = _elementOf(o);
+    return (e && e.classList.contains("ui_checkbox"));
+}
+
 export function isCheckBoxSelected(o) {
     let e = getCheckBox(o);
     if (e) {
@@ -951,24 +971,36 @@ export function isCheckBoxSelected(o) {
     throw "not a checkbox";
 }
 
-
 //--- radios
 
 function _initializeRadios() {
     for (let e of document.getElementsByClassName("ui_radio")) {
         let labelText = e.dataset.label;
-        if (_hasNoChildElements(e) && labelText) {
-            let btn = _createElement("DIV", "ui_radio_button");
-            btn.addEventListener("click", _clickRadio);
-            e.appendChild(btn);
-
-            let lbl = _createElement("DIV", "ui_radio_label", labelText);
-            lbl.addEventListener("click", _clickRadio);
-            e.appendChild(lbl);
-
+        if (_hasNoChildElements(e)) {
+            _addRadioComponents(e, labelText)
             e.setAttribute("tabindex", "0");
         }
     }
+}
+
+function _addRadioComponents(e, labelText) {
+    let btn = _createElement("DIV", "ui_radio_button");
+    btn.addEventListener("click", _clickRadio);
+    e.appendChild(btn);
+
+    if (labelText) {
+        let lbl = _createElement("DIV", "ui_radio_label", labelText);
+        lbl.addEventListener("click", _clickRadio);
+        e.appendChild(lbl);
+    }
+}
+
+export function createRadio(initState, clickHandler, labelText) {
+    let e = _createElement("DIV", "ui_radio");
+    if (initState) _addClass(e, "selected");
+    _addRadioComponents(e, labelText);
+    if (clickHandler) e.addEventListener("click", clickHandler);
+    return e;
 }
 
 function _clickRadio(event) {
@@ -1021,6 +1053,11 @@ export function getRadio(o) {
     return undefined;
 }
 
+export function isRadio(o) {
+    let e = _elementOf(o);
+    return (e && e.classList.contains("ui_radio"));
+}
+
 export function clearRadioGroup(o) {
     let e = _elementOf(o);
     let n = 0;
@@ -1030,6 +1067,40 @@ export function clearRadioGroup(o) {
             n++;
         }
         e = e.parentElement;
+    }
+}
+
+//--- common interfact for checkboxes and radios
+
+export function getSelector(o) {
+    var e = getCheckBox(o);
+    if (!e) e = getRadio(o);
+    return e;
+}
+
+export function isSelector(o) {
+    let e = _elementOf(o);
+    return (e && (e.classList.contains("ui_checkbox") || e.classList.contains("ui_radio")));
+}
+
+export function isSelectorSet(o) {
+    let e = _elementOf(o);
+    if (e) {
+        if (e.classList.contains("ui_checkbox")) return e.classList.contains("checked");
+        else if (e.classList.contains("ui_radio")) return e.classList.contains("selected");
+    }
+    return false;
+}
+
+export function setSelector(o, newState) {
+    let e = _elementOf(o);
+    if (e) {
+        if (e.classList.contains("ui_checkbox")) {
+            setCheckBox(e, newState);
+        } else if (e.classList.contains("ui_radio")) {
+            if (newState) selectRadio(e);
+            else _removeClass(e, "selected");
+        }
     }
 }
 
@@ -1101,7 +1172,14 @@ export function setListItemDisplay(o, styleWidth, attrs, mapFunc) {
 function _setSubItemsOf(ie, item) {
     for (let i = 0; i < ie.childElementCount; i++) {
         let ce = ie.children[i];
-        ce.innerText = ce._uiMapFunc(item);
+        let val = ce._uiMapFunc(item);
+
+        if (val instanceof HTMLElement) {
+            _removeChildrenOf(ce); // there can only be one
+            ce.appendChild(val);
+        } else {
+            ce.innerText = val;
+        }
     }
 }
 
@@ -1113,6 +1191,30 @@ function _setListItem(e, ie, item) {
     }
     ie._uiItem = item;
     e._uiItemMap.set(item, ie);
+}
+
+export function getListItemOfElement(e) {
+    let li = _nearestParentWithClass(e, "ui_list_item");
+    return li ? li._uiItem : null;
+}
+
+export function getElementOfListItem(o, item) {
+    let e = getList(o);
+    if (e) {
+        return e._uiItemMap.get(item);
+    } else return null;
+}
+
+export function getNthSubElementOfListItem(o, item, n) {
+    let e = getList(o);
+    if (e) {
+        let it = e._uiItemMap.get(item);
+        if (it) {
+            let sub = _nthChildOf(it, n);
+            if (sub && sub.classList.contains("ui_list_subitem")) return sub;
+            else return null;
+        } else return null;
+    } else return null;
 }
 
 function _cloneRowPrototype(proto) {

@@ -22,7 +22,7 @@ import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.BusEvent
-import gov.nasa.race.track.{TrackedObject, TrackedObjects}
+import gov.nasa.race.track.{TrackDropped, TrackedObject, TrackedObjects}
 
 import scala.collection.immutable.{Iterable, TreeSeqMap}
 
@@ -32,6 +32,10 @@ object TrackWSRoute {
   val SRC = asc("src")
   val DSP = asc("dsp")
   val SYM = asc("sym")
+  val DROP = asc("drop")
+  val ID = asc("id")
+  val DATE = asc("date")
+  val LABEL = asc("label")
 }
 import TrackWSRoute._
 
@@ -64,7 +68,7 @@ trait TrackWSRoute extends PushWSRaceRoute {
   def writeTrackObject (w: JsonWriter, channel: String, track: TrackedObject): Unit = {
     w.beginObject
     track.serializeMembersFormattedTo(w)
-    w.writeStringMember("label", track.cs) // FIXME - we have to make this more general
+    w.writeStringMember(LABEL, track.cs) // FIXME - we have to make this more general
 
     //--- add our display related fields
     w.writeStringMember(SRC, channelMap.getOrElse(channel,channel)) // we always have one
@@ -91,6 +95,19 @@ trait TrackWSRoute extends PushWSRaceRoute {
       .endObject
   }
 
+  def serializeDrop(channel: String, drop: TrackDropped): Unit = {
+    writer.clear()
+      .beginObject
+      .writeMemberName(DROP)
+      .beginObject
+      .writeStringMember(ID,drop.id)
+      .writeStringMember(LABEL, drop.cs)
+      .writeDateTimeMember(DATE,drop.date)
+      .writeStringMember(SRC, channelMap.getOrElse(channel,channel)) // we always have one
+      .endObject
+      .endObject
+  }
+
   // called from associated actor (different thread)
   def receiveTrackData: Receive = {
     case BusEvent(channel,track: TrackedObject,_) =>
@@ -110,6 +127,12 @@ trait TrackWSRoute extends PushWSRaceRoute {
           serializeTracks(channel, tracks)
           push(TextMessage.Strict(writer.toJson))
         }
+      }
+
+    case BusEvent(channel,drop: TrackDropped,_) =>
+      synchronized {
+        serializeDrop(channel,drop)
+        push(TextMessage.Strict(writer.toJson))
       }
   }
 

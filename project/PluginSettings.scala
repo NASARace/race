@@ -16,9 +16,9 @@
  */
 
 import java.io.File
-
 import sbt._
 import Keys._
+import laika.markdown.github.GitHubFlavor
 
 // NOTE - using macros such as "++=" and "+=" is dangerous since it
 // uses a implicit (context dependent) Append.Value(s) argument
@@ -35,6 +35,9 @@ object PluginSettings {
   import laika.sbt.LaikaPlugin
   import laika.sbt.LaikaPlugin.autoImport._
   val laikaSettings = LaikaPlugin.projectSettings ++ Seq(
+    laikaExtensions := Seq(
+      GitHubFlavor
+    ),
     Laika / sourceDirectories := Seq(file("doc/manual")),
     Laika / target := target.value / "doc",
     laikaIncludePDF := false,

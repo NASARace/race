@@ -159,7 +159,7 @@ function toggleSlideshow() {
 }
 
 function showCounter() {
-  slideCounter.textContent = curIdx + " / " + (slides.length-1);
+  slideCounter.textContent = (curIdx+1) + " / " + slides.length;
 }
 
 function scrollToSlide (idx) {
@@ -202,12 +202,18 @@ document.addEventListener("keydown", e => {
   else if (kc >=48 && kc <= 57){ // jump to slide 0..9
     var idx = kc - 48;
     if (e.ctrlKey){
+      if (idx == 0) {
+        scrollToSlide(1);
+        return;
+      }
       firstDigit = idx;
     } else {
-      if (firstDigit > 0) {
+      if (idx > 0) idx -= 1;
+      if (firstDigit) {
         idx += firstDigit * 10;
-        firstDigit = 0;
+        firstDigit = undefined;
       }
+
       scrollToSlide(idx);
     }
   }

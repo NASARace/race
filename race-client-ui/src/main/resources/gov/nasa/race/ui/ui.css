@@ -517,6 +517,7 @@ div.ui_list_item {
     display: flex;
     flex-direction: row;
     align-content: center;
+    align-items: center;
     height: var(--list-item-height);
     color: var(--field-value-color);
     padding: var(--list-item-padding);

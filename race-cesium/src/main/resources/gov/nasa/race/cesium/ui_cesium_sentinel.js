@@ -7,6 +7,7 @@ import * as uiCesium from "./ui_cesium.js";
 
 const FIRE = "🔥"
 
+var sentinelDataSource = new Cesium.CustomDataSource("sentinel");
 var sentinelView = undefined;
 var sentinelEntries = new Map();
 var sentinelList = new SkipList( // id-sorted display list for trackEntryView
@@ -16,8 +17,10 @@ var sentinelList = new SkipList( // id-sorted display list for trackEntryView
 );
 
 class SentinelAssets {
-    constructor(symbol) {
+    constructor(symbol, details) {
         this.symbol = symbol; // billboard
+        this.details = details; // gas coverage, camera-coverage, wind
+        this.fire = undefined;
     }
 }
 
@@ -25,19 +28,26 @@ class SentinelEntry {
     constructor(sentinel) {
         this.id = sentinel.id;
         this.sentinel = sentinel;
+        this.showDetails = false;
 
         this.assets = null;
     }
 
-    status() {
+    alertStatus() {
         if (this.sentinel.fire) {
             if (this.sentinel.fire.fireProb > 0.5) return FIRE;
         }
         return "";
     }
+
+    setShowDetails(showIt) {
+        this.showDetails = showIt;
+        if (this.assets && this.assets.details) this.assets.details.show = showIt
+    }
 }
 
 export function initialize() {
+    uiCesium.addDataSource(sentinelDataSource);
     sentinelView = initSentinelView();
 
     //uiCesium.setEntitySelectionHandler(trackSelection);
@@ -50,17 +60,24 @@ function initSentinelView() {
     let view = ui.getList("sentinel.list");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit"], [
-            { name: "status", width: "1rem", attrs: [], map: e => e.status() },
-            { name: "id", width: "4rem", attrs: ["alignLeft"], map: e => e.id },
-            {
-                name: "date",
-                width: "6rem",
-                attrs: ["fixed", "alignRight"],
-                map: e => util.toLocalTimeString(e.sentinel.date)
-            }
+            { name: "show", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.showDetails, toggleShowDetails, null) },
+            { name: "id", width: "2rem", attrs: ["alignLeft"], map: e => e.id },
+            { name: "alert", width: "1.5rem", attrs: [], map: e => e.alertStatus() },
+            { name: "prob", width: "2rem", attrs: ["fixed"], map: e => util.f_1.format(e.sentinel.fire.fireProb) },
+            { name: "date", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalTimeString(e.sentinel.date) }
         ]);
     }
     return view;
+}
+
+function toggleShowDetails(event) {
+    let cb = ui.getCheckBox(event.target);
+    if (cb) {
+        let e = ui.getListItemOfElement(cb);
+        if (e) {
+            e.setShowDetails(ui.isCheckBoxSelected(cb));
+        }
+    }
 }
 
 function handleWsSentinelMessages(msgType, msg) {
@@ -92,6 +109,7 @@ function addSentinelEntry(sentinel) {
     ui.insertListItem(sentinelView, e, idx);
 
     if (sentinel.gps) e.assets = createAssets(sentinel);
+    checkFireAsset(e);
 }
 
 function updateSentinelEntry(e, sentinel) {
@@ -101,28 +119,102 @@ function updateSentinelEntry(e, sentinel) {
     e.sentinel = sentinel;
     ui.updateListItem(sentinelView, e);
 
-    if (!old.gps && sentinel.gps) e.assets = createAssets(sentinel);
+    if (!old.gps && sentinel.gps) {
+        e.assets = createAssets(sentinel);
+    }
+    checkFireAsset(e);
+}
+
+function checkFireAsset(e) {
+    let sentinel = e.sentinel;
+
+    if (sentinel.gps && e.alertStatus() === FIRE) { // TODO
+        if (e.assets) {
+            if (!e.assets.fire) {
+                e.assets.fire = createFireAsset(sentinel);
+                if (e.assets.fire) e.assets.fire.show = true;
+            } else {
+                // update fire location/probability
+            }
+        }
+    }
 }
 
 function createAssets(sentinel) {
-    let gps = sentinel.gps;
-    if (gps) {
-        //console.log("@@ add entity")
-        let entity = new Cesium.Entity({
-            id: sentinel.id,
-            position: Cesium.Cartesian3.fromDegrees(gps.longitude, gps.latitude, 0),
-            billboard: {
-                image: 'sentinel-asset/sentinel',
-                distanceDisplayCondition: config.sentinelBillboardDC,
-                color: config.sentinelColor,
-                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-            }
-        });
-        uiCesium.viewer.entities.add(entity);
-        return entity;
-
-    } else {
-        return null;
-    }
-
+    return new SentinelAssets(
+        createSymbolAsset(sentinel),
+        createDetailAsset(sentinel)
+    );
 }
+
+function createSymbolAsset(sentinel) {
+    let entity = new Cesium.Entity({
+        id: sentinel.id,
+        position: Cesium.Cartesian3.fromDegrees(sentinel.gps.longitude, sentinel.gps.latitude),
+        billboard: {
+            image: 'sentinel-asset/sentinel',
+            distanceDisplayCondition: config.sentinelBillboardDC,
+            color: config.sentinelColor,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        },
+        label: {
+            text: sentinel.id.toString(),
+            scale: 0.8,
+            horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+            verticalOrigin: Cesium.VerticalOrigin.TOP,
+            font: config.trackLabelFont,
+            fillColor: config.sentinelColor,
+            showBackground: true,
+            backgroundColor: config.trackLabelBackground,
+            pixelOffset: config.sentinelLabelOffset,
+            distanceDisplayCondition: config.sentinelBillboardDC,
+        }
+    });
+    sentinelDataSource.entities.add(entity);
+    return entity;
+}
+
+// TODO - this is a mockup
+function createDetailAsset(sentinel) {
+    let entity = new Cesium.Entity({
+        id: sentinel.id + "-details",
+        distanceDisplayCondition: config.sentinelBillboardDC,
+        position: Cesium.Cartesian3.fromDegrees(sentinel.gps.longitude, sentinel.gps.latitude),
+        ellipse: {
+            semiMinorAxis: 500,
+            semiMajorAxis: 1000,
+            rotation: Cesium.Math.toRadians(45),
+            material: Cesium.Color.ALICEBLUE.withAlpha(0.3),
+        },
+        show: false // only when selected
+    });
+    sentinelDataSource.entities.add(entity);
+    return entity;
+}
+
+// TODO - this is a mockup
+function createFireAsset(sentinel) {
+    let entity = new Cesium.Entity({
+        id: sentinel.id + "-fire",
+        distanceDisplayCondition: config.sentinelBillboardDC,
+        position: Cesium.Cartesian3.fromDegrees(sentinel.gps.longitude - 0.002, sentinel.gps.latitude - 0.002, 0),
+        ellipse: {
+            semiMinorAxis: 25,
+            semiMajorAxis: 50,
+            rotation: Cesium.Math.toRadians(-45),
+            material: Cesium.Color.RED.withAlpha(0.7),
+            outline: true,
+            outlineColor: Cesium.Color.RED
+
+        }
+    });
+    sentinelDataSource.entities.add(entity);
+    return entity;
+}
+
+ui.exportToMain(function selectSentinel(event) {
+    let e = event.detail.curSelection;
+    if (e) {
+        // if (e.assets && e.assets.details) e.assets.details.show = true;
+    }
+});

@@ -1,13 +1,11 @@
 package gov.nasa.race.land
 
-import com.fasterxml.jackson.core.JsonParseException
-import gov.nasa.race.{Dated, ifSome}
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{JsonSerializable, JsonWriter, UTF8JsonPullParser}
-import gov.nasa.race.geo.{DatedGeoPosition, GeoPosition}
 import gov.nasa.race.uom.Angle.Degrees
 import gov.nasa.race.uom.Speed.MetersPerSecond
 import gov.nasa.race.uom.{Angle, DateTime, Speed}
+import gov.nasa.race.{Dated, ifSome}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -41,7 +39,7 @@ object Sentinel {
     }
   }
 }
-import Sentinel._
+import gov.nasa.race.land.Sentinel._
 
 trait SentinelReading extends Dated with JsonSerializable
 

@@ -38,7 +38,11 @@ development with RACE, presented at DASC 2019
 
 [SHARE][share] describes the System for Hierarchical Ad hoc Reporting (SHARE) built with RACE actors
 
+[ODIN-fire][OdinFire] use of RACE as Open Data Integration platform for wildland fire management
+
 [RACE by Example][RaceByExample] is a collection of examples with associated config files to run them
+
+
 
 [raceviewer]: ../slides/RaceViewer.html
 [remotelauncher]: ../slides/RemoteLauncher.html
@@ -50,3 +54,4 @@ development with RACE, presented at DASC 2019
 [dasc19]: ../slides/DASC19.html
 [share]: ../slides/SHARE.html
 [RaceByExample]: ../slides/RaceByExample.html
+[OdinFire]: ../slides/odin.html

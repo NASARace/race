@@ -19,7 +19,7 @@ package gov.nasa.race.cesium
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{PathMatcher, Route}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.http._
@@ -32,7 +32,6 @@ import scalatags.Text.all._
 import java.net.InetSocketAddress
 import java.util.TimeZone
 
-case class ImageryProvider (name: String, url: String, providerCls: String, description: String, proxy: Boolean)
 
 object CesiumRoute extends CachedFileAssetMap {
   def sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
@@ -40,42 +39,7 @@ object CesiumRoute extends CachedFileAssetMap {
   val imageryPrefix = "imagery"
   val terrainPrefix = "terrain"
 
-  val defaultImageryProviders: Seq[ImageryProvider] = Seq(
-    ImageryProvider(
-      "arcgis",
-      "https://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/",
-      "Cesium.ArcGisMapServerImageryProvider",
-      "arcgis geographic",
-      false),
-    ImageryProvider(
-      "stamen_terrain",
-      "http://tile.stamen.com/terrain",
-      "Cesium.OpenStreetMapImageryProvider",
-      "stamen terrain",
-      false),
-    ImageryProvider(
-      "<default>",
-      "<default>",
-      "<default>",
-      "Bing aerial",
-      false
-    )
-  )
-
-  val defaultOverlayProviders: Seq[ImageryProvider] = Seq(
-    ImageryProvider(
-      "goes_conus_ir",
-      "https://mesonet.agron.iastate.edu/cgi-bin/wms/goes/conus_ir.cgi?",
-      "Cesium.WebMapServiceImageryProvider",
-      "goes conus infrared",
-      false),
-    ImageryProvider(
-      "nexrad",
-      "https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi?",
-      "Cesium.WebMapServiceImageryProvider",
-      "nexrad precipitation",
-      false)
-  )
+  val imageryPrefixMatcher = PathMatcher(imageryPrefix / "[^/]+".r)
 }
 
 /**
@@ -103,21 +67,11 @@ trait CesiumRoute
   val cesiumCache = config.getOptionalString("cesium-cache") // optional cache of Cesium resources
   val cesiumVersion = config.getStringOrElse("cesium-version", "1.91")
 
-  val proxyImagery = config.getBoolean("proxy-maptile-provider")
-  val imageryProvider = config.getStringOrElse("maptile-provider", "http://tile.stamen.com/terrain")
-
   val proxyTerrain = config.getBoolean("proxy-elevation-provider")
   val terrainProvider = config.getStringOrElse("elevation-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
 
-  val imageryProviders = {
-    // read from config first
-    CesiumRoute.defaultImageryProviders
-  }
-
-  val overlayProviders = {
-    // read from config first
-    CesiumRoute.defaultOverlayProviders
-  }
+  val imageryLayers = ImageryLayer.readConfig(config)
+  val layerMap: Map[String,String] = Map.from( imageryLayers.map( layer=> (layer.name, layer.url))) // symbolic map layer name -> url
 
   //--- cesium related routes
 
@@ -126,8 +80,12 @@ trait CesiumRoute
   def uiCesiumRoute: Route = {
     get {
       //--- dynamic geospatial content requested by Cesium at runtime
-      pathPrefix(CesiumRoute.imageryPrefix) { // we only get this if we act as a proxy
-        completeProxied(imageryProvider)
+      pathPrefix(CesiumRoute.imageryPrefixMatcher) { layerId=>// we only get this if we act as a proxy
+          layerMap.get(layerId) match {
+            case Some(url) => completeProxied(url)
+            case None => complete(StatusCodes.NotFound, p.toString())
+          }
+
       } ~ pathPrefix(CesiumRoute.terrainPrefix) { // also just when configured as proxy
         completeProxied(terrainProvider)
 
@@ -209,19 +167,13 @@ trait CesiumRoute
     super.getConfig(requestUri, remoteAddr) + basicCesiumConfig(requestUri,remoteAddr)
   }
 
-  def createMapLayerProviders (providers: Seq[ImageryProvider]): String = {
-    val sb = new StringBuilder
-    sb.append("[")
-    providers.foreach { ip=>
-      if (ip.name == "<default>") {
-        sb.append(s"\n{name:'', provider: undefined}") // the default Bing aerial provider
-      } else {
-        val url = if (ip.proxy) s"${CesiumRoute.imageryPrefix}/${ip.name}" else ip.url
-        sb.append(s"\n{name:'${ip.name}',provider: new ${ip.providerCls}({url:'$url'})},")
-      }
-    }
-    sb.append("\n]")
-    sb.toString()
+  def createImageryLayers (layers: Seq[ImageryLayer]): String = {
+    layers.map{ l=>
+      val url = if (l.proxy) s"${CesiumRoute.imageryPrefix}/${l.name}" else l.url
+      val provider = l.provider.replace("$URL",url)
+      val dsp = l.displayParam.mkString("[",",","]")
+      s"""{name:'${l.name}',provider:${provider},descr:'${l.description}',isBase:${l.isBase},show:${l.show},display:$dsp}"""
+    }.mkString("[\n", ",\n","\n]")
   }
 
   // to be called from the concrete getConfig() implementation
@@ -229,29 +181,13 @@ trait CesiumRoute
 
     val wsToken = registerTokenForClient(remoteAddr)
 
-    val imagery = if (proxyImagery) CesiumRoute.imageryPrefix else imageryProvider
     val terrain = if (proxyTerrain) CesiumRoute.terrainPrefix else terrainProvider
 
     s"""
       export const cesiumAccessToken = '${config.getVaultableString("access-token")}';
       export const wsURL = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';
 
-      //export const imageryProvider = new Cesium.ArcGisMapServerImageryProvider({url:'https://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/'});
-      export const imageryProvider = new Cesium.ArcGisMapServerImageryProvider({url: '$imagery'});
-      //export const imageryProvider = new Cesium.OpenStreetMapImageryProvider({url: '$imagery'});
-
-      export const imageryProviders = ${createMapLayerProviders(imageryProviders)};
-      export const imageryProviderOptions = {
-        defaultBrightness: ${config.getDoubleOrElse("maptile-brightness", 0.6)},
-        defaultContrast: ${config.getDoubleOrElse("maptile-contrast", 1.5)},
-        defaultHue: Cesium.Math.toRadians(${config.getIntOrElse("maptile-hue", 0)}), // 220 for reddish
-        defaultSaturation: ${config.getDoubleOrElse("maptile-saturation", 1.0)},
-        defaultGamma: ${config.getDoubleOrElse("maptile-gamma", 1.0)},
-        defaultAlpha: ${config.getDoubleOrElse("maptile-gamma", 1.0)}
-      };
-
-      export const overlayProviders = ${createMapLayerProviders(overlayProviders)};
-
+      export const imageryLayers = ${createImageryLayers(imageryLayers)};
       export const terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'});
     """
   }
@@ -287,6 +223,8 @@ trait CesiumRoute
     )
   }
 
+  // 🔥18
+
   //--- the standard Ui windows/icons we provide (can be overridden for more app specific versions)
 
   // positions can be set in main css (ids: 'view', 'view_icon', 'time', 'time_icon')
@@ -304,19 +242,20 @@ trait CesiumRoute
         uiButton("Down", "main.setDownView()")
       ),
       uiPanel("map layers", true)(
-        uiColumnContainer("align_left")(
-          uiList("view.map.list", 10, "main.selectMapLayer(event)"),
-          uiChoice("base map layer","view.map.base", "main.selectBaseMap(event)")
+        uiList("view.map.list", 10, "main.selectMapLayer(event)"),
+        uiRowContainer()(
+          uiButton("⬆︎", "main.raiseMapLayer()"),
+          uiButton("⬇︎", "main.lowerMapLayer()")
         )
       ),
       uiPanel("layer parameters", false)(
         uiColumnContainer("align_right")(
+          uiSlider("alpha", "view.map.alpha", "main.setMapAlpha(event)"),
           uiSlider("brightness", "view.map.brightness", "main.setMapBrightness(event)"),
           uiSlider("contrast", "view.map.contrast", "main.setMapContrast(event)"),
           uiSlider("hue", "view.map.hue", "main.setMapHue(event)"),
           uiSlider("saturation", "view.map.saturation","main.setMapSaturation(event)"),
-          uiSlider("gamma", "view.map.gamma", "main.setMapGamma(event)"),
-          uiSlider("alpha", "view.map.alpha", "main.setMapAlpha(event)")
+          uiSlider("gamma", "view.map.gamma", "main.setMapGamma(event)")
         )
       )
     )

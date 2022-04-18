@@ -201,6 +201,9 @@ function handleWsTrackMessages(msgType, msg) {
         case "trackList":
             handleTrackListMessage(msg.trackList);
             return true;
+        case "drop":
+            handleDropped(msg.drop);
+            return true;
         case "sources":
             handleSources(msg.sources);
             return true;
@@ -231,20 +234,26 @@ function handleTrackListMessage(tracks) { // bulk update
     for (track of tracks) updateTrackEntries(track);
 }
 
+function handleDropped(drop) {
+    let label = util.intern(drop.label);
+    let src = util.intern(drop.src);
+
+    let ts = trackSources.find(ts => ts.id === src);
+    if (ts) {
+        let te = ts.trackEntries.get(label);
+        if (te) {
+            removeTrackEntry(ts, te);
+        }
+    }
+}
+
 function updateTrack(track, te, pos, attitude) {
     let ts = te.trackSource;
     let trackEntries = ts.trackEntries;
     let trackEntryList = ts.trackEntryList;
 
-    if (isTrackTerminated(track)) { // remove
-        if (trackEntryFilter(te)) {
-            trackEntryList.remove(te)
-            if (ts === selectedTrackSource) {
-                ui.removeListItem(trackEntryView, te);
-            }
-            trackEntries.delete(te.id);
-        }
-        removeAssets(te);
+    if (isTrackTerminated(track)) {
+        removeTrackEntry(ts, te);
 
     } else { // update
         if (track.date >= te.track.date) {
@@ -312,6 +321,17 @@ function addTrack(ts, track, pos, attitude) {
     }
 }
 
+function removeTrackEntry(ts, te) {
+    if (trackEntryFilter(te)) {
+        ts.trackEntryList.remove(te)
+        if (ts === selectedTrackSource) {
+            ui.removeListItem(trackEntryView, te);
+        }
+        ts.trackEntries.delete(te.id);
+    }
+    removeAssets(ts, te);
+}
+
 function updateTrackEntries(track) {
     // avoid gazillions of equal string objects
     track.id = util.intern(track.id);
@@ -339,6 +359,10 @@ function updateTrackEntries(track) {
     } else {
         console.log("unknown track source: " + track.src);
     }
+}
+
+function isDroppedOrCompleted(track) {
+    return (track.status & (0x04 | 0x08)) != 0;
 }
 
 //--- track status
@@ -615,12 +639,12 @@ function getRefPoint(te, dur) {
     return null;
 }
 
-function removeAssets(te) {
+function removeAssets(ts, te) {
     let assets = te.assets;
-    if (assets.symbol) removeTrackSymbolEntity(assets.symbol);
-    if (assets.info) removeTrackInfoEntity(assets.info);
-    if (assets.trajectory) removeTrajectoryEntity(assets.trajectory);
-    if (assets.point) removeTrackPointEntity(assets.point);
+    if (assets.symbol) removeTrackSymbolEntity(ts.symbolDataSource, assets.symbol);
+    if (assets.info) removeTrackInfoEntity(ts.trackInfoDataSource, assets.info);
+    if (assets.trajectory) removeTrajectoryEntity(ts.trajectoryDataSource, assets.trajectory);
+    if (assets.point) removeTrackPointEntity(ts.pointDataSource, assets.point);
 }
 
 function createTrajectoryAssetPositions(trackEntry) {

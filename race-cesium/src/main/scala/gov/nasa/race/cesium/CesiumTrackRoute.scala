@@ -173,7 +173,7 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
     def _string (key: String, defaultValue: String): String = config.getStringOrElse(key,defaultValue)
 
     val trackLabelOffsetX = _int("track-label-offset.x", 12)
-    val trackLabelOffsetY = _int("track-label-offset.y", 12)
+    val trackLabelOffsetY = _int("track-label-offset.y", 10)
     val trackPointDist = _int("track-point-dist", 120000)
 
     s"""
@@ -181,7 +181,7 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
       export const trackColors = new Map(${trackColors.map(e=> s"['${e._1}',Cesium.Color.fromCssColorString('${e._2}')]").mkString("[",",","]")});
 
       export const trackLabelFont = '${_string("track-label", "16px sans-serif")}';
-      export const trackLabelOffset = new Cesium.Cartesian2( $trackLabelOffsetX, ${_int("track-label-offset.y", 10)});
+      export const trackLabelOffset = new Cesium.Cartesian2( $trackLabelOffsetX, $trackLabelOffsetY);
       export const trackLabelBackground = Cesium.Color.fromCssColorString('${_string( "track-label-bg", "black")}');
       export const trackLabelDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-label-dist", 200000)});
 
