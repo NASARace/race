@@ -11,7 +11,7 @@ enablePlugins(LaikaPlugin)
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
   organization := "gov.nasa.race",
-  version := "1.8.0"
+  version := "1.8.1"
 )
 
 lazy val testSettings = commonSettings ++ noPublishSettings  // test projects don't publish artifacts

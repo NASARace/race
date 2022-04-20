@@ -23,6 +23,7 @@ import gov.nasa.race.http.{CachedFileAssetMap, MainDocumentRoute}
 object CesiumApp extends CachedFileAssetMap {
   val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
 }
+import CesiumApp._
 
 /**
   * app that includes all of our Cesium sub-routes (tracks, layers, ..)
@@ -32,7 +33,7 @@ class CesiumApp (val parent: ParentActor, val config: Config) extends MainDocume
   val mainModule = "main_app.js"
   val mainCss = "main_app.css"
 
-  override def mainModuleContent: Array[Byte] = CesiumTrackApp.getContent(mainModule)
-  override def mainCssContent: Array[Byte] = CesiumTrackApp.getContent(mainCss)
+  override def mainModuleContent: Array[Byte] = getContent(mainModule)
+  override def mainCssContent: Array[Byte] = getContent(mainCss)
 }
 

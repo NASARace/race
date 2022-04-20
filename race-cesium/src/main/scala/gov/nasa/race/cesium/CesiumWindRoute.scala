@@ -112,7 +112,7 @@ trait CesiumWindRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesiu
             case None => complete(StatusCodes.NotFound, p.toString())
           }
         }
-      } ~ pathPrefix("wind") {
+      } ~ pathPrefix("wind" ~ Slash) {
         extractUnmatchedPath { p =>
           val pathName = s"wind/$p"
           if (pathName.endsWith(".js")) {
