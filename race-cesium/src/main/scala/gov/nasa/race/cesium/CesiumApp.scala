@@ -29,7 +29,7 @@ import CesiumApp._
   * app that includes all of our Cesium sub-routes (tracks, layers, ..)
   */
 class CesiumApp (val parent: ParentActor, val config: Config) extends MainDocumentRoute
-           with CesiumBldgRoute with CesiumGpsRoute with CesiumTrackRoute with CesiumLayerRoute with CesiumWindRoute with CesiumSentinelRoute {
+           with CesiumBldgRoute with CesiumGpsRoute with CesiumTrackRoute with CesiumLayerRoute with CesiumWindRoute {
   val mainModule = "main_app.js"
   val mainCss = "main_app.css"
 
