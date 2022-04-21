@@ -72,13 +72,9 @@ trait CesiumRoute
   //--- Cesium specific configuration
 
   val accessToken = config.getVaultableString("access-token")
-
-  val cesiumCache = config.getOptionalString("cesium-cache") // optional cache of Cesium resources
   val cesiumVersion = config.getStringOrElse("cesium-version", defaultCesiumJsVersion)
-
   val proxyTerrain = config.getBoolean("proxy-elevation-provider")
   val terrainProvider = config.getStringOrElse("elevation-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
-
   val imageryLayers = ImageryLayer.readConfig(config)
   val layerMap: Map[String,String] = Map.from( imageryLayers.map( layer=> (layer.name, layer.url))) // symbolic map layer name -> url
 
@@ -195,27 +191,14 @@ trait CesiumRoute
     """
   }
 
-  def cesiumUrl: String = {
-    cesiumCache match {
-      case Some(path) => "Build/Cesium/Cesium.js"
-      case None => s"https://cesium.com/downloads/cesiumjs/releases/$cesiumVersion/Build/Cesium/Cesium.js"
-    }
-  }
-
-  def cesiumWidgetCSS: String = {
-    cesiumCache match {
-      case Some(path) => "Build/Cesium/Widgets/widgets.css"
-      case None => s"https://cesium.com/downloads/cesiumjs/releases/$cesiumVersion/Build/Cesium/Widgets/widgets.css"
-    }
-  }
-
   // id required by Cesium scripts
   def fullWindowCesiumContainer: Text.TypedTag[String] = div(id:="cesiumContainer", cls:="ui_full_window")
 
   def cesiumResources: Seq[Text.TypedTag[String]] = {
+    // note these are now always fs-cache proxied so we can use fixed (logical) URLs
     Seq(
-      cssLink(cesiumWidgetCSS),
-      extScript(cesiumUrl)
+      cssLink("Build/Cesium/Widgets/widgets.css"),
+      extScript("Build/Cesium/Cesium.js")
     )
   }
 
