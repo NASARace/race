@@ -19,8 +19,9 @@ package gov.nasa.race.cesium
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{PathMatcher, Route}
+import akka.http.scaladsl.server.{PathMatcher, PathMatchers, Route}
 import akka.stream.scaladsl.SourceQueueWithComplete
+import gov.nasa.race.cesium.CesiumRoute.cesiumJsUrl
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.http._
 import gov.nasa.race.ui.{uiSlider, _}
@@ -40,7 +41,15 @@ object CesiumRoute extends CachedFileAssetMap {
   val terrainPrefix = "terrain"
 
   val imageryPrefixMatcher = PathMatcher(imageryPrefix / "[^/]+".r)
+
+  val defaultCesiumJsVersion = "1.92"
+
+  val cesiumPathMatcher = PathMatchers.separateOnSlashes("Build/Cesium/")
+  def cesiumJsUrl (version: String): String = {
+    s"https://cesium.com/downloads/cesiumjs/releases/$version/Build/Cesium/"
+  }
 }
+import CesiumRoute._
 
 /**
   * a RaceRouteInfo that servers Cesium related content, including:
@@ -65,7 +74,7 @@ trait CesiumRoute
   val accessToken = config.getVaultableString("access-token")
 
   val cesiumCache = config.getOptionalString("cesium-cache") // optional cache of Cesium resources
-  val cesiumVersion = config.getStringOrElse("cesium-version", "1.91")
+  val cesiumVersion = config.getStringOrElse("cesium-version", defaultCesiumJsVersion)
 
   val proxyTerrain = config.getBoolean("proxy-elevation-provider")
   val terrainProvider = config.getStringOrElse("elevation-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
@@ -89,15 +98,9 @@ trait CesiumRoute
       } ~ pathPrefix(CesiumRoute.terrainPrefix) { // also just when configured as proxy
         completeProxied(terrainProvider)
 
-        //--- the standard Cesium assets
-      } ~ pathPrefix("Build" / "Cesium") {
-        extractUnmatchedPath { p =>
-          val pathName = cesiumCache.get + "/Build/Cesium" + p.toString()
-          FileUtils.fileContentsAsString(pathName) match {
-            case Some(content) => complete(HttpEntity(ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), content))
-            case None => complete(StatusCodes.NotFound, "Build/Cesium" + p.toString())
-          }
-        }
+        //--- the standard Cesium assets - note we always proxy these fs-cached with a pre-configured host URL
+      } ~ pathPrefix(cesiumPathMatcher) {
+        completeProxied( cesiumJsUrl(cesiumVersion))
 
         //--- our Cesium assets
       } ~ path ("ui_cesium.js") {
@@ -222,8 +225,6 @@ trait CesiumRoute
       extModule("ui_cesium.js")
     )
   }
-
-  // 🔥18
 
   //--- the standard Ui windows/icons we provide (can be overridden for more app specific versions)
 

@@ -152,7 +152,9 @@ object FSCachedProxyRoute {
 trait FSCachedProxyRoute extends ProxyRaceRoute {
   import FSCachedProxyRoute._
 
-  val cacheDir: String = config.getString("cache-dir")
+  val cacheDir: File = new File(config.getStringOrElse("cache-dir", ".cache"))
+
+  if (FileUtils.ensureWritableDir(cacheDir).isEmpty) throw new RuntimeException(s"invalid cache dir: $cacheDir")
 
   def fetchFile(file: File, reqUri: String)(saveAction: =>Unit): Unit = {
     implicit val ec = scala.concurrent.ExecutionContext.global
