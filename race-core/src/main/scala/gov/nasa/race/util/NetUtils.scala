@@ -102,6 +102,17 @@ object NetUtils {
     }
   }
 
+  // solve the "..//.." problem
+  def concatenatePaths (prefix: String, postfix: String): String = {
+    if (prefix.last == '/') {
+      if (postfix.head == '/') prefix + postfix.substring(1)
+      else prefix + postfix
+    } else {
+      if (postfix.head == '/') prefix + postfix
+      else prefix + '/' + postfix
+    }
+  }
+
   //--- socket functions
 
   def createSocket (sf: SocketFactory, host: String, port: Int): Option[Socket] = trySome(sf.createSocket(host,port))

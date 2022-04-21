@@ -40,7 +40,7 @@ object CesiumRoute extends CachedFileAssetMap {
   val imageryPrefix = "imagery"
   val terrainPrefix = "terrain"
 
-  val imageryPrefixMatcher = PathMatcher(imageryPrefix / "[^/]+".r)
+  val imageryPrefixMatcher = PathMatcher(imageryPrefix / "[^/]+".r ~ Slash)
 
   val defaultCesiumJsVersion = "1.92"
 

@@ -86,7 +86,7 @@ trait ProxyRaceRoute extends RaceRouteInfo {
   protected def proxiedRequestUri (unmatchedPath : Uri.Path, rawQuery: Option[String], serverUrl: String): String = {
     rawQuery match {
       case Some(params) => serverUrl + unmatchedPath + '?' + params
-      case None => serverUrl + unmatchedPath
+      case None => NetUtils.concatenatePaths(serverUrl,unmatchedPath.toString())
     }
   }
 
