@@ -1143,14 +1143,14 @@ export function setListItemDisplayColumns(o, listAttrs, colSpecs) {
             ce._uiMapFunc = cs.map;
             ce.style.width = cs.width ? cs.width : defaultWidth;
 
-            if (cs.attrs.includes("alignLeft")) ce.style.textAlign = "left";
-            else if (cs.attrs.includes("alignRight")) ce.style.textAlign = "right";
+            if (cs.attrs.includes("alignLeft")) _addClass(ce, "align_left");
+            else if (cs.attrs.includes("alignRight")) _addClass(ce, "align_right");
 
-            if (cs.attrs.includes("fixed")) ce.style.font = _rootVar("--mono-font");
+            if (cs.attrs.includes("fixed")) _addClass(ce, "fixed");
             re.appendChild(ce);
         });
 
-        if (listAttrs.includes("fit")) e.style.width = "inherit";
+        if (listAttrs.includes("fit")) _addClass(e, "fit");
         e._uiRowPrototype = re;
     }
 }
@@ -1162,10 +1162,9 @@ export function setListItemDisplay(o, styleWidth, attrs, mapFunc) {
         if (mapFunc) e._uiMapFunc = mapFunc;
         if (styleWidth) e.style.width = styleWidth;
 
-        if (attrs.includes("alignLeft")) e.style.textAlign = "left";
-        else if (attrs.includes("alignRight")) e.style.textAlign = "right";
-
-        if (attrs.includes("fixed")) e.style.font = _rootVar("--mono-font");
+        if (attrs.includes("alignLeft")) _addClass(e, "align_left");
+        else if (attrs.includes("alignRight")) _addClass(e, "align_right");
+        if (attrs.includes("fixed")) _addClass(e, "fixed");
     }
 }
 

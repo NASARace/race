@@ -31,7 +31,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 /**
-  * base type for route infos, which consist of a akka.http Route and an optional RaceActor
+  * base type for route infos, which consist of an akka.http Route and an optional RaceActor
   * to collect data used for the associated response content
   *
   * concrete RaceRouteInfo implementations have to provide a constructor that takes 2 args:
@@ -106,12 +106,13 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
   //--- document content fragment accululators (need to default to neutral element)
 
   // loaded before all RACE specific resources, e.g. for 3rd party code we use in own init
-  // NOTE - anything in here should not
   def getPreambleHeaderFragments: Seq[Text.TypedTag[String]] = Seq.empty
 
+  // RACE specific header parts
   def getHeaderFragments: Seq[Text.TypedTag[String]] = Seq.empty
 
-  def getPreambleBodyFragments: Seq[Text.TypedTag[String]] = Seq.empty // loaded before all RACE specific resources
+  // loaded before all RACE specific resources
+  def getPreambleBodyFragments: Seq[Text.TypedTag[String]] = Seq.empty
 
   def getBodyFragments: Seq[Text.TypedTag[String]] = Seq.empty
 }

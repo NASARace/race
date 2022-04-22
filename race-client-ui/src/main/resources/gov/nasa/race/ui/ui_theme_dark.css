@@ -15,10 +15,10 @@
     --data-background-color: rgb(20, 20, 20);
     --selection-background-color: rgb(64, 64, 200);
     --hover-background-color: rgb(84, 84, 160);
-    --font: 13pt sans-serif;
+    --font: 12pt sans-serif;
     --font-small: 10pt sans-serif;
-    --mono-font: 13pt Courier;
-    --mono-font-large: 16pt monospace;
+    --mono-font: 12pt Courier;
+    --mono-font-large: 14pt monospace;
     --border-color: rgb(130, 130, 130);
     --border-dark-color: rgb(80, 80, 80);
     --border-bright-color: rgb(150, 150, 150);
