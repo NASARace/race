@@ -96,7 +96,7 @@ function initMapLayerView() {
                     else return ui.createCheckBox(e.show, _toggleShowMapLayer, null);
                 }
             },
-            { name: "id", width: "10rem", attrs: ["alignLeft"], map: e => e.descr }
+            { name: "id", width: "12rem", attrs: ["alignLeft"], map: e => e.descr }
         ]);
 
         ui.setListItems(view, config.imageryLayers);

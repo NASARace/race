@@ -61,8 +61,8 @@ function initLayerView() {
     let view = ui.getList("layers.list");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit"], [
-            { name: "show", width: "1rem", attrs: [], map: e => e.status },
-            { name: "id", width: "8rem", attrs: ["alignLeft"], map: e => e.id },
+            { name: "show", width: "2rem", attrs: [], map: e => e.status },
+            { name: "id", width: "10rem", attrs: ["alignLeft"], map: e => e.id },
             {
                 name: "date",
                 width: "6rem",

@@ -52,6 +52,10 @@ div.ui_full_window {
     overflow: hidden;
 }
 
+html {
+    font-size: var(--font-size);
+}
+
 
 /* movable windows */
 
@@ -209,7 +213,7 @@ input.ui_field {
     color: var(--field-value-color);
     background: var(--data-background-color);
     width: var(--field-value-width);
-    height: var(--field-height);
+    height: var(--input-height);
 }
 
 input.ui_field.num {
@@ -345,6 +349,7 @@ div.ui_slider_num {
     background: var(--data-background-color);
     font: var(--mono-font);
     position: absolute;
+    top: 4px;
     z-index: 2;
 }
 
@@ -352,7 +357,7 @@ div.ui_slider_limit {
     display: inline-block;
     color: var(--slider-range-color);
     font: var(--mono-font);
-    font-size: small;
+    /*font-size: small;*/
     position: absolute;
 }
 

@@ -118,8 +118,8 @@ function initTrackEntryView() {
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit"], [
             { name: "assets", width: "2rem", attrs: [], map: te => te.assetDisplay() },
-            { name: "id", width: "5rem", attrs: ["alignLeft"], map: te => te.id },
-            { name: "date", width: "5rem", attrs: ["fixed", "alignRight"], map: te => util.toLocalTimeString(te.track.date) }
+            { name: "id", width: "6rem", attrs: ["alignLeft"], map: te => te.id },
+            { name: "date", width: "6rem", attrs: ["fixed", "alignRight"], map: te => util.toLocalTimeString(te.track.date) }
         ]);
     }
     return view;
