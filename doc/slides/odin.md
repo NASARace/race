@@ -83,15 +83,23 @@ NASA Ames Research Center
 
 ## Wildland Fire Management Application - Vision
 * ODIN node = data integration hub as field deployable server
+* provides task-specific view across various input sources (layers)
 
-<img src="../images/odin-node.svg" class="center scale75"/>
+<img src="../images/odin-node.svg" class="center scale70"/>
 <div class="run">1: ./race --vault ../conf config/cesium/cesium-app.conf</div><a class="srv" href="http://localhost:9000/app"></a>
 
 ## Why Open Source?
-* lower barrier of entry for stakeholders, vendors and research orgs
+* *community* is larger than fire agencies (>600)
+* provide common ground with low barrier of entry for stakeholders, vendors and research orgs
 
 <img src="../images/odin-open.svg" class="center scale70"/>
 
+## Example - Sentinel Sensor Integration
+* collaboration with Delphire to integrate their Sentinel fire sensors
+* provides visual, infrared and gas sensor readings along power lines
+* good to correlate with other inputs such as satellite based IR (VIIRS)
+
+<img src="../images/odin-sentinel-viirs.svg" class="center scale60"/>
 
 ## Tracking
 

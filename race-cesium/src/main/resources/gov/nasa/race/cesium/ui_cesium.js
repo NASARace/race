@@ -14,7 +14,6 @@ export function initialize() {
     Cesium.Ion.defaultAccessToken = config.cesiumAccessToken;
 
     viewer = new Cesium.Viewer('cesiumContainer', {
-        //imageryProvider: config.imageryProvider, //config.imageryProviders[0].provider,
         terrainProvider: config.terrainProvider,
         skyBox: false,
         infoBox: false,

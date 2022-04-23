@@ -46,6 +46,10 @@
     font: var(--mono-font);
 }
 
+.fit {
+    width: inherit;
+}
+
 div.ui_full_window {
     width: 100%;
     height: 100%;
