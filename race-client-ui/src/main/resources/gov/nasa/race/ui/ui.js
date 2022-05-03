@@ -2,13 +2,37 @@ if (window) {
     if (!window.main) window.main = {}; // used as an anchor for global properties available from document
 }
 
-//--- public functions
-
 export function exportToMain(func) {
     window.main[func.name] = func;
 }
 
-export function initialize() {
+//--- module initialization
+// (note that the moduleInitializers are executed on window.onload - after all modules and elements have been loaded and pre-initialized)
+
+var loadFunctions = [];
+var unloadFunctions = [];
+
+window.addEventListener('load', e => {
+    console.log("initializing modules..");
+    loadFunctions.forEach(f => f());
+    console.log("modules initialized.");
+});
+
+window.addEventListener('unload', e => {
+    loadFunctions.forEach(f => f());
+    console.log("modules terminated.");
+});
+
+export function registerLoadFunction(func) {
+    loadFunctions.push(func);
+}
+
+export function registerUnloadFunction(func) {
+    unloadFunctions.push(func);
+}
+
+// this should be the first moduleInitializer so that all modules can rely on expanded elements
+registerLoadFunction(function initialize() {
     _initializeIcons();
     _initializeWindows();
     _initializePanels();
@@ -20,12 +44,13 @@ export function initialize() {
     _initializeTimeWidgets();
     _initializeSliderWidgets();
     _initializeMenus(); /* has to be last in case widgets add menus */
-}
+});
 
-//--- fullscreen
+var themeChangeHandlers = [];
+
+//--- fullScreen support
 
 var isFullScreen = false;
-var windows = [];
 
 export function enterFullScreen() {
     if (!isFullScreen) {
@@ -56,6 +81,20 @@ export function toggleFullScreen() {
     else enterFullScreen();
 }
 
+//--- theme change support
+
+var themeChangeHandlers = [];
+
+export function registerThemeChangeHandler(handler) {
+    if (handler instanceof Function) {
+        themeChangeHandlers.push(handler);
+    }
+}
+
+export function notifyThemeChangeHandlers() {
+    themeChangeHandlers.forEach(h => h())
+}
+
 //--- windows
 
 var topWindowZ = _rootVarInt('--window-z');
@@ -70,6 +109,14 @@ function _initializeWindows() {
 export function initWindow(e) {
     if (e.children.length == 0 || !e.children[0].classList.contains("ui_titlebar")) {
         let tb = _createElement("DIV", "ui_titlebar", e.dataset.title);
+
+        let icon = e.dataset.icon;
+        if (icon) {
+            let img = _createElement("IMG", "ui_titlebar_icon");
+            img.src = icon;
+            tb.appendChild(img);
+        }
+
         let cb = _createElement("BUTTON", "ui_close_button", "⨉");
         cb.onclick = (event) => {
             let w = event.target.closest('.ui_window');
@@ -267,8 +314,22 @@ function _resetPanelMaxHeight(ce) {
 //--- icon functions
 
 function _initializeIcons() {
-    // add boilerplate childnode:  <svg viewBox="0 0 32 32"> <use class="ui_icon_svg" href="${src}#layer1"></use> </svg>
+    var iconBox = undefined;
+    let allIcons = [];
+
+    // note we can't re-parent while we iterate over DOM nodes
     for (let icon of document.getElementsByClassName("ui_icon")) {
+        allIcons.push(icon);
+    }
+
+    for (let icon of allIcons) {
+        // if icon is not positioned add it to the iconBox
+
+        if (!iconBox) iconBox = getIconBox();
+        let parent = icon.parentElement;
+        if (parent) parent.removeChild(icon);
+        iconBox.appendChild(icon);
+
         let src = icon.dataset.src;
 
         let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -294,6 +355,45 @@ export function toggleIcon(event) {
     _toggleClass(event.target, "on");
 }
 
+function getIconBox() {
+    let iconBox = document.getElementById("icon_box");
+    if (!iconBox) {
+        iconBox = _createElement("div", "icon_box");
+        iconBox.id = "icon_box";
+        document.body.appendChild(iconBox);
+    }
+
+    let top = _rootVar("--icon-box-top");
+    if (!iconBox.style.top && top) iconBox.style.top = top;
+
+    let right = _rootVar("--icon-box-right");
+    if (!iconBox.style.right && right) iconBox.style.right = right;
+
+    let bottom = _rootVar("--icon-box-bottom");
+    if (!iconBox.style.bottom && bottom) iconBox.style.bottom = bottom;
+
+    let left = _rootVar("--icon-box-left");
+    if (!iconBox.style.left && left) iconBox.style.left = left;
+
+
+    return iconBox;
+}
+
+//--- input element functions
+
+export function setInputDisabled(o, isDisabled) {
+    let e = _elementOf(o);
+    if (e) {
+        if (e.tagName == "INPUT") { // buttons
+            e.disabled = isDisabled;
+        }
+    }
+}
+
+export function setButtonDisabled(o, isDisabled) {
+    setInputDisabled(o, isDisabled);
+}
+
 //--- fields 
 
 function _initializeFields() {
@@ -302,6 +402,7 @@ function _initializeFields() {
         if (e.tagName == "DIV") {
             let id = e.dataset.id;
             let labelText = e.dataset.label;
+            let dataWidth = e.dataset.width;
 
             if (id && labelText) {
                 let label = _createElement("DIV", "ui_field_label", labelText);
@@ -314,6 +415,7 @@ function _initializeFields() {
                     field.style.border = 'none';
                     e.style.margin = '0';
                 }
+                if (dataWidth) field.style.width = dataWidth;
                 e.appendChild(field);
 
                 if (e.classList.contains("input")) {
@@ -333,10 +435,24 @@ function _checkKeyEvent(event) {
     }
 }
 
+export function isFieldDisabled(o) {
+    let e = getField(o);
+    if (e) {
+        return e.childNodes[1].disabled;
+    }
+}
+
+export function setFieldDisabled(o, isDisabled) {
+    let e = getField(o);
+    if (e) {
+        e.childNodes[1].disabled = isDisabled;
+    }
+}
+
 export function setField(o, newContent) {
     let e = getField(o);
     if (e) {
-        e.value = newContent;
+        e.value = newContent ? newContent : "";
     }
 }
 
@@ -832,10 +948,19 @@ function _initializeChoices() {
             let field = _createElement("DIV", "ui_choice_value");
             field.id = id;
             field._uiSelIndex = -1;
+            field._uiItems = [];
 
             e.appendChild(field);
         }
     }
+}
+
+export function isChoiceDisabled(o) {
+    return _isDisabled(getChoice(o));
+}
+
+export function setChoiceDisabled(o, isDisabled) {
+    _setDisabled(getChoice(o), isDisabled);
 }
 
 export function setChoiceItems(o, items, selIndex = -1) {
@@ -844,6 +969,7 @@ export function setChoiceItems(o, items, selIndex = -1) {
         let prevChoices = _firstChildWithClass(e.parentElement, "ui_popup_menu");
         if (prevChoices) e.parentElement.removeChild(prevChoices);
         e._uiSelIndex = Math.min(selIndex, items.length);
+        e._uiItems = items;
 
         let choice = e.parentElement;
         var i = 0;
@@ -876,6 +1002,29 @@ export function setChoiceItems(o, items, selIndex = -1) {
     }
 }
 
+export function getChoiceItems(o) {
+    let e = getChoice(o);
+    if (e) {
+        return e._uiItems;
+    }
+}
+
+export function selectChoiceItemIndex(o, selIndex) {
+    let e = getChoice(o);
+    if (e) {
+        let menu = _firstChildWithClass(e.parentElement, "ui_popup_menu");
+        if (selIndex >= 0 && selIndex < menu.childNodes.length) {
+            let mi = _nthChildOf(menu, selIndex);
+            if (e._uiSelIndex >= 0) { menu.children[e._uiSelIndex].classList.remove('checked'); }
+            e._uiSelIndex = selIndex;
+            mi.classList.add('checked');
+            //e.innerText = mi.innerText;
+            e.innerText = e._uiItems[selIndex];
+            e.parentElement.dispatchEvent(new Event("change"));
+        }
+    }
+}
+
 export function getSelectedChoiceValue(o) {
     let e = getChoice(o);
     if (e) {
@@ -883,7 +1032,7 @@ export function getSelectedChoiceValue(o) {
     }
 }
 
-export function getChoice(o) {
+export function getChoice(o) { // TODO - do we really want the ui_choice_value?
     let e = _elementOf(o);
     if (e) {
         if (e.classList.contains("ui_choice_value")) return e;
@@ -922,6 +1071,14 @@ export function createCheckBox(initState, clickHandler, labelText) {
     _addCheckBoxComponents(e, labelText);
     if (clickHandler) e.addEventListener("click", clickHandler);
     return e;
+}
+
+export function isCheckBoxDisabled(o) {
+    return _isDisabled(getCheckBox(o));
+}
+
+export function setCheckBoxDisabled(o, isDisabled) {
+    _setDisabled(getCheckBox(o), isDisabled);
 }
 
 function _clickCheckBox(event) {
@@ -1001,6 +1158,14 @@ export function createRadio(initState, clickHandler, labelText) {
     _addRadioComponents(e, labelText);
     if (clickHandler) e.addEventListener("click", clickHandler);
     return e;
+}
+
+export function isRadioBoxDisabled(o) {
+    return _isDisabled(getRadio(o));
+}
+
+export function setRadioDisabled(o, isDisabled) {
+    _setDisabled(getRadio(o), isDisabled);
 }
 
 function _clickRadio(event) {
@@ -1104,6 +1269,14 @@ export function setSelector(o, newState) {
     }
 }
 
+export function isSelectorDisabled(o) {
+    return _isDisabled(getSelector(o));
+}
+
+export function setSelectorDisabled(o, isDisabled) {
+    _setDisabled(getSelector(o), isDisabled);
+}
+
 //--- lists
 
 function _initializeLists() {
@@ -1135,13 +1308,20 @@ export function setListItemDisplayColumns(o, listAttrs, colSpecs) {
     let e = getList(o);
     if (e) {
         let defaultWidth = _rootVar("--list-item-column-width", "5rem");
+        let totalWidth = "";
         let re = _createElement("DIV", "ui_list_item");
 
         colSpecs.forEach(cs => {
             let ce = _createElement("DIV", "ui_list_subitem");
 
             ce._uiMapFunc = cs.map;
-            ce.style.width = cs.width ? cs.width : defaultWidth;
+
+            let w = cs.width ? cs.width : defaultWidth;
+            ce.style.width = w;
+            ce.style.maxWidth = w;
+
+            if (totalWidth) totalWidth += " + ";
+            totalWidth += w;
 
             if (cs.attrs.includes("alignLeft")) _addClass(ce, "align_left");
             else if (cs.attrs.includes("alignRight")) _addClass(ce, "align_right");
@@ -1150,6 +1330,7 @@ export function setListItemDisplayColumns(o, listAttrs, colSpecs) {
             re.appendChild(ce);
         });
 
+        e.style.width = `calc(${totalWidth})`;
         if (listAttrs.includes("fit")) _addClass(e, "fit");
         e._uiRowPrototype = re;
     }
@@ -1254,15 +1435,17 @@ export function setListItems(o, items) {
         let i1 = ies.length;
         let proto = e._uiRowPrototype;
 
-        items.forEach(item => {
-            if (i < i1) { // replace existing element
-                _setListItem(e, ies[i], item);
-            } else { // append new element
-                let ie = _createListItemElement(e, item, proto);
-                e.appendChild(ie);
-            }
-            i++;
-        });
+        if (items) {
+            items.forEach(item => {
+                if (i < i1) { // replace existing element
+                    _setListItem(e, ies[i], item);
+                } else { // append new element
+                    let ie = _createListItemElement(e, item, proto);
+                    e.appendChild(ie);
+                }
+                i++;
+            });
+        }
 
         if (e.childElementCount > i) _removeLastNchildrenOf(e, e.childElementCount - i);
 
@@ -1539,6 +1722,19 @@ export function toggleMenuItemCheck(event) {
     }
 }
 
+//--- color input
+
+export function createColorInput(initClr, size, action) {
+    let e = document.createElement("input");
+    e.type = "color";
+    e.setAttribute("value", initClr);
+    e.style.width = size;
+    e.style.height = size;
+    e.style.backgroundColor = initClr;
+    //e.onchange = action;
+    e.oninput = action;
+    return e;
+}
 
 //--- general utility functions
 
@@ -1576,6 +1772,10 @@ function _addClass(element, cls) {
 
 function _removeClass(element, cls) {
     element.classList.remove(cls);
+}
+
+function _containsClass(element, cls) {
+    return element.classList.contains(cls);
 }
 
 function _containsAnyClass(element, ...cls) {
@@ -1695,6 +1895,15 @@ function _removeChildrenOf(element, keepFilter = undefined) {
             element.appendChild(e);
         }
     }
+}
+
+function _isDisabled(e) {
+    return _containsClass(e, "disabled");
+}
+
+function _setDisabled(e, isDisabled) {
+    if (isDisabled) _addClass(e, "disabled");
+    else _removeClass(e, "disabled");
 }
 
 

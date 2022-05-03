@@ -19,61 +19,67 @@ package gov.nasa.race.cesium
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 
+/**
+  * object that holds params to modify the display of imagery map tiles
+  */
+case class ImageryParams (alpha: Double,
+                          brightness: Double,
+                          contrast: Double,
+                          hue: Double,
+                          saturation: Double,
+                          gamma: Double) {
+
+  def toJs: String = s"{alpha:$alpha,brightness:$brightness,contrast:$contrast,hue:$hue,saturation:$saturation,gamma:$gamma}"
+}
+
 object ImageryLayer {
 
   // default display parameters that can be changed interactively
-  val defaultDisplayParams = Array(
-    1.0,  // alpha
-    0.6,  // brightness
-    1.6,  // contrast
-    0.0,  // hue
-    1.0,  // saturation
-    1.0   // gamma
-  )
+  val defaultImageryParams = ImageryParams( 1.0, 1.0, 1.0, 0.0, 1.0, 1.0) // the Cesium defaults
 
-  def readDisplayParams (cfg: Config): Array[Double] = {
-    val a = new Array[Double](defaultDisplayParams.length)
-    a(0) = cfg.getDoubleOrElse("alpha", defaultDisplayParams(0))
-    a(1) = cfg.getDoubleOrElse("brightness", defaultDisplayParams(1))
-    a(2) = cfg.getDoubleOrElse("contrast", defaultDisplayParams(2))
-    a(3) = cfg.getDoubleOrElse("hue", defaultDisplayParams(3))
-    a(4) = cfg.getDoubleOrElse("saturation", defaultDisplayParams(4))
-    a(5) = cfg.getDoubleOrElse("gamma", defaultDisplayParams(5))
-    a
+  def readImageryParams (cfg: Config): ImageryParams = {
+    val alpha = cfg.getDoubleOrElse("alpha", defaultImageryParams.alpha)
+    val brightness = cfg.getDoubleOrElse("brightness", defaultImageryParams.brightness)
+    val contrast = cfg.getDoubleOrElse("contrast", defaultImageryParams.contrast)
+    val hue = cfg.getDoubleOrElse("hue", defaultImageryParams.hue)
+    val saturation = cfg.getDoubleOrElse("saturation", defaultImageryParams.saturation)
+    val gamma = cfg.getDoubleOrElse("gamma", defaultImageryParams.gamma)
+
+    ImageryParams(alpha,brightness,contrast,hue,saturation,gamma)
   }
 
   val defaultLayers: Seq[ImageryLayer] = Seq(
     ImageryLayer(
       "arcgis",
+      "ArcGIS Geographic",
       "https://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/",
       "new Cesium.ArcGisMapServerImageryProvider({url:'$URL'})",
-      "ArcGIS Geographic",
       isBase = true,
       proxy = true,
       show = true,
-      defaultDisplayParams
+      None
     ),
 
     ImageryLayer(
       "stamen_terrain",
+      "Stamen Terrain",
       "http://tile.stamen.com/terrain",
       "new Cesium.OpenStreetMapImageryProvider({url:'$URL'})",
-      "Stamen Terrain",
       isBase = true,
       proxy = true,
       show = false,
-      defaultDisplayParams
+      None
     ),
 
     ImageryLayer(
       "<default>",
+      "Bing Aerial",
       "",
       "null",
-      "Bing Aerial",
       isBase = true,
       proxy = false,
       show = false,
-      defaultDisplayParams
+      None
     )
   )
 
@@ -85,30 +91,41 @@ object ImageryLayer {
       ilConfigs.map{ cfg =>
         ImageryLayer(
           cfg.getString("name"),
+          cfg.getString("description"),
           cfg.getString("url"),
           cfg.getString("provider"),
-          cfg.getString("descr"),
           cfg.getBooleanOrElse("base", false),
           cfg.getBooleanOrElse("proxy", false),
           cfg.getBooleanOrElse("show", false),
-          readDisplayParams(cfg)
+          cfg.getOptionalConfig("imagery-params").map(readImageryParams)
         )
       }
     }
   }
+
+  def getDefaultImageryParams (conf: Option[Config]): ImageryParams = {
+    conf.map(readImageryParams).getOrElse( defaultImageryParams)
+  }
 }
 
 /**
-  * object representing a Cesium ImageryLayer
-  * used in document config.js
+  * object representing a Cesium ImageryLayer specification
+  * this needs to include everything that is required to instantiate the ImageryLayer on the Cesium (client) side
   */
 case class ImageryLayer(
                          name: String,
-                         url: String,
-                         provider: String,
                          description: String,
+                         url: String,
+                         provider: String,  // Javascript snippet to instantiate Cesium ImageryProvider (can use $URL placeholder)
                          isBase: Boolean,  // is this a base layer (there is only one at a time)
                          proxy: Boolean,   // can we proxy, i.e. store map-tiles on the server
                          show: Boolean,     // do we initially show this (only one base layer can be shown at a time)
-                         displayParam: Array[Double] // alpha, brightness, contrast, hue, saturation, gamma
-                       )
+                         imageryParams: Option[ImageryParams]
+                       )  {
+
+  def toJs: String = {
+    val prov = provider.replace("$URL", url)
+    val ip = imageryParams.map(p=> s"imageryParams:${p.toJs}").getOrElse("")
+    s"""{name:'$name',description:'$description',url:'$url',provider:$prov,isBase:$isBase,proxy:$proxy,show:$show,$ip}"""
+  }
+}

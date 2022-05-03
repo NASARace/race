@@ -313,6 +313,21 @@ img.scale100 {
   img.scale65 {
       height: 55vh;
   }
+  img.scale70 {
+      height: 60vh;
+  }
+  img.scale75 {
+      height: 65vh;
+  }
+  img.scale80 {
+      height: 70vh;
+  }
+  img.scale85 {
+      height: 75vh;
+  }
+  img.scale90 {
+      height: 80vh;
+  }
 }
 
 img.back {

@@ -22,43 +22,76 @@ import akka.http.scaladsl.server.Route
 import scalatags.Text
 import scalatags.Text.all.{script, _}
 
+import scala.collection.mutable.{ArrayBuffer, Set => MutSet}
+
 /**
   * RaceRouteInfo that serves a single page application, i.e. manages a single (possibly dynamic) Document
+  *
+  * main responsibility of this trait is to dynamically build the document from our various sub-type traits
+  * TODO - this should be able to use UserAgent header, requestUri and location to serve specialized content
   */
-trait DocumentRaceRoute extends RaceRouteInfo {
+trait DocumentRoute extends RaceRouteInfo {
 
-  protected def completeSpaRequest: Route = {
-    complete( HttpEntity(ContentTypes.`text/html(UTF-8)`, getDocument))
+  protected def completeDocumentRequest: Route = {
+    val doc = getDocument()
+    complete( HttpEntity(ContentTypes.`text/html(UTF-8)`, doc))
   }
 
   def documentRoute: Route = {
     get {
       path(requestPrefixMatcher) {
-        completeSpaRequest
+        completeDocumentRequest
       }
     }
   }
 
   override def route: Route = documentRoute ~ super.route
 
+  /** include only the first occurrence of each element */
+  protected def filterUnique( frags: Seq[Text.TypedTag[String]]): Seq[Text.TypedTag[String]] = {
+    // normally the Scala compiler will do the job for us if fragments are associated with mix-in traits,
+    // but it is possible that two different traits depend on the same fragment
+    // note that we have to foldLeft to preserve linearization order
+    val seen = MutSet.empty[Text.TypedTag[String]]
+    frags.foldLeft(ArrayBuffer.empty[Text.TypedTag[String]])( (list,tt) => {
+      if (seen.contains(tt)) {
+        list
+      } else {
+        seen.add(tt)
+        list.append(tt)
+      }
+    }).toSeq
+  }
+
    /*
     * the content creators to be provided by the concrete type
-    * TODO - do we need to pass in requestUri and remoteAddr to allow for client specific documents?
+    * TODO - do we need to pass in requestUri and remoteAddr to allow for location and user agent specific documents?
     */
-
-
-  protected def getDocument: String = {
+  protected def getDocument(): String = {
     html(
-      scalatags.Text.all.head( getPreambleHeaderFragments, getHeaderFragments ),
-      body(onload:="main.initialize()", onunload:="main.shutdown()")( getPreambleBodyFragments, getBodyFragments )
+      scalatags.Text.all.head(
+        // entries have to be unique (don't load scripts or resources twice)
+        filterUnique(getPreambleHeaderFragments),
+        filterUnique(getHeaderFragments),
+        filterUnique(getPostambleHeaderFragments)
+      ),
+      body()(
+        // here we do allow repetitions
+        getPreambleBodyFragments,
+        getBodyFragments,
+        getPostambleBodyFragments
+      )
     ).render
   }
 }
 
 /**
   * a DocumentRaceRoute that adds a main module and css
+  *
+  * this can be used for initialization that cannot be done in the order of our linearized traits, and for css
+  * that should override default values
   */
-trait MainDocumentRoute extends DocumentRaceRoute {
+trait MainDocumentRoute extends DocumentRoute {
   val mainModule: String
   val mainCss: String
 

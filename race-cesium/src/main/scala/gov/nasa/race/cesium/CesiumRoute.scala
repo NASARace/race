@@ -26,7 +26,7 @@ import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.http._
 import gov.nasa.race.ui.{uiSlider, _}
 import gov.nasa.race.uom.Length.Meters
-import gov.nasa.race.util.FileUtils
+import gov.nasa.race.util.{FileUtils, StringUtils}
 import scalatags.Text
 import scalatags.Text.all._
 
@@ -77,6 +77,10 @@ trait CesiumRoute
   val terrainProvider = config.getStringOrElse("elevation-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
   val imageryLayers = ImageryLayer.readConfig(config)
   val layerMap: Map[String,String] = Map.from( imageryLayers.map( layer=> (layer.name, layer.url))) // symbolic map layer name -> url
+
+  // these can be overridden by what is in the theme, which can be overridden what is specified in the layer itself
+  // (if the layer has a spec that prevents anything but manual modification on the client side)
+  val imageryParams = ImageryLayer.getDefaultImageryParams(config.getOptionalConfig("imagery-params"))
 
   //--- cesium related routes
 
@@ -166,15 +170,6 @@ trait CesiumRoute
     super.getConfig(requestUri, remoteAddr) + basicCesiumConfig(requestUri,remoteAddr)
   }
 
-  def createImageryLayers (layers: Seq[ImageryLayer]): String = {
-    layers.map{ l=>
-      val url = if (l.proxy) s"${CesiumRoute.imageryPrefix}/${l.name}" else l.url
-      val provider = l.provider.replace("$URL",url)
-      val dsp = l.displayParam.mkString("[",",","]")
-      s"""{name:'${l.name}',provider:${provider},descr:'${l.description}',isBase:${l.isBase},show:${l.show},display:$dsp}"""
-    }.mkString("[\n", ",\n","\n]")
-  }
-
   // to be called from the concrete getConfig() implementation
   def basicCesiumConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
 
@@ -184,9 +179,10 @@ trait CesiumRoute
 
     s"""
       export const cesiumAccessToken = '${config.getVaultableString("access-token")}';
-      export const wsURL = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';
+      export const wsUrl = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';
 
-      export const imageryLayers = ${createImageryLayers(imageryLayers)};
+      export const imageryParams = ${imageryParams.toJs};
+      export const imageryLayers = ${StringUtils.mkString(imageryLayers,"[\n",",\n","\n]")(_.toJs)};
       export const terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'});
     """
   }
@@ -214,7 +210,7 @@ trait CesiumRoute
   // positions can be set in main css (ids: 'view', 'view_icon', 'time', 'time_icon')
 
   def uiViewWindow(title: String="View"): Text.TypedTag[String] = {
-    uiWindow(title, "view")(
+    uiWindow(title, "view", "view-icon.svg")(
       uiFieldGroup()(
         uiNumField("lat", "view.latitude"),
         uiNumField("lon", "view.longitude"),
@@ -250,7 +246,7 @@ trait CesiumRoute
   }
 
   def uiTimeWindow(title: String="Time"): Text.TypedTag[String] = {
-    uiWindow(title, "time")(
+    uiWindow(title, "time", "time-icon.svg")(
       uiClock("time UTC", "time.utc", "UTC"),
       uiClock("time loc", "time.loc",  TimeZone.getDefault.getID),
       uiTimer("elapsed", "time.elapsed")
@@ -260,4 +256,5 @@ trait CesiumRoute
   def uiTimeIcon: Text.TypedTag[String] = {
     uiIcon("time-icon.svg", "main.toggleWindow(event,'time')", "time_icon")
   }
+
 }

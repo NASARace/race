@@ -116,12 +116,28 @@ object StringUtils {
   }
 
   def mkString[E] (it: Iterable[E], prefix: String, sep: String, postfix: String)(f: E=>String = (e:E)=>{e.toString}): String = {
+    var isFirst = true
     val sb = new StringBuilder(prefix)
-    var i = 0
     it.foreach { e =>
-      if (i>0) sb.append(sep)
-      i += 1
+      if (isFirst) isFirst = false else sb.append(sep)
       sb.append(f(e))
+    }
+    sb.append(postfix)
+    sb.toString
+  }
+
+  // a generalization of mkString that allows to skip elements
+  def mkFlatString[E](it: Iterable[E], prefix: String, sep: String, postfix: String)(f: (E)=>Option[String]): String = {
+    var isFirst = true
+    val sb = new StringBuffer
+    sb.append(prefix)
+    it.foreach { o=>
+      f(o) match {
+        case Some(s) =>
+          if (isFirst) isFirst = false else sb.append(sep)
+          sb.append(s)
+        case None => // skip this one
+      }
     }
     sb.append(postfix)
     sb.toString
@@ -131,6 +147,10 @@ object StringUtils {
     if (s0 == null || s0.isEmpty) s
     else s0 + sep + s
   }
+
+  // we just need one instance of each
+  val AnyRE = """.*""".r // matched anything
+  val NoneRE = new Regex( System.nanoTime().toString) // TODO - just an approximation
 
   val IntRE = """(\d+)""".r
   val QuotedRE = """"(.*)"""".r

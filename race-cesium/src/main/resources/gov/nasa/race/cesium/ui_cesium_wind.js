@@ -1,4 +1,5 @@
 import * as ws from "./ws.js";
+import * as config from "./config.js";
 import * as util from "./ui_util.js";
 import { SkipList } from "./ui_data.js";
 import * as ui from "./ui.js";
@@ -146,17 +147,18 @@ class WindEntry {
     }
 }
 
-//--- wind init
+//--- wind field init
 
-export function initialize() {
+
+ui.registerLoadFunction(function initialize() {
     windView = initWindView();
-    ws.addWsHandler(handleWsWindMessages);
+    ws.addWsHandler(config.wsUrl, handleWsWindMessages);
 
     initUserInputControls();
     setupEventListeners();
 
-    return true;
-}
+    console.log("ui_cesium_wind initialized");
+});
 
 function initWindView() {
     let view = ui.getList("wind.list");

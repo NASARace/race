@@ -11,18 +11,18 @@
 ::-webkit-scrollbar-track {
     width: var(--scrollbar-track-width);
     height: var(--scrollbar-track-width);
-    background-color: var(--scrollbar-track-color);
+    background: var(--scrollbar-track-color);
 }
 
  ::-webkit-scrollbar-thumb {
     width: var(--scrollbar-thumb-width);
     height: var(--scrollbar-thumb-width);
-    background-color: var(--scrollbar-thumb-color);
+    background: var(--scrollbar-thumb-color);
     border: 2px outset var(--border-color);
 }
 
 ::-webkit-scrollbar-corner {
-    background-color: transparent;
+    background: transparent;
 }
 
 .inset {
@@ -61,6 +61,24 @@ html {
 }
 
 
+/* color inputs (browser specific) */
+
+input[type="color"] {
+    -webkit-appearance: none;
+    border: var(--button-border);
+    padding: 0;
+    margin: 0;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+    border: none;
+}
+
+
 /* movable windows */
 
 div.ui_window {
@@ -68,7 +86,7 @@ div.ui_window {
     position: absolute;
     border: var(--window-border);
     box-shadow: var(--window-shadow);
-    background-color: var(--window-background-color);
+    background: var(--window-background);
 }
 
 div.ui_window.resizable {
@@ -80,19 +98,28 @@ div.ui_window.resizable {
 div.ui_titlebar {
     padding: 5px;
     color: var(--titlebar-color);
-    background-color: var(--titlebar-background-color);
+    background: var(--titlebar-background);
     font: var(--font);
     font-size: 100%;
     font-weight: normal;
     text-align: center;
     cursor: move;
+    height: var(--titlebar-height);
+}
+
+img.ui_titlebar_icon {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    height: var(--titlebar-height);
+    width: auto;
 }
 
 div.ui_titlebar button.ui_close_button {
     position: absolute;
     top: 3px;
     right: 3px;
-    background-color: transparent;
+    background: transparent;
     border: none;
     color: var(--color);
 }
@@ -104,7 +131,7 @@ div.ui_window_content {
     gap: 3px;
     padding: 5px;
     color: var(--window-color);
-    background-color: var(--window-background-color);
+    background: var(--window-background);
     border: none;
     font: var(--font);
     cursor: default;
@@ -120,8 +147,7 @@ div.ui_window.resizable div.ui_window_content {
 
 div.ui_icon {
     display: block;
-    position: fixed;
-    background: var(--icon-background-color);
+    background: var(--icon-background);
     color: var(--icon-color);
     border: var(--icon-border);
     border-radius: var(--icon-border-radius);
@@ -131,15 +157,12 @@ div.ui_icon {
 }
 
 div.ui_icon svg {
-    position: absolute;
-    left: 0;
-    top: 0;
     width: 100%;
     height: 100%;
 }
 
 div.ui_icon:hover {
-    background: var(--icon-hover-background-color);
+    background: var(--icon-hover-background);
 }
 
 use.ui_icon_svg {
@@ -154,7 +177,7 @@ use.ui_icon_svg:hover {
 
 div.ui_icon.on {
     color: var(--icon-on-color);
-    background-color: var(--icon-on-background-color);
+    background: var(--icon-on-background);
     border: var(--icon-on-border);
 }
 
@@ -162,12 +185,15 @@ div.ui_icon.on {
 /* collapsible panels */
 
 div.ui_panel_header {
-    padding: 10px;
+    padding-left: var(--padding);
+    padding-right: 0;
+    padding-top: var(--panel-padding-top);
+    padding-bottom: var(--panel-padding-bottom);
     border: none;
     border-top: var(--panel-border-top);
     /*font-size: 115%;*/
     /*font-weight: bold;*/
-    width: 90%;
+    width: 100%;
     align-items: flex-start;
 }
 
@@ -191,7 +217,7 @@ div.ui_panel {
     align-items: flex-end;
     transition: max-height 0.4s ease-out;
     overflow: hidden;
-    /*background-color: var(--panel-background-color);*/
+    /*background: var(--panel-background);*/
     background: transparent;
 }
 
@@ -215,7 +241,7 @@ input.ui_field {
     box-sizing: border-box;
     border: var(--field-border);
     color: var(--field-value-color);
-    background: var(--data-background-color);
+    background: var(--data-background);
     width: var(--field-value-width);
     height: var(--input-height);
 }
@@ -244,7 +270,7 @@ div.ui_clock_wrapper {
     flex-direction: column;
     align-items: center;
     border: var(--field-border);
-    background: var(--data-background-color);
+    background: var(--data-background);
     padding: 5px;
 }
 
@@ -274,7 +300,7 @@ div.ui_timer_value {
     color: var(--clock-color);
     font: var(--clock-time-font);
     border: var(--field-border);
-    background: var(--data-background-color);
+    background: var(--data-background);
     padding: 5px;
 }
 
@@ -311,7 +337,7 @@ div.ui_slider_track {
     height: var(--slider-height);
     width: var(--slider-width);
     border: var(--border);
-    background: var(--data-background-color);
+    background: var(--data-background);
     position: relative;
 }
 
@@ -350,7 +376,7 @@ div.ui_slider_thumb:hover {
 div.ui_slider_num {
     display: inline-block;
     color: var(--field-value-color);
-    background: var(--data-background-color);
+    background: var(--data-background);
     font: var(--mono-font);
     position: absolute;
     top: 4px;
@@ -375,7 +401,7 @@ div.ui_choice_value {
     box-sizing: content-box;
     border: var(--choice-field-border);
     color: var(--field-value-color);
-    background: var(--data-background-color);
+    background: var(--data-background);
     width: var(--choice-value-width);
     height: var(--field-height);
 }
@@ -402,7 +428,7 @@ div.ui_choice_value.text {
 }
 
 div.ui_choice_value:hover {
-    background: var(--button-hover-background-color);
+    background: var(--button-hover-background);
 }
 
 
@@ -428,14 +454,14 @@ div.ui_checkbox_button {
     height: var(--checkbox-button-size);
     border: var(--checkbox-button-border);
     color: var(--data-color);
-    background: var(--data-background-color);
+    background: var(--data-background);
     font-size: smaller;
     font-weight: bold;
     text-align: center;
 }
 
 div.ui_checkbox:hover div {
-    background: var(--button-hover-background-color);
+    background: var(--button-hover-background);
 }
 
 div.ui_checkbox.checked div.ui_checkbox_button::before {
@@ -466,7 +492,7 @@ div.ui_radio:active {
 }
 
 div.ui_radio:hover div {
-    background: var(--button-hover-background-color);
+    background: var(--button-hover-background);
 }
 
 div.ui_radio_button {
@@ -477,7 +503,7 @@ div.ui_radio_button {
     border: var(--radio-button-border);
     border-radius: 50%;
     color: var(--data-color);
-    background: var(--data-background-color);
+    background: var(--data-background);
     line-height: var(--radio-button-size);
     align-items: center;
     justify-content: center;
@@ -502,7 +528,7 @@ div.ui_radio_label {
     height: var(--button-height);
     color: var(--button-color);
     font: var(--font);
-    background: var(--button-background-color);
+    background: var(--button-background);
     border: var(--button-border);
     border-radius: var(--button-border-radius);
     margin: var(--margin);
@@ -510,7 +536,12 @@ div.ui_radio_label {
 }
 
 .ui_button:hover {
-    background: var(--button-hover-background-color);
+    background: var(--button-hover-background);
+}
+
+.ui_button:disabled {
+    color: var(--disabled-color);
+    background: var(--button-background);
 }
 
 .ui_button:active {
@@ -523,12 +554,12 @@ div.ui_radio_label {
 
 div.ui_list {
     color: var(--list-color);
-    background: var(--data-background-color);
+    background: var(--data-background);
     border: var(--list-border);
-    padding: 3px;
+    padding: var(--list-item-padding);
     /*max-height: calc( attr(data-rows) * var(--list-item-height) + 2px);  attr() does not work */
     min-width: var(--list-width);
-    min-height: var(--field-height);
+    min-height: calc( 2 * var(--list-item-height));
     box-sizing: border-box;
     overflow-y: auto;
     overflow-x: auto;
@@ -545,12 +576,12 @@ div.ui_list_item {
 }
 
 div.ui_list_item:hover {
-    background: var(--list-hover-background-color);
+    background: var(--list-hover-background);
 }
 
 div.ui_list_item.selected {
     color: var(--selected-data-color);
-    background: var(--list-selection-background-color);
+    background: var(--list-selection-background);
 }
 
 div.ui_list_item.prototype {
@@ -562,6 +593,8 @@ div.ui_list_subitem {
     overflow: hidden;
     text-overflow: "…";
     background: transparent;
+    text-align: left;
+    white-space: nowrap;
 }
 
 
@@ -576,7 +609,7 @@ div.ui_popup_menu {
     visibility: hidden;
     border: var(--popup-menu-border);
     border-radius: 5px;
-    background: var(--menuitem-background-color);
+    background: var(--menuitem-background);
     box-shadow: var(--box-shadow);
     z-index: 5;
 }
@@ -589,7 +622,7 @@ div.ui_menuitem {
     padding: 2px 1rem 2px 1rem;
     font: var(--menuitem-font);
     height: var(--menuitem-height);
-    background: var(--menuitem-background-color);
+    background: var(--menuitem-background);
 }
 
 div.ui_menuitem.disabled {
@@ -601,7 +634,7 @@ div.ui_menuitem.checked::before {
 }
 
 div.ui_menuitem:not([class*="disabled"]):hover {
-    background: var(--menuitem-selection-background-color);
+    background: var(--menuitem-selection-background);
 }
 
 
@@ -610,15 +643,16 @@ div.ui_menuitem:not([class*="disabled"]):hover {
 div.ui_container {
     display: flex;
     flex-wrap: nowrap;
-    padding: 3px;
-    gap: 3px;
+    padding: var(--container-padding);
+    margin: var(--container-margin);
+    gap: var(--container-gap);
     background: transparent;
 }
 
 div.ui_container.bordered {
     display: inline-flex;
     border: var(--border);
-    background: var(--data-background-color);
+    background: var(--data-background);
     margin: var(--margin);
     gap: 0;
 }
@@ -641,4 +675,11 @@ div.align_center {
 
 div.align_right {
     align-items: flex-end;
+}
+
+div.icon_box {
+    position: absolute;
+    margin: var(--icon-box-margin);
+    gap: var(--icon-box-gap);
+    background: var(--icon-box-background);
 }

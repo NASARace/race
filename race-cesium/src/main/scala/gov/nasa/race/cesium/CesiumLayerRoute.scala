@@ -92,7 +92,7 @@ trait CesiumLayerRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesi
   //--- document content
 
   def uiLayerWindow(title: String="Layers"): Text.TypedTag[String] = {
-    uiWindow(title, "layers")(
+    uiWindow(title, "layers", "layer-icon.svg")(
       uiList("layers.list", 10, "main.selectLayer(event)"),
       uiRowContainer()(
         uiCheckBox("show layer", "main.toggleLayer(event)", "layers.show")
@@ -135,10 +135,4 @@ object CesiumLayerApp extends CachedFileAssetMap {
 /**
   * a single page application that processes track channels
   */
-class CesiumLayerApp (val parent: ParentActor, val config: Config) extends MainDocumentRoute with CesiumLayerRoute {
-  val mainModule = "main_layers.js"
-  val mainCss = "main_layers.css"
-
-  override def mainModuleContent: Array[Byte] = CesiumLayerApp.getContent(mainModule)
-  override def mainCssContent: Array[Byte] = CesiumLayerApp.getContent(mainCss)
-}
+class CesiumLayerApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumLayerRoute

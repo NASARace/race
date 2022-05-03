@@ -18,7 +18,7 @@ package gov.nasa.race.cesium
 
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import gov.nasa.race.http.{CachedFileAssetMap, DocumentRaceRoute, ResponseData}
+import gov.nasa.race.http.{CachedFileAssetMap, DocumentRoute, ResponseData}
 import gov.nasa.race.ui.extModule
 import scalatags.Text
 
@@ -33,7 +33,7 @@ object CesiumBldgRoute extends CachedFileAssetMap {
   *
   * TODO - will have to handle per-building info
   */
-trait CesiumBldgRoute extends CesiumRoute with DocumentRaceRoute {
+trait CesiumBldgRoute extends CesiumRoute with DocumentRoute {
 
   //--- resources & fragments
 

@@ -16,16 +16,16 @@
  */
 package gov.nasa.race.cesium
 
-import akka.http.scaladsl.model.{ContentType, HttpEntity, MediaTypes, StatusCodes}
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.ParentActor
-import gov.nasa.race.http.{CachedFileAssetMap, FSCachedProxyRoute, HttpServer, MainDocumentRoute, ProxyRaceRoute, PushWSRaceRoute, QueryProxyRoute, ResponseData, WSContext}
-import gov.nasa.race.ui.{extModule, extScript, uiCheckBox, uiChoice, uiColumnContainer, uiIcon, uiList, uiPanel, uiRowContainer, uiSlider, uiWindow}
+import gov.nasa.race.http._
+import gov.nasa.race.ui._
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.FileUtils
 import scalatags.Text
@@ -134,7 +134,7 @@ trait CesiumWindRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesiu
   //--- document content
 
   def uiWindWindow(title: String="Wind"): Text.TypedTag[String] = {
-    uiWindow(title, "wind")(
+    uiWindow(title, "wind", "wind-icon.svg")(
       uiList("wind.list", 10, "main.selectWind(event)"),
       uiRowContainer()(
         uiCheckBox("show wind", "main.toggleWind(event)", "wind.show")
@@ -157,21 +157,18 @@ trait CesiumWindRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesiu
     uiIcon("wind-icon.svg", "main.toggleWindow(event,'wind')", "wind_icon")
   }
 
-  def uiCesiumWindResources: Seq[Text.TypedTag[String]] = {
-    Seq(
-      extScript("proxy?https://www.lactame.com/lib/netcdfjs/0.7.0/netcdfjs.min.js"), // TODO - move to server
+  override def getPreambleHeaderFragments: Seq[Text.TypedTag[String]] = super.getPreambleHeaderFragments ++ Seq(
+    extScript("proxy?https://www.lactame.com/lib/netcdfjs/0.7.0/netcdfjs.min.js"), // TODO - move to server
+  )
 
-      extModule("wind/windUtils.js"),
-      extModule("wind/particleSystem.js"),
-      extModule("wind/particlesComputing.js"),
-      extModule("wind/particlesRendering.js"),
-      extModule("wind/customPrimitive.js"),
-
-      extModule("ui_cesium_wind.js")
-    )
-  }
-
-  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ uiCesiumWindResources
+  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ Seq(
+    extModule("wind/windUtils.js"),
+    extModule("wind/particleSystem.js"),
+    extModule("wind/particlesComputing.js"),
+    extModule("wind/particlesRendering.js"),
+    extModule("wind/customPrimitive.js"),
+    extModule("ui_cesium_wind.js")
+  )
 
   override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiWindWindow(), uiWindIcon)
 
@@ -185,10 +182,4 @@ object CesiumWindApp extends CachedFileAssetMap {
 /**
   * a single page application that processes track channels
   */
-class CesiumWindApp (val parent: ParentActor, val config: Config) extends MainDocumentRoute with CesiumWindRoute {
-  val mainModule = "main_wind.js"
-  val mainCss = "main_wind.css"
-
-  override def mainModuleContent: Array[Byte] = CesiumWindApp.getContent(mainModule)
-  override def mainCssContent: Array[Byte] = CesiumWindApp.getContent(mainCss)
-}
+class CesiumWindApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumWindRoute

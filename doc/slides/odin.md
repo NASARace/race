@@ -94,12 +94,19 @@ NASA Ames Research Center
 
 <img src="../images/odin-open.svg" class="center scale70"/>
 
-## Example - Sentinel Sensor Integration
+## Example - Multi-Sensor Data Integration 
 * collaboration with Delphire to integrate their Sentinel fire sensors
 * provides visual, infrared and gas sensor readings along power lines
 * good to correlate with other inputs such as satellite based IR (VIIRS)
 
 <img src="../images/odin-sentinel-viirs.svg" class="center scale60"/>
+
+## Sentinel Sensor 
+* import of Sentinel Sensor Records (JSON) from Delphire's edge server
+* archive/replay with standard RACE infrastructure
+* visualization through SentinelRoute (HttpServer actor)
+
+<img src="../images/sentinel.svg" class="center scale50"/>
 
 ## Tracking
 

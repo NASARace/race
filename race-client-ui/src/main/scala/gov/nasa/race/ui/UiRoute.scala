@@ -16,23 +16,57 @@
  */
 package gov.nasa.race.ui
 
+import akka.http.scaladsl.model.headers.`User-Agent`
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.http.{CachedFileAssetMap, ResponseData, RaceRouteInfo}
+import gov.nasa.race.http.{CachedFileAssetMap, ConfigScriptRaceRoute, RaceRouteInfo, ResponseData}
 import scalatags.Text
 
+import scala.util.matching.Regex
+
+case class UiTheme (name: String, pathName: String, userAgentMatcher: Option[Regex])
 
 object UiRoute extends CachedFileAssetMap {
   def sourcePath: String = "./race-client-ui/src/main/resources/gov/nasa/race/ui"
-  def uiDefaultTheme: String = "ui_theme_dark.css"
+
+  val DEFAULT_THEME = "dark"
+  val fallbackTheme = "ui_theme_dark.css"
+
+  val defaultThemes: Seq[UiTheme] = Seq(
+    UiTheme( DEFAULT_THEME, "ui_theme_dark.css", None),
+    UiTheme( "night", "ui_theme_night.css", None)
+  )
+
+  def getThemes (config: Config): Seq[UiTheme] = {
+    val themeConfigs: Seq[Config] = config.getConfigSeq("ui-themes")
+    if (themeConfigs.isEmpty) {
+      defaultThemes
+    } else {
+      themeConfigs.map { cfg =>
+        UiTheme(
+          cfg.getString("name"),
+          cfg.getString("path"),
+          cfg.getOptionalString("user-agent").map( pattern => new Regex(pattern))
+        )
+      }
+    }
+  }
 }
+import gov.nasa.race.ui.UiRoute._
 
 /**
   * a RaceRouteInfo that serves race-ui-client content
   */
-trait UiRoute extends  RaceRouteInfo {
-  val uiThemeCss = config.getStringOrElse("ui-theme", UiRoute.uiDefaultTheme)
+trait UiRoute extends  RaceRouteInfo with ConfigScriptRaceRoute {
+
+  protected val themeMap: Map[String,Seq[UiTheme]] = UiRoute.getThemes(config).foldLeft( Map.empty[String,Seq[UiTheme]]) { (m,t) =>
+    m.get(t.name) match {
+      case Some(list) => m + (t.name -> (t +: list))
+      case None => m + (t.name -> Seq(t))
+    }
+  }
 
   //--- route handling
 
@@ -41,27 +75,47 @@ trait UiRoute extends  RaceRouteInfo {
   def uiRoute: Route = {
     get {
       path("ui.js") {
-        complete( ResponseData.js( UiRoute.getContent("ui.js")))
+        complete( ResponseData.js( getContent("ui.js")))
       } ~ path("ui_util.js") {
-        complete( ResponseData.js( UiRoute.getContent("ui_util.js")))
+        complete( ResponseData.js( getContent("ui_util.js")))
       } ~ path("ui_data.js") {
-        complete( ResponseData.js( UiRoute.getContent("ui_data.js")))
+        complete( ResponseData.js( getContent("ui_data.js")))
       } ~ path("ui.css") {
-        complete( ResponseData.css( UiRoute.getContent("ui.css")))
-      } ~ path("ui_theme_dark.css") {
-        complete( ResponseData.css( UiRoute.getContent("ui_theme_dark.css")))
+        complete( ResponseData.css( getContent("ui.css")))
+      } ~ path( "ui_theme.css") {
+        parameterMap { qps =>
+          val theme: String = qps.getOrElse("theme", DEFAULT_THEME)
+          optionalHeaderValueByType(`User-Agent`) { ua =>
+            complete( ResponseData.css(getContent( getThemePathName(theme,ua.map(_.value())))))
+          }
+        }
       }
     }
   }
 
+  def getThemePathName (theme: String, userAgent: Option[String]): String = {
+    themeMap.get(theme) match {
+      case Some(uiThemes) =>
+        userAgent match {
+          case Some(ua) =>
+            // we choose the first theme with a matching userAgent spec (if no matcher is set that matches every client)
+            uiThemes.find( ut=> ut.userAgentMatcher.isEmpty || ut.userAgentMatcher.get.matches(ua)).map(_.pathName).getOrElse(fallbackTheme)
+          case None =>
+            // no userAgent header - choose the first candidate
+            uiThemes.head.pathName
+        }
+      case None => fallbackTheme
+    }
+  }
 
   //--- document content
 
-  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ uiResources
+  // NOTE - this always puts UiRoute resources at the top, which is important for initialization order
+  override def getHeaderFragments: Seq[Text.TypedTag[String]] = uiResources ++ super.getHeaderFragments
 
   def uiResources: Seq[Text.TypedTag[String]] = {
     Seq(
-      cssLink(uiThemeCss), // TODO - this should be configurable/request dependent
+      cssLink("ui_theme.css", "theme"),  // logical URL, resolved in route
       cssLink("ui.css"),
 
       extModule("ui_data.js"),  // TODO - should this be optional?

@@ -31,10 +31,17 @@ package object ui {
 
   val NoAction = ""
   val NoId = ""
+  val NoIcon = ""
+  val NoWidth = ""
 
   lazy val htmlHead = scalatags.Text.all.head  // 'head' collides with a lot of other packages
 
-  def cssLink (url:String): Text.TypedTag[String] = link(rel:="stylesheet", tpe:="text/css", href:=url)
+  def cssLink (url:String, eid: UiID=NoId, loadAction:String=NoAction): Text.TypedTag[String] = {
+    var mods = List(rel:="stylesheet", tpe:="text/css", href:=url)
+    if (eid.nonEmpty) mods = (id:=eid) :: mods
+    if (loadAction.nonEmpty) mods = (onload:=loadAction) :: mods
+    link(mods)
+  }
 
   def extScript (url:String): Text.TypedTag[String] = script(src:=url)
   def extModule (url:String): Text.TypedTag[String] = script(src:=url, tpe:="module")
@@ -49,8 +56,9 @@ package object ui {
     div(mods: _*)
   }
 
-  def uiWindow (title: String, eid: UiID=NoId): Text.TypedTag[String] = {
+  def uiWindow (title: String, eid: UiID=NoId, icon: String=NoIcon): Text.TypedTag[String] = {
     var mods = List(cls:="ui_window", data("title"):=title)
+    if (icon.nonEmpty) mods = (data("icon"):=icon) :: mods
     if (eid.nonEmpty) mods = (id:=eid) :: mods
     div(mods: _*)
   }
@@ -92,8 +100,11 @@ package object ui {
     div(mods: _*)
   }
 
-  def uiRowContainer (eid: UiID=NoId): Text.TypedTag[String] = {
-    var mods = List(cls:="ui_container row")
+  def uiRowContainer (align: String="", eid: UiID=NoId): Text.TypedTag[String] = {
+    var classes = "ui_container row"
+    if (align == "align_center") classes += " align_center"
+
+    var mods = List(cls:=classes)
     if (eid.nonEmpty) mods = (id:=eid) :: mods
     div(mods: _*)
   }
@@ -107,10 +118,11 @@ package object ui {
     div(mods: _*)
   }
 
-  def uiTextInput (label: String, eid: UiID, action: String=NoAction, placeHolder: String=""): Text.TypedTag[String] = {
+  def uiTextInput (label: String, eid: UiID, action: String=NoAction, placeHolder: String="", width: String=NoWidth): Text.TypedTag[String] = {
     var mods = List(cls:="ui_field text input", data("id"):=eid, data("label"):= label)
     if (action.nonEmpty) mods = (onchange:=action) :: mods
     if (placeHolder.nonEmpty) mods = (data("placeholder"):=placeHolder) :: mods
+    if (width.nonEmpty) mods = (data("width"):=width) :: mods
     div(mods: _*)
   }
 

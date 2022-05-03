@@ -130,7 +130,7 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
   override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiTrackWindow(), uiTrackIcon)
 
   def uiTrackWindow(title: String="Tracks"): Text.TypedTag[String] = {
-    uiWindow(title,"tracks")(
+    uiWindow(title,"tracks", "track-icon.svg")(
       uiList("tracks.sources", 5, "main.selectSource(event)", NoAction, "main.popupMenu(event,'tracks.sources_menu')")(
         uiPopupMenu("tracks.sources_menu")(
           uiMenuItem("show", "main.toggleShowSource(event)",NoId, true),
@@ -177,38 +177,38 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
     val trackPointDist = _int("track-point-dist", 120000)
 
     s"""
-      export const trackColor = Cesium.Color.fromCssColorString('${_string("color", trackColor)}');
-      export const trackColors = new Map(${trackColors.map(e=> s"['${e._1}',Cesium.Color.fromCssColorString('${e._2}')]").mkString("[",",","]")});
+export const trackColor = Cesium.Color.fromCssColorString('${_string("color", trackColor)}');
+export const trackColors = new Map(${trackColors.map(e=> s"['${e._1}',Cesium.Color.fromCssColorString('${e._2}')]").mkString("[",",","]")});
 
-      export const trackLabelFont = '${_string("track-label", "16px sans-serif")}';
-      export const trackLabelOffset = new Cesium.Cartesian2( $trackLabelOffsetX, $trackLabelOffsetY);
-      export const trackLabelBackground = Cesium.Color.fromCssColorString('${_string( "track-label-bg", "black")}');
-      export const trackLabelDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-label-dist", 200000)});
+export const trackLabelFont = '${_string("track-label", "16px sans-serif")}';
+export const trackLabelOffset = new Cesium.Cartesian2( $trackLabelOffsetX, $trackLabelOffsetY);
+export const trackLabelBackground = Cesium.Color.fromCssColorString('${_string( "track-label-bg", "black")}');
+export const trackLabelDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-label-dist", 200000)});
 
-      export const trackPointSize = ${_int("track-point-size", 5)};
-      export const trackPointOutlineColor = Cesium.Color.fromCssColorString('${_string("track-point-outline-color", "black")}');
-      export const trackPointOutlineWidth = ${_double("track-point-outline-width", 1)};
-      export const trackPointDC = new Cesium.DistanceDisplayCondition( $trackPointDist, Number.MAX_VALUE);
+export const trackPointSize = ${_int("track-point-size", 5)};
+export const trackPointOutlineColor = Cesium.Color.fromCssColorString('${_string("track-point-outline-color", "black")}');
+export const trackPointOutlineWidth = ${_double("track-point-outline-width", 1)};
+export const trackPointDC = new Cesium.DistanceDisplayCondition( $trackPointDist, Number.MAX_VALUE);
 
-      export const trackModelSize = ${_int( "track-model-size", 20) };
-      export const trackModelDC = new Cesium.DistanceDisplayCondition( 0, $trackPointDist);
-      export const trackModelOutlineColor = Cesium.Color.fromCssColorString('${_string("track-model-outline-color", "black")}');
-      export const trackModelOutlineWidth = ${_double("track-model-outline-width", 2.0)};
-      export const trackModelOutlineAlpha = ${_double("track-model-outline-alpha", 1.0)};
+export const trackModelSize = ${_int( "track-model-size", 20) };
+export const trackModelDC = new Cesium.DistanceDisplayCondition( 0, $trackPointDist);
+export const trackModelOutlineColor = Cesium.Color.fromCssColorString('${_string("track-model-outline-color", "black")}');
+export const trackModelOutlineWidth = ${_double("track-model-outline-width", 2.0)};
+export const trackModelOutlineAlpha = ${_double("track-model-outline-alpha", 1.0)};
 
-      export const trackBillboardDC = new Cesium.DistanceDisplayCondition( 0, $trackPointDist);
+export const trackBillboardDC = new Cesium.DistanceDisplayCondition( 0, $trackPointDist);
 
-      export const trackInfoFont = '${_string("track-info", "14px monospace")}';
-      export const trackInfoOffset = new Cesium.Cartesian2( ${_int("track-info-offset.x", trackLabelOffsetX)}, ${_int("track-info-offset.y", trackLabelOffsetY + 16)});
-      export const trackInfoDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-info-dist", 80000)});
+export const trackInfoFont = '${_string("track-info", "14px monospace")}';
+export const trackInfoOffset = new Cesium.Cartesian2( ${_int("track-info-offset.x", trackLabelOffsetX)}, ${_int("track-info-offset.y", trackLabelOffsetY + 16)});
+export const trackInfoDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-info-dist", 80000)});
 
-      export const trackPathLength = ${_int("track-path-length", 0)};
-      export const trackPathDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-path-dist", 1000000)});
-      export const trackPathColor = Cesium.Color.fromCssColorString('${_string("track-path-color", trackColor)}');
-      export const trackPathWidth = ${_int("track-path-width", 1)};
-      export const trackPath2dWidth = ${_int("track-path-2d-width", 3)};
+export const trackPathLength = ${_int("track-path-length", 0)};
+export const trackPathDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-path-dist", 1000000)});
+export const trackPathColor = Cesium.Color.fromCssColorString('${_string("track-path-color", trackColor)}');
+export const trackPathWidth = ${_int("track-path-width", 1)};
+export const trackPath2dWidth = ${_int("track-path-2d-width", 3)};
 
-      export const maxTraceLength = ${_int("max-trace-length", 200)};
+export const maxTraceLength = ${_int("max-trace-length", 200)};
      """
   }
 }
@@ -221,10 +221,4 @@ object CesiumTrackApp extends CachedFileAssetMap {
 /**
   * a single page application that processes track channels
   */
-class CesiumTrackApp (val parent: ParentActor, val config: Config) extends MainDocumentRoute with CesiumTrackRoute {
-  val mainModule = "main_tracks.js"
-  val mainCss = "main_tracks.css"
-
-  override def mainModuleContent: Array[Byte] = CesiumTrackApp.getContent(mainModule)
-  override def mainCssContent: Array[Byte] = CesiumTrackApp.getContent(mainCss)
-}
+class CesiumTrackApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumTrackRoute

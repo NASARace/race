@@ -1,41 +1,36 @@
-/* basic dark theme CSS property values */
+/* basic night vision (red) theme CSS property values */
 
 
 /* common variables */
 
 :root {
-    --theme: "dark";
-    /* basic values */
-    --color: rgb(200, 200, 200);
-    --data-color: #01ff01;
-    /* rgb(0,255,0); */
+    --theme: "night";
+    --color: rgb(222, 141, 141);
+    --data-color: #fdb724;
     --selected-data-color: yellow;
     --input-data-color: yellow;
-    --disabled-color: rgba(200, 200, 200, 0.297);
-    --background: rgba(42, 42, 64, 1.0);
+    --disabled-color: rgba(255, 48, 48, 0.5);
+    /* --background: rgba(64, 64, 84, 1.0); */
+    --background: rgb(37, 3, 3);
     --data-background: rgb(20, 20, 20);
-    --selection-background: rgb(64, 64, 200);
-    --hover-background: rgb(84, 84, 160);
-    --font-size: 11pt;
-    --font-size-small: 10pt;
-    --font-size-large: 13pt;
-    --font-family: sans-serif;
-    --font-family-mono: Courier;
-    --font: var(--font-size) var(--font-family);
-    --font-small: var(--font-size-small) var(--font-family);
-    --mono-font: var(--font-size) var(--font-family-mono);
+    --selection-background: rgb(115, 30, 3);
+    --hover-background: rgb(122, 0, 0);
+    --font-size: 12pt;
+    --font-size-small: 11pt;
+    --font-size-large: 14pt;
+    --font: var(--font-size) sans-serif;
+    --font-small: var(--font-size-small) sans-serif;
+    --mono-font: var(--font-size) Courier;
     --mono-font-large: var(--font-size-large) monospace;
-    --border-color: rgb(130, 130, 130);
-    --border-dark-color: rgb(80, 80, 80);
-    --border-bright-color: rgb(150, 150, 150);
+    --border-color: rgb(189, 1, 1);
+    --border-dark-color: rgb(99, 20, 20);
+    --border-bright-color: rgb(247, 0, 0);
     --border-width: 2px;
-    --border: var(--border-width) inset var(--border-color);
-    --box-shadow: 5px 5px 8px rgb(136, 136, 136);
+    --border: var(--border-width) solid var(--border-color);
+    --box-shadow: 5px 5px 8px rgb(79, 1, 1);
     --padding: 3px;
     --margin: 3px;
     --gap: 3px;
-    /* icons (toplevel buttons with variable stroke/fill color SVGs and explicit 'on' state) */
-    /*   background used for transparent image parts, color for image stroke and fill-color for image fill */
     --icon-size: 32px;
     --icon-border: 1px solid var(--border-color);
     --icon-background: var(--background);
@@ -45,99 +40,83 @@
     --icon-hover-color: cyan;
     --icon-hover-fill-color: rgb(99, 166, 168);
     --icon-on-background: var(--selection-background);
-    --icon-on-color: white;
+    --icon-on-color: #d92222;
     --icon-on-fill-color: rgb(220, 220, 220);
     --icon-on-border: 1px solid white;
     --icon-border-radius: 5px;
-    /* windows */
     --titlebar-height: 1.4rem;
-    --titlebar-color: var(--color);
-    --titlebar-background: rgb(32, 32, 64);
+    --titlebar-color: rgb(255, 196, 196);
+    --titlebar-background: rgb(27 1 1);
     --titlebar-font: var(--font);
     --window-color: var(--color);
     --window-background: var(--background);
     --window-border: 1px solid var(--border-color);
     --window-shadow: var(--box-shadow);
     --window-z: 50;
-    /* panels */
     --panel-padding-top: 6px;
     --panel-padding-bottom: 3px;
     --panel-border-top: 1px solid var(--border-color);
     --panel-background: var(--background);
-    /* scrollbars */
     --scrollbar-track-width: 0.6rem;
     --scrollbar-track-color: rgb(44, 44, 44);
     --scrollbar-thumb-width: 0.5rem;
-    --scrollbar-thumb-color: rgb(100, 100, 100);
-    /* menus */
-    --popup-menu-border: 1px solid rgb(24, 24, 24);
+    --scrollbar-thumb-color: rgb(155 14 14);
+    --popup-menu-border: 1px solid rgb(132 12 12);
     --menuitem-font: var(--font);
     --menuitem-height: 1.1rem;
-    --menuitem-background: rgb(64, 64, 64);
-    --menuitem-selection-background: rgb(64, 64, 200);
-    /* data fields */
+    --menuitem-background: rgb(61, 0, 0);
+    --menuitem-selection-background: rgb(132 0 0);
     --field-height: 1.5rem;
     --field-label-width: 5rem;
     --field-value-width: 8rem;
     --field-value-color: var(--data-color);
     --field-border: var(--border);
-    /* text input */
     --input-height: 1.8rem;
     --input-color: var(--input-data-color);
     --input-active-color: yellow;
-    --input-active-background: rgb(64, 64, 200);
-    /* choices */
+    --input-active-background: rgb(93, 0, 0);
     --choice-height: var(--field-height);
     --choice-value-width: var(--field-value-width);
     --choice-field-border: var(--border);
     --choice-value-color: var(--input-data-color);
     --choice-field-background: var(--data-background);
-    /* pushbuttons */
     --button-height: 2.0rem;
-    --button-color: rgb(200, 200, 200);
-    --button-background: rgb(74, 74, 74);
-    --button-hover-background: rgb(64, 64, 200);
+    --button-color: rgb(255 89 89);
+    --button-background: rgb(38 3 3);
+    --button-hover-background: rgb(122, 0, 0);
     --button-border: 3px groove var(--border-color);
     --button-border-radius: 0px;
     --button-color-pressed: yellow;
     --button-border-pressed: var(--button-border);
-    /* checkboxes */
     --checkbox-size: 1rem;
     --checkbox-button-size: 0.8rem;
     --checkbox-button-border: 1px solid var(--border-color);
-    /* radio buttons */
     --radio-size: 1rem;
     --radio-button-size: 0.9rem;
     --radio-button-border: 1px solid var(--border-color);
     --radio-button-selected-color: var(--data-color);
     --radio-button-selected-background: var(--data-background);
-    /* lists */
     --list-width: var(--field-value-width);
     --list-item-height: 1.1rem;
     --list-item-padding: 2px;
     --list-border: var(--border);
-    --list-hover-background: rgb(80, 80, 80);
+    --list-hover-background: rgb(145, 0, 0);
     --list-selection-color: var(--selected-data-color);
     --list-selection-background: var(--selection-background);
-    /* clocks */
     --clock-date-font: var(--font-small);
     --clock-time-font: bold 120% Courier;
     --clock-color: var(--field-value-color);
-    /* sliders */
     --slider-border: var(--border);
     --slider-height: 2.0rem;
     --slider-width: 12rem;
     --slider-thumb-size: 1.2rem;
     --slider-range-color: rgba(200, 200, 200, 0.6);
-    /* general containers */
     --container-padding: 4px;
     --container-margin: var(--margin);
     --container-gap: 4px;
-    /* generic map rendering */
-    --map-brightness: 0.6;
-    --map-hue: 0.0;
-    --map-saturation: 1.0;
-    /* icon_box */
+    --map-brightness: 0.4;
+    --map-hue: 200;
+    --map-saturation: 0.6;
     --icon-box-left: 0;
     --icon-box-top: 0;
     --icon-box-dir: row;

@@ -88,17 +88,16 @@ var trackEntryFilter = noTrackEntryFilter;
 var trackEntryView = undefined; // the UI element to display trackEntries
 var trackSourceView = undefined; // the UI element for our track sources
 
-function noTrackEntryFilter(track) { return true; } // all tracks are displayed
 
-export function initialize() {
+ui.registerLoadFunction(function initialize() {
     trackSourceView = initTrackSourceView();
     trackEntryView = initTrackEntryView();
 
     uiCesium.setEntitySelectionHandler(trackSelection);
-    ws.addWsHandler(handleWsTrackMessages);
+    ws.addWsHandler(config.wsUrl, handleWsTrackMessages);
 
-    return true;
-}
+    console.log("ui_cesium_tracks initialized");
+});
 
 function initTrackSourceView() {
     let view = ui.getList("tracks.sources");
@@ -124,6 +123,8 @@ function initTrackEntryView() {
     }
     return view;
 }
+
+function noTrackEntryFilter(track) { return true; } // all tracks are displayed
 
 
 // intercept adding/removing entities to enable the non-flicker hack.

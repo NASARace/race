@@ -5,25 +5,11 @@ body {
     margin: 0;
 }
 
-#time_icon {
-    left: 10px;
-    top: 10px;
+.icon_box {
+    left: 0;
+    top: 0;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: flex-start;
+    max-width: 100vw;
 }
-
-#view_icon {
-    left: 50px;
-    top: 10px;
-}
-
-
-/*
-#time {
-    left: 10px;
-    top: 70px;
-}
-
-#view {
-    left: 10px;
-    top: 220px;
-}
-*/

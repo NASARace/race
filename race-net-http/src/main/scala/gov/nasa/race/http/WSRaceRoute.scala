@@ -52,12 +52,10 @@ trait WSRaceRoute extends RaceRouteInfo {
   implicit val materializer: Materializer = HttpServer.materializer
   implicit val ec = HttpServer.ec // scala.concurrent.ExecutionContext.global
 
-  // document fragment to support extensible client-side websocket message handlers
-  def wsResources: Seq[Text.TypedTag[String]] = {
-    Seq( script(src:="ws.js", tpe:="module"))
-  }
+  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ Seq(
+    script(src:="ws.js", tpe:="module")
+  )
 
-  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ wsResources
   // no body fragments
 
   override def route: Route = {

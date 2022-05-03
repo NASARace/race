@@ -10,7 +10,11 @@ var mapLayerView = undefined;
 var selectedMapLayer = undefined;
 var activeBaseLayer = undefined;
 
-export function initialize() {
+var imageryLayers = config.imageryLayers;
+var imageryParams = {...config.imageryParams }; // we might still adjust them based on theme (hence we have to copy)
+
+
+ui.registerLoadFunction(function initialize() {
     Cesium.Ion.defaultAccessToken = config.cesiumAccessToken;
 
     viewer = new Cesium.Viewer('cesiumContainer', {
@@ -35,47 +39,109 @@ export function initialize() {
     viewer.camera.moveEnd.addEventListener(updateCamera);
     viewer.scene.canvas.addEventListener('mousemove', updateMouseLocation);
 
-    ws.addWsHandler(handleWsViewMessages);
+    ws.addWsHandler(config.wsUrl, handleWsViewMessages);
 
+    adjustImageryParams();
     initImageryLayers();
     initViewWindow();
 
-    return true;
+    ui.registerThemeChangeHandler(themeChanged);
+
+    console.log("ui_cesium initialized");
+});
+
+function themeChanged() {
+    imageryLayers.forEach(li => li.imageryParams = li.originalImageryParams); // restore original imageryParams
+    adjustImageryParams(); // adjust defaults according to theme
+
+    if (selectedMapLayer) { // update selectedMapLayer
+        updateSelectedMapLayer();
+        setMapSliders(selectedMapLayer);
+    }
+}
+
+function adjustImageryParams() {
+    let docStyle = getComputedStyle(document.documentElement);
+    let anyChanged = false;
+
+    imageryParams = {...config.imageryParams }; // reset
+
+    let hue = docStyle.getPropertyValue("--map-hue");
+    if (hue) {
+        imageryParams.hue = hue;
+        anyChanged = true;
+    }
+
+    let brightness = docStyle.getPropertyValue("--map-brightness");
+    if (brightness) {
+        imageryParams.brightness = brightness;
+        anyChanged = true;
+    }
+
+    let saturation = docStyle.getPropertyValue("--map-saturation");
+    if (saturation) {
+        imageryParams.saturation = saturation;
+        anyChanged = true;
+    }
+
+    let contrast = docStyle.getPropertyValue("--map-contrast");
+    if (contrast) {
+        imageryParams.contrast = contrast;
+        anyChanged = true;
+    }
+
+    if (anyChanged) updateSelectedMapLayer();
 }
 
 function initImageryLayers() {
-    let imageryLayers = viewer.imageryLayers;
-    let layerInfos = config.imageryLayers;
-    let defaultImageryLayer = imageryLayers.get(0); // Bing aerial
+    let viewerLayers = viewer.imageryLayers;
+    let defaultImageryLayer = viewerLayers.get(0); // Cesium uses Bing aerial as default (provider already instantiated)
 
-    layerInfos.forEach(li => {
-        let layer = li.provider ? new Cesium.ImageryLayer(li.provider) : defaultImageryLayer;
-        li.layer = layer;
+    imageryLayers.forEach(il => {
+        let layer = il.provider ? new Cesium.ImageryLayer(il.provider) : defaultImageryLayer;
+        il.layer = layer;
 
-        layer.alpha = li.display[0];
-        layer.brightness = li.display[1];
-        layer.contrast = li.display[2];
-        layer.hue = li.display[3];
-        layer.saturation = li.display[4];
-        layer.gamma = li.display[5];
+        // save the original imageryParams so that we can later-on restore
+        il.originalImageryParams = il.imageryParams;
 
-        if (li.show) {
-            if (li.isBase) {
+        let ip = il.imageryParams ? il.imageryParams : config.imageryParams
+        setLayerImageryParams(layer, ip);
+
+        if (il.show) {
+            if (il.isBase) {
                 if (activeBaseLayer) { // there can only be one
                     activeBaseLayer.show = false;
                     activeBaseLayer.layer.show = false;
                 }
-                activeBaseLayer = li;
+                activeBaseLayer = il;
             }
             layer.show = true;
+            selectedMapLayer = il;
         } else {
             layer.show = false;
         }
 
-        if (li.provider) { // this is a new layer
-            imageryLayers.add(layer);
+        if (il.provider) { // this is a new layer
+            viewerLayers.add(layer);
         }
     });
+}
+
+function updateSelectedMapLayer() {
+    if (selectedMapLayer) {
+        if (!selectedMapLayer.imageryParams) { // if we have those set explicitly they take precedence
+            setLayerImageryParams(selectedMapLayer.layer, imageryParams);
+        }
+    }
+}
+
+function setLayerImageryParams(layer, imageryParams) {
+    layer.alpha = imageryParams.alpha;
+    layer.brightness = imageryParams.brightness;
+    layer.contrast = imageryParams.contrast;
+    layer.hue = imageryParams.hue * Math.PI / 180.0;
+    layer.saturation = imageryParams.saturation;
+    layer.gamma = imageryParams.gamma;
 }
 
 function initViewWindow() {
@@ -95,7 +161,7 @@ function initMapLayerView() {
                     else return ui.createCheckBox(e.show, _toggleShowMapLayer, null);
                 }
             },
-            { name: "id", width: "12rem", attrs: ["alignLeft"], map: e => e.descr }
+            { name: "id", width: "12rem", attrs: ["alignLeft"], map: e => e.description }
         ]);
 
         ui.setListItems(view, config.imageryLayers);
@@ -139,40 +205,52 @@ ui.exportToMain(function selectMapLayer(event) {
     }
 })
 
+function getImageryParams(li) {
+    if (li.imageryParams) return li.imageryParams; // if we have some set this has precedence
+    else return imageryParams;
+}
+
+// this sets imageryParams if they are not set
+function getModifiableImageryParams(li) {
+    if (!li.imageryParams) li.imageryParams = {...imageryParams };
+    return li.imageryParams;
+}
+
 function setMapSliders(li) {
-    let display = li.display;
-    ui.setSliderValue('view.map.alpha', display[0]);
-    ui.setSliderValue('view.map.brightness', display[1]);
-    ui.setSliderValue('view.map.contrast', display[2]);
-    ui.setSliderValue('view.map.hue', display[3]);
-    ui.setSliderValue('view.map.saturation', display[4]);
-    ui.setSliderValue('view.map.gamma', display[5]);
+    let ip = getImageryParams(li);
+
+    ui.setSliderValue('view.map.alpha', ip.alpha);
+    ui.setSliderValue('view.map.brightness', ip.brightness);
+    ui.setSliderValue('view.map.contrast', ip.contrast);
+    ui.setSliderValue('view.map.hue', ip.hue);
+    ui.setSliderValue('view.map.saturation', ip.saturation);
+    ui.setSliderValue('view.map.gamma', ip.gamma);
 }
 
 function initMapSliders() {
     let e = ui.getSlider('view.map.alpha');
     ui.setSliderRange(e, 0, 1.0, 0.1, util.f_1);
-    ui.setSliderValue(e, 1.0);
+    ui.setSliderValue(e, imageryParams.alpha);
 
     e = ui.getSlider('view.map.brightness');
     ui.setSliderRange(e, 0, 2.0, 0.1, util.f_1);
-    ui.setSliderValue(e, 1.0);
+    ui.setSliderValue(e, imageryParams.brightness);
 
     e = ui.getSlider('view.map.contrast');
     ui.setSliderRange(e, 0, 2.0, 0.1, util.f_1);
-    ui.setSliderValue(e, 1.0);
+    ui.setSliderValue(e, imageryParams.contrast);
 
     e = ui.getSlider('view.map.hue');
     ui.setSliderRange(e, 0, 360, 1, util.f_0);
-    ui.setSliderValue(e, 0.0);
+    ui.setSliderValue(e, imageryParams.hue);
 
     e = ui.getSlider('view.map.saturation');
     ui.setSliderRange(e, 0, 2.0, 0.1, util.f_1);
-    ui.setSliderValue(e, 1.0);
+    ui.setSliderValue(e, imageryParams.saturation);
 
     e = ui.getSlider('view.map.gamma');
     ui.setSliderRange(e, 0, 2.0, 0.1, util.f_1);
-    ui.setSliderValue(e, 1.0);
+    ui.setSliderValue(e, imageryParams.gamma);
 }
 
 function setCanvasSize() {
@@ -282,7 +360,7 @@ export function toggleFullScreen(event) {
 }
 ui.exportToMain(toggleFullScreen);
 
-function setImageryProvider(event, providerName) {
+ui.exportToMain(function setImageryProvider(event, providerName) {
     let p = config.imageryProviders.find(p => p.name == providerName);
     if (p) {
         console.log("switching to " + p.name);
@@ -290,66 +368,77 @@ function setImageryProvider(event, providerName) {
     } else {
         console.log("unknown imagery provider: " + providerName);
     }
-}
-ui.exportToMain(setImageryProvider);
+});
 
-function toggleOverlayProvider(event, providerName) {
+ui.exportToMain(function toggleOverlayProvider(event, providerName) {
     let provider = config.overlayProviders.find(p => p.name == providerName);
     if (provider) {
         console.log("toggle overlay" + providerName);
     } else {
         console.log("unknown overlay provider: " + providerName);
     }
-}
-ui.exportToMain(toggleOverlayProvider);
+});
 
 
-//--- map rendering parameters
+//--- explicitly set map rendering parameters for selected layer (will be reset when switching themes)
+
 
 ui.exportToMain(function setMapAlpha(event) {
     if (selectedMapLayer) {
         let v = ui.getSliderValue(event.target);
         selectedMapLayer.layer.alpha = v;
-        selectedMapLayer.display[0] = v;
+        getModifiableImageryParams(selectedMapLayer).alpha = v;
     }
 });
 
 ui.exportToMain(function setMapBrightness(event) {
-    if (selectedMapLayer) {
-        let v = ui.getSliderValue(event.target);
-        selectedMapLayer.layer.brightness = v;
-        selectedMapLayer.display[1] = v;
-    }
+    let v = ui.getSliderValue(event.target);
+    setMapLayerBrightness(v);
 });
+
+function setMapLayerBrightness(v) {
+    if (selectedMapLayer) {
+        selectedMapLayer.layer.brightness = v;
+        getModifiableImageryParams(selectedMapLayer).brightness = v;
+    }
+}
 
 ui.exportToMain(function setMapContrast(event) {
     if (selectedMapLayer) {
         let v = ui.getSliderValue(event.target);
         selectedMapLayer.layer.contrast = v;
-        selectedMapLayer.display[2] = v;
+        getModifiableImageryParams(selectedMapLayer).contrast = v;
     }
 });
 
 ui.exportToMain(function setMapHue(event) {
-    if (selectedMapLayer) {
-        let v = ui.getSliderValue(event.target);
-        selectedMapLayer.layer.hue = (v * Math.PI) / 180; // needs radians
-        selectedMapLayer.display[3] = v;
-    }
+    let v = ui.getSliderValue(event.target);
+    setMapLayerHue(v);
 });
 
-ui.exportToMain(function setMapSaturation(event) {
+function setMapLayerHue(v) {
     if (selectedMapLayer) {
-        let v = ui.getSliderValue(event.target);
-        selectedMapLayer.layer.saturation = v;
-        selectedMapLayer.display[4] = v;
+        selectedMapLayer.layer.hue = (v * Math.PI) / 180; // needs radians
+        getModifiableImageryParams(selectedMapLayer).hue = v;
     }
+}
+
+ui.exportToMain(function setMapSaturation(event) {
+    let v = ui.getSliderValue(event.target);
+    setMapLayerSaturation(v);
 });
+
+function setMapLayerSaturation(v) {
+    if (selectedMapLayer) {
+        selectedMapLayer.layer.saturation = v;
+        getModifiableImageryParams(selectedMapLayer).saturation = v;
+    }
+}
 
 ui.exportToMain(function setMapGamma(event) {
     if (selectedMapLayer) {
         let v = ui.getSliderValue(event.target);
         selectedMapLayer.layer.gamma = v;
-        selectedMapLayer.display[5] = v;
+        getModifiableImageryParams(selectedMapLayer).gamma = v;
     }
 });

@@ -1,27 +1,43 @@
+// TODO - should we support multiple web sockets per document ? 
+
 var ws = undefined;
+var wsUrl = undefined;
 
-export function initialize(wsUrl = "ws") {
+window.addEventListener('load', e => {
+    setTimeout(() => {
+        initialize()
+    }, 0); // make sure this load handler runs last;
+});
+
+window.addEventListener('unload', shutdown);
+
+export function initialize() {
     if ("WebSocket" in window) {
-        console.log("initializing websocket " + wsUrl);
-        ws = new WebSocket(wsUrl);
+        console.log("initializing websocket: " + wsUrl);
 
-        ws.onopen = function() {
-            // nothing yet
-        };
+        if (wsUrl) {
+            ws = new WebSocket(wsUrl);
 
-        ws.onmessage = function(evt) {
-            try {
-                let msg = JSON.parse(evt.data.toString());
-                handleServerMessage(msg);
-            } catch (error) {
-                console.log(error);
-                //console.log(evt.data.toString());
+            ws.onopen = function() {
+                // nothing yet
+            };
+
+            ws.onmessage = function(evt) {
+                try {
+                    let msg = JSON.parse(evt.data.toString());
+                    handleServerMessage(msg);
+                } catch (error) {
+                    console.log(error);
+                    //console.log(evt.data.toString());
+                }
             }
-        }
 
-        ws.onclose = function() {
-            console.log("connection is closed...");
-        };
+            ws.onclose = function() {
+                console.log("connection is closed...");
+            };
+        } else {
+            console.log("no WebSocket url set");
+        }
     } else {
         console.log("WebSocket NOT supported by your Browser!");
     }
@@ -30,7 +46,8 @@ export function initialize(wsUrl = "ws") {
 // each handler is a function that takes two parameters: (msgType,msg) and returns true if message dispatch should be shortcut
 var wsHandlers = [];
 
-export function addWsHandler(newHandler) {
+export function addWsHandler(url, newHandler) {
+    wsUrl = url;
     wsHandlers.push(newHandler);
 }
 

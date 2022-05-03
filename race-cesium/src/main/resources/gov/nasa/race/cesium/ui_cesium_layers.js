@@ -1,4 +1,5 @@
 // cesium KML layer module
+import * as config from "./config.js";
 import * as ws from "./ws.js";
 import * as util from "./ui_util.js";
 import { SkipList } from "./ui_data.js";
@@ -49,13 +50,13 @@ class LayerEntry {
     }
 }
 
-export function initialize() {
+
+ui.registerLoadFunction(function initialize() {
     layerView = initLayerView();
 
-    ws.addWsHandler(handleWsLayerMessages);
-
-    return true;
-}
+    ws.addWsHandler(config.wsUrl, handleWsLayerMessages);
+    console.log("ui_cesium_layers initialized");
+});
 
 function initLayerView() {
     let view = ui.getList("layers.list");

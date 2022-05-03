@@ -105,16 +105,22 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
 
   //--- document content fragment accululators (need to default to neutral element)
 
-  // loaded before all RACE specific resources, e.g. for 3rd party code we use in own init
+  // loaded *before* all RACE specific resources, e.g. for 3rd party code we use in own init
   def getPreambleHeaderFragments: Seq[Text.TypedTag[String]] = Seq.empty
 
   // RACE specific header parts
   def getHeaderFragments: Seq[Text.TypedTag[String]] = Seq.empty
 
-  // loaded before all RACE specific resources
+  // loaded *after* all RACE specific resources
+  def getPostambleHeaderFragments: Seq[Text.TypedTag[String]] = Seq.empty
+
+  // loaded before all RACE specific body elements
   def getPreambleBodyFragments: Seq[Text.TypedTag[String]] = Seq.empty
 
   def getBodyFragments: Seq[Text.TypedTag[String]] = Seq.empty
+
+  // loaded after all RACE specific resources
+  def getPostambleBodyFragments: Seq[Text.TypedTag[String]] = Seq.empty
 }
 
 /**

@@ -1,6 +1,8 @@
+import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
-export function initialize() {
+
+ui.registerLoadFunction(function initialize() {
 
     //uiCesium.viewer.scene.primitives.add(Cesium.createOsmBuildings());
 
@@ -12,4 +14,4 @@ export function initialize() {
         console.log("osmBuildings 3D tileset initialized")
         uiCesium.viewer.scene.primitives.add(osmBldgs);
     });
-}
+});
