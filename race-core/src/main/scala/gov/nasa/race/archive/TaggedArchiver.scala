@@ -18,7 +18,6 @@ package gov.nasa.race.archive
 
 import java.io.{InputStream, OutputStream}
 import java.util
-
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConfigurableStreamCreator._
 import gov.nasa.race.common.{AsciiBuffer, ByteSlice, MutAsciiSlice, MutCharSeqByteSlice, MutRawByteSlice, Parser, StringDataBuffer, Utf8Buffer}
@@ -26,7 +25,7 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.Time._
-import gov.nasa.race.util.NumUtils
+import gov.nasa.race.util.{ArrayUtils, NumUtils}
 
 import scala.collection.Seq
 
@@ -92,7 +91,7 @@ trait TaggedArchiveWriter extends ArchiveWriter {
   // override in subclasses for specific conversions of entry data
   protected def toString(obj: Any) = obj.toString
 
-  protected def writeEntryHeader(date: DateTime, length: Int): Unit = {
+  def writeEntryHeader(date: DateTime, length: Int): Unit = {
     oStream.write(LF)
     oStream.write(SOH)
     writeHex8(date.timeSince(refDate).toMillis.toInt)  // TODO - change to Hex16 (but don't break existing archives)
@@ -103,7 +102,7 @@ trait TaggedArchiveWriter extends ArchiveWriter {
 
   protected def setEntryBytes(obj: Any): Unit
 
-  protected def writeFileHeader (extraHeaderData: Array[Byte], len: Int): Unit = {
+  def writeFileHeader (extraHeaderData: Array[Byte], len: Int): Unit = {
     writeHex16(refDate.toEpochMillis)
     oStream.write(FS)
     writeHex8(len)
@@ -111,7 +110,8 @@ trait TaggedArchiveWriter extends ArchiveWriter {
 
     oStream.write(extraHeaderData,0,len)
   }
-  protected def writeFileHeader (extraHeaderData: String): Unit = {
+
+  def writeFileHeader (extraHeaderData: String): Unit = {
     val a = extraHeaderData.getBytes
     writeFileHeader(a,a.length)
   }
@@ -158,7 +158,7 @@ trait TaggedTextArchiveWriter extends TaggedArchiveWriter {
 /**
   * a TaggedTextArchiveWriter that can store full unicode strings
   */
-class TaggedStringArchiveWriter (val oStream: OutputStream, val pathName:String="<unknown>", initBufferSize: Int) extends TaggedTextArchiveWriter {
+class TaggedStringArchiveWriter (val oStream: OutputStream, val pathName:String="<unknown>", initBufferSize: Int = 8192) extends TaggedTextArchiveWriter {
   override protected def createStringDataBuffer = new Utf8Buffer(initBufferSize)
 
   def this(conf: Config) = this(createOutputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096))
@@ -194,6 +194,12 @@ trait TaggedArchiveReader extends ArchiveReader {
 
   protected var refDate: DateTime = UndefinedDateTime
   protected var extraFileHeader: Array[Byte] = Array.empty[Byte]
+
+  protected var entryDate: DateTime = UndefinedDateTime
+  protected var entryLength: Int = -1
+
+  def getRefDate: DateTime = refDate
+  def getExtraFileHeader: String = new String(extraFileHeader)
 
   // we can't call this from our own init since pathname/istream/initBufferSize are set by derived type
   private def initialize: Boolean = {
@@ -234,9 +240,9 @@ trait TaggedArchiveReader extends ArchiveReader {
     while (true) {
       if (iStream.read(buf, 0, entryHeaderLength) == entryHeaderLength) {
         slice.setRange(2, 8)
-        val entryDate = refDate + Milliseconds(slice.toHexInt)
+        entryDate = refDate + Milliseconds(slice.toHexInt)
         slice.setRange(11, 8)
-        val entryLength = slice.toHexInt
+        entryLength = slice.toHexInt
         if (entryLength > 0) {
           if (entryLength > buf.length) growBuffer(entryLength)
           if (iStream.read(buf, 0, entryLength) == entryLength) {
@@ -256,6 +262,53 @@ trait TaggedArchiveReader extends ArchiveReader {
     }
     throw new RuntimeException("should not get here")
   }
+
+  //--- low level read functions (note these are actually less efficient)
+
+  // this positions the stream *after* the next opening LF SOH marker (if any is left)
+  // buf will contain the data from where we start to read up to the opening LF
+  // the data length in buf is returned
+  protected def readToNextEntryHeaderStart(): Int = {
+    var nRead = 0
+
+    @inline def push (c: Int): Unit = {
+      if (nRead >= buf.length) {
+        buf = ArrayUtils.grow(buf,buf.length * 2)
+        slice.set(buf,0,0)
+      }
+      buf(nRead) = c.toByte
+      nRead += 1
+    }
+
+    var c: Int = iStream.read()
+    while (c != -1) {
+      if (c == LF) {
+        c = iStream.read()
+        if (c == SOH) {
+          return nRead
+        } else {
+          push(LF)
+        }
+
+      } else {
+        push(c)
+        c = iStream.read()
+      }
+    }
+    nRead
+  }
+
+  // the stream has to be positioned after the LF SOH marker
+  protected def readEntryHeaderFields(): Boolean = {
+    if (iStream.read(buf, 0, entryHeaderLength - 2) == entryHeaderLength - 2){
+      slice.setRange(0, 8)
+      entryDate = refDate + Milliseconds(slice.toHexInt)
+      slice.setRange(9, 8)
+      entryLength = slice.toHexInt
+      true
+    } else false
+  }
+
 
   //--- ArchiveReader interface
 

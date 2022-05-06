@@ -172,7 +172,7 @@ trait CharSeqByteSlice extends ByteSlice with CharSequence {
       case 'D' | 'd' => 13
       case 'E' | 'e' => 14
       case 'F' | 'f' => 15
-      case _ => throw new NumberFormatException("not a hex number")
+      case _ => throw new NumberFormatException(s"not a hex number: '$this'")
     }
   }
 
