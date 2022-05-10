@@ -108,4 +108,11 @@ object SeqUtils {
     val seq = it.toSeq
     seq.sortWith(sortFunc)
   }
+
+  def optionToSeq[A](opt: Option[A]): Seq[A] = {
+    opt match {
+      case Some(a) => Seq(a)
+      case None => Seq.empty
+    }
+  }
 }

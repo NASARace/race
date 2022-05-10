@@ -34,8 +34,7 @@ import java.net.InetSocketAddress
 import java.util.TimeZone
 
 
-object CesiumRoute extends CachedFileAssetMap {
-  def sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
+object CesiumRoute {
 
   val imageryPrefix = "imagery"
   val terrainPrefix = "terrain"
@@ -64,9 +63,10 @@ import CesiumRoute._
 trait CesiumRoute
   extends FSCachedProxyRoute // we might cache cesium content
     with UiRoute // we provide race-ui windows for controlling Cesium view and entities
+    with CachedFileAssetRoute
     with TokenizedWSRaceRoute  // and need a per-document-request web socket..
     with PushWSRaceRoute //..to push at least initial globe/time state (concrete type probably needs to push more)
-    with ConfigScriptRaceRoute // requiring a lot of client configuration
+    with ConfigScriptRoute // requiring a lot of client configuration
     with ContinuousTimeRaceRoute { // we also need sim time
 
   //--- Cesium specific configuration
@@ -103,17 +103,12 @@ trait CesiumRoute
         completeProxied( cesiumJsUrl(cesiumVersion))
 
         //--- our Cesium assets
-      } ~ path ("ui_cesium.js") {
-        complete( ResponseData.js( CesiumRoute.getContent("ui_cesium.js")))
-      } ~ path ("ui_cesium.css") {
-        complete( ResponseData.css( CesiumRoute.getContent("ui_cesium.css")))
-      } ~ path ("time-icon.svg") {
-        complete( ResponseData.svg( CesiumRoute.getContent("time-icon.svg")))
-      } ~ path ("view-icon.svg") {
-        complete( ResponseData.svg( CesiumRoute.getContent("view-icon.svg")))
-      } ~ path ("map-cursor.png") {
-        complete( ResponseData.png( CesiumRoute.getContent("map-cursor-bw-32x32.png")))
-      }
+      } ~
+        fileAsset ("ui_cesium.js") ~
+        fileAsset ("ui_cesium.css") ~
+        fileAsset ("time-icon.svg") ~
+        fileAsset ("view-icon.svg") ~
+        fileAsset ("map-cursor.png")
     }
   }
 

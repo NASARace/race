@@ -19,30 +19,23 @@ package gov.nasa.race.ui
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import gov.nasa.race.http.{CachedFileAssetMap, ConfigScriptRaceRoute, ResponseData}
-import gov.nasa.race.ui.UiRoute.getContent
+import gov.nasa.race.http.{CachedFileAssetRoute, ConfigScriptRoute}
 import scalatags.Text
 
 import java.net.InetSocketAddress
 
-object UiSettingsRoute extends CachedFileAssetMap {
-  def sourcePath: String = "./race-client-ui/src/main/resources/gov/nasa/race/ui"
-}
 
 /**
   * a route that has support for interactive render settings such as themes
   */
-trait UiSettingsRoute extends UiRoute with ConfigScriptRaceRoute {
+trait UiSettingsRoute extends UiRoute with ConfigScriptRoute with CachedFileAssetRoute {
 
   override def route: Route = uiSettingsRoute ~ super.route
 
   def uiSettingsRoute: Route = {
     get {
-      path ("settings-icon.svg") {
-        complete( ResponseData.svg( getContent("settings-icon.svg")))
-      } ~ path ("ui_settings.js"){
-        complete( ResponseData.js( getContent("ui_settings.js")))
-      }
+      fileAsset ("settings-icon.svg") ~
+        fileAsset ("ui_settings.js")
     }
   }
 

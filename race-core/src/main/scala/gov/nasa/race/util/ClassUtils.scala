@@ -18,6 +18,7 @@ package gov.nasa.race.util
 
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.Method
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * java.lang.Class related utility functions
@@ -44,5 +45,28 @@ object ClassUtils {
     } catch {
       case x:NoSuchMethodException => None
     }
+  }
+
+  // linearize a type hierarchy. Note this is an approximation since Scala does not have to create a separate
+  // class object for every mixin trait, but since we mostly use this to look up resources it will do
+  // this is DFS bottom up order
+  def linearizedSuperTypesOf(obj: AnyRef, commonType: Class[_]=classOf[AnyRef]): Seq[Class[_]] = {
+
+    def linearize (cls: Class[_], lin: ArrayBuffer[Class[_]]): Unit = {
+      if (commonType.isAssignableFrom(cls)){
+        val sc: Class[_] = cls.getSuperclass
+        if (sc != null && commonType.isAssignableFrom(sc)) linearize(sc,lin)
+
+        cls.getInterfaces.foreach { c=>
+          if (commonType.isAssignableFrom(c)) linearize(c,lin)
+        }
+
+        if (!lin.contains(cls)) lin += cls
+      }
+    }
+
+    val lin = ArrayBuffer.empty[Class[_]]
+    linearize(obj.getClass, lin)
+    lin.reverse.toSeq
   }
 }

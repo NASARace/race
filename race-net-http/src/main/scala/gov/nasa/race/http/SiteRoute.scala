@@ -34,6 +34,12 @@ import scala.collection.mutable
   * a RaceRouteInfo that uses a cached filesystem to lookup request URIs
   * note this is a class since it can be directly used, although most cases are going to
   * subclass in order to add specific routes by overriding route() (for web sockets etc)
+  *
+  * Note this trait is for web sites that mostly consist of static content that is not supposed to be
+  * backed by class resources and should be loaded from one location in the file system, without overriding from
+  * sub-types (other than setting siteRoot).
+  *
+  * Use CachedFileAssetRoute if the content is overridable (either from a hierarchy of directories or classes)
   */
 class SiteRoute (val parent: ParentActor, val config: Config) extends RaceRouteInfo {
 
@@ -98,7 +104,8 @@ class SiteRoute (val parent: ParentActor, val config: Config) extends RaceRouteI
     }
   }
 
-  protected def getContent (path: String): Option[CachedContent] = {
+  // distinguish this from CachedFileAssetRoute.getContent
+  protected def getSiteContent(path: String): Option[CachedContent] = {
     contentCache.get(path) match {
       case res@Some(cachedContent) =>
         if (cachedContent.isOutdated) loadContent(path) else res
@@ -111,7 +118,7 @@ class SiteRoute (val parent: ParentActor, val config: Config) extends RaceRouteI
     extractUri { uri =>
       pathPrefix(requestPrefixMatcher) {
         extractUnmatchedPath { path =>
-          getContent(path.toString) match {
+          getSiteContent(path.toString) match {
             case Some(cachedContent) =>
               cachedContent.location match {
                 case Some(loc) =>
@@ -172,7 +179,7 @@ class AuthSiteRoute(parent: ParentActor, config: Config) extends SiteRoute(paren
             complete(StatusCodes.BadRequest, s"directory access not supported: $relPath")
 
           } else {
-            getContent(relPath) match {
+            getSiteContent(relPath) match {
               case Some(cachedContent) =>
                 optionalCookie(sessionCookieName) { opt =>
                   opt match {

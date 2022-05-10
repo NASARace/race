@@ -64,7 +64,9 @@
     --popup-menu-border: 1px solid rgb(132 12 12);
     --menuitem-font: var(--font);
     --menuitem-height: 1.1rem;
+    --menuitem-color: var(--color);
     --menuitem-background: rgb(61, 0, 0);
+    --menuitem-selection-color: var(--selected-data-color);
     --menuitem-selection-background: rgb(132 0 0);
     --field-height: 1.5rem;
     --field-label-width: 5rem;

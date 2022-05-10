@@ -622,6 +622,7 @@ div.ui_menuitem {
     padding: 2px 1rem 2px 1rem;
     font: var(--menuitem-font);
     height: var(--menuitem-height);
+    color: var(--menuitem-color);
     background: var(--menuitem-background);
 }
 
@@ -634,6 +635,7 @@ div.ui_menuitem.checked::before {
 }
 
 div.ui_menuitem:not([class*="disabled"]):hover {
+    color: var(--menuitem-selection-color);
     background: var(--menuitem-selection-background);
 }
 

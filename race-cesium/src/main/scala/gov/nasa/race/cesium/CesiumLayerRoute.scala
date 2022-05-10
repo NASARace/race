@@ -32,10 +32,6 @@ import java.io.File
 import scala.collection.mutable
 import scala.collection.mutable.SeqMap
 
-object CesiumLayerRoute extends CachedFileAssetMap {
-  val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
-}
-
 case class CesiumLayer (name: String, url: String, file: Option[File], show: Boolean) { //.. probably more attributes to follow
   def date = file.map( f=> DateTime.ofEpochMillis(f.lastModified())).getOrElse(DateTime.UndefinedDateTime)
 }
@@ -43,7 +39,7 @@ case class CesiumLayer (name: String, url: String, file: Option[File], show: Boo
 /**
   * a CesiumRoute that pushes static file updates containing layers (e.g. kml)
   */
-trait CesiumLayerRoute extends QueryProxyRoute with FSCachedProxyRoute with CesiumRoute with PushWSRaceRoute {
+trait CesiumLayerRoute extends QueryProxyRoute with FSCachedProxyRoute with CesiumRoute with PushWSRaceRoute with CachedFileAssetRoute {
 
   //--- init layers
 
@@ -79,11 +75,9 @@ trait CesiumLayerRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesi
     get {
       path ("proxy") {
         completeProxied // the request url is encoded in the query
-      } ~ path("ui_cesium_layers.js") {
-        complete( ResponseData.js( CesiumLayerRoute.getContent("ui_cesium_layers.js")))
-      } ~ path("layer-icon.svg") {
-        complete( ResponseData.svg( CesiumLayerRoute.getContent("layer-icon.svg")))
-      }
+      } ~
+        fileAsset("ui_cesium_layers.js") ~
+        fileAsset("layer-icon.svg")
     }
   }
 
@@ -126,11 +120,6 @@ trait CesiumLayerRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesi
   }
 }
 
-
-
-object CesiumLayerApp extends CachedFileAssetMap {
-  val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
-}
 
 /**
   * a single page application that processes track channels

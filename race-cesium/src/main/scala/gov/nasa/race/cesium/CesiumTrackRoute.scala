@@ -32,14 +32,10 @@ import scalatags.Text.all._
 import java.net.InetSocketAddress
 import scala.collection.immutable.{Iterable, ListMap}
 
-object CesiumTrackRoute  extends CachedFileAssetMap {
-  val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
-}
-
 /**
   * a RaceRoute that uses Cesium to display tracks transmitted over a websocket
   */
-trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
+trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute with CachedFileAssetRoute {
 
   val trackColor = config.getStringOrElse("color", "yellow")
 
@@ -58,7 +54,7 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
   }
 
   def getAssetContent (key: String): Option[HttpEntity.Strict] = {
-    trackAssets.get(key).map( fileName => CesiumTrackRoute.getContent(fileName))
+    trackAssets.get(key).map( fileName => getFileAssetContent(fileName))
   }
 
   //--- route handling
@@ -67,19 +63,16 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute {
 
   def uiCesiumTrackRoute: Route = {
     get {
-      path ("ui_cesium_tracks.js") {
-        complete( ResponseData.js( CesiumTrackRoute.getContent("ui_cesium_tracks.js")))
-
-      } ~ pathPrefix( "track-asset" ~ Slash) {  // mesh-models and images
+      pathPrefix( "track-asset" ~ Slash) { // mesh-models and images
         extractUnmatchedPath { p =>
-          getAssetContent( p.toString()) match {
+          getAssetContent(p.toString()) match {
             case Some(content) => complete(content)
-            case None =>complete(StatusCodes.NotFound,p.toString())
+            case None => complete(StatusCodes.NotFound, p.toString())
           }
         }
-      } ~ path ("track-icon.svg") {
-        complete( ResponseData.svg( CesiumTrackRoute.getContent("track-icon.svg")))
-      }
+      } ~
+        fileAsset("ui_cesium_tracks.js") ~
+        fileAsset("track-icon.svg")
     }
   }
 
@@ -211,11 +204,6 @@ export const trackPath2dWidth = ${_int("track-path-2d-width", 3)};
 export const maxTraceLength = ${_int("max-trace-length", 200)};
      """
   }
-}
-
-
-object CesiumTrackApp extends CachedFileAssetMap {
-  val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
 }
 
 /**

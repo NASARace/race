@@ -18,13 +18,7 @@ package gov.nasa.race.cesium
 
 import gov.nasa.race.http.TrackWSRoute
 
-object CesiumGpsRoute {
-  val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
-}
-
 /**
   * a RaceRoute that uses Cesium to display GpsPos tracks transmitted over a websocket
   */
-trait CesiumGpsRoute extends CesiumRoute with TrackWSRoute {
-
-}
+trait CesiumGpsRoute extends CesiumRoute with TrackWSRoute

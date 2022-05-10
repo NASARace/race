@@ -73,7 +73,9 @@
     --popup-menu-border: 1px solid rgb(24, 24, 24);
     --menuitem-font: var(--font);
     --menuitem-height: 1.1rem;
+    --menuitem-color: var(--color);
     --menuitem-background: rgb(64, 64, 64);
+    --menuitem-selection-color: rgb(255, 255, 255);
     --menuitem-selection-background: rgb(64, 64, 200);
     /* data fields */
     --field-height: 1.5rem;

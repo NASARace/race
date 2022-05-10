@@ -8,7 +8,7 @@
    version="1.1"
    id="SVGRoot"
    sodipodi:docname="track-icon.svg"
-   inkscape:version="1.1.1 (eb90963e84, 2021-10-02)"
+   inkscape:version="1.1.1 (c3084ef, 2021-09-22)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -24,12 +24,12 @@
      inkscape:document-units="px"
      showgrid="true"
      inkscape:zoom="24.886869"
-     inkscape:cx="15.871824"
+     inkscape:cx="15.851733"
      inkscape:cy="14.646278"
      inkscape:window-width="1806"
      inkscape:window-height="1199"
-     inkscape:window-x="26"
-     inkscape:window-y="23"
+     inkscape:window-x="1290"
+     inkscape:window-y="431"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1">
     <inkscape:grid
@@ -50,7 +50,7 @@
        x="0"
        y="0" />
     <path
-       style="fill:#b1b1b1;fill-opacity:1;stroke:#e2dfdf;stroke-width:1.6;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:normal"
+       style="fill:#888888;fill-opacity:1;stroke:#e2dfdf;stroke-width:1.59874016;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:normal"
        d="m 2,11 27,1 -5,4 1,6 z"
        id="path6442" />
   </g>

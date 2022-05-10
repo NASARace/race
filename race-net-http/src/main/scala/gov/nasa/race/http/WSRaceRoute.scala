@@ -39,16 +39,13 @@ sealed trait WSContext {
 case class BasicWSContext (sockConn: SocketConnection) extends WSContext
 case class AuthWSContext (sockConn: SocketConnection, sessionToken: String) extends WSContext
 
-object WSRaceRoute extends CachedFileAssetMap {
-  val sourcePath = "./race-net-http/src/main/resources/gov/nasa/race/http"
-}
 
 /**
   * root type for WebSocket RaceRouteInfos
   *
   * implementations provide a route directive that ends in a 'promoteToWebSocket()'
   */
-trait WSRaceRoute extends RaceRouteInfo {
+trait WSRaceRoute extends RaceRouteInfo with CachedFileAssetRoute {
   implicit val materializer: Materializer = HttpServer.materializer
   implicit val ec = HttpServer.ec // scala.concurrent.ExecutionContext.global
 
@@ -65,9 +62,7 @@ trait WSRaceRoute extends RaceRouteInfo {
   // optional route/content fragment if concrete type wants to use the ws.js handlers
   def wsAssetRoute: Route = {
     get {
-      path("ws.js") {
-        complete( ResponseData.js(WSRaceRoute.getContent("ws.js")))
-      }
+      fileAsset("ws.js")
     }
   }
 

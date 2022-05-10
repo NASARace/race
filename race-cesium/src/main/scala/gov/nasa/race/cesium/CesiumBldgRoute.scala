@@ -18,14 +18,10 @@ package gov.nasa.race.cesium
 
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import gov.nasa.race.http.{CachedFileAssetMap, DocumentRoute, ResponseData}
+import gov.nasa.race.http.{CachedFileAssetRoute, DocumentRoute}
 import gov.nasa.race.ui.extModule
 import scalatags.Text
 
-
-object CesiumBldgRoute extends CachedFileAssetMap {
-  val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
-}
 /**
   * a Cesium Route that adds an OSM buildings layer
   *
@@ -33,24 +29,18 @@ object CesiumBldgRoute extends CachedFileAssetMap {
   *
   * TODO - will have to handle per-building info
   */
-trait CesiumBldgRoute extends CesiumRoute with DocumentRoute {
-
+trait CesiumBldgRoute extends CesiumRoute with DocumentRoute with CachedFileAssetRoute
+{
   //--- resources & fragments
 
-  def uiCesiumBldgResources: Seq[Text.TypedTag[String]] = {
-    Seq( extModule("ui_cesium_bldg.js"))
-  }
-
-  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ uiCesiumBldgResources
-
-  //override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments
+  override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ Seq(
+    extModule("ui_cesium_bldg.js")
+  )
 
   //--- route
 
   def bldgRoute: Route = {
-    path("ui_cesium_bldg.js") {
-      complete( ResponseData.js( CesiumLayerRoute.getContent("ui_cesium_bldg.js")))
-    }
+    fileAsset("ui_cesium_bldg.js")
   }
 
   override def route: Route = bldgRoute ~ super.route

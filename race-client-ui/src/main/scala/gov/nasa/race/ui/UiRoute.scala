@@ -21,15 +21,14 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.http.{CachedFileAssetMap, ConfigScriptRaceRoute, RaceRouteInfo, ResponseData}
+import gov.nasa.race.http.{CachedFileAssetRoute, ConfigScriptRoute, RaceRouteInfo, ResponseData}
 import scalatags.Text
 
 import scala.util.matching.Regex
 
 case class UiTheme (name: String, pathName: String, userAgentMatcher: Option[Regex])
 
-object UiRoute extends CachedFileAssetMap {
-  def sourcePath: String = "./race-client-ui/src/main/resources/gov/nasa/race/ui"
+object UiRoute {
 
   val DEFAULT_THEME = "dark"
   val fallbackTheme = "ui_theme_dark.css"
@@ -59,7 +58,7 @@ import gov.nasa.race.ui.UiRoute._
 /**
   * a RaceRouteInfo that serves race-ui-client content
   */
-trait UiRoute extends  RaceRouteInfo with ConfigScriptRaceRoute {
+trait UiRoute extends  RaceRouteInfo with ConfigScriptRoute with CachedFileAssetRoute {
 
   protected val themeMap: Map[String,Seq[UiTheme]] = UiRoute.getThemes(config).foldLeft( Map.empty[String,Seq[UiTheme]]) { (m,t) =>
     m.get(t.name) match {
@@ -68,25 +67,24 @@ trait UiRoute extends  RaceRouteInfo with ConfigScriptRaceRoute {
     }
   }
 
+  val themeSourcePath: Option[String] = config.getOptionalString("theme-path")
+  addFileAssetResolver(".*ui_theme.*\\.css".r, classOf[UiRoute], isStatic=true, themeSourcePath)
+
   //--- route handling
 
   override def route: Route = uiRoute ~ super.route
 
   def uiRoute: Route = {
     get {
-      path("ui.js") {
-        complete( ResponseData.js( getContent("ui.js")))
-      } ~ path("ui_util.js") {
-        complete( ResponseData.js( getContent("ui_util.js")))
-      } ~ path("ui_data.js") {
-        complete( ResponseData.js( getContent("ui_data.js")))
-      } ~ path("ui.css") {
-        complete( ResponseData.css( getContent("ui.css")))
-      } ~ path( "ui_theme.css") {
+      fileAsset("ui.js") ~
+      fileAsset("ui_util.js") ~
+      fileAsset("ui_data.js") ~
+      fileAsset("ui.css") ~
+      path( "ui_theme.css") {
         parameterMap { qps =>
           val theme: String = qps.getOrElse("theme", DEFAULT_THEME)
           optionalHeaderValueByType(`User-Agent`) { ua =>
-            complete( ResponseData.css(getContent( getThemePathName(theme,ua.map(_.value())))))
+            complete( ResponseData.css( getFileAssetContent( getThemePathName(theme,ua.map(_.value())))))
           }
         }
       }

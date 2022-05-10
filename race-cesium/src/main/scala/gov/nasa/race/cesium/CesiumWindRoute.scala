@@ -35,10 +35,6 @@ import scala.collection.mutable
 import scala.collection.mutable.SeqMap
 
 
-object CesiumWindRoute extends CachedFileAssetMap {
-  val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
-}
-
 /**
   * a CesiumRoute that displays wind fields
   *
@@ -49,7 +45,7 @@ object CesiumWindRoute extends CachedFileAssetMap {
   * Ultimately, this structure will be computed by this route and transmitted as a JSON object in order to remove
   * client side netcdfjs dependencies and offload client computation
   */
-trait CesiumWindRoute extends QueryProxyRoute with FSCachedProxyRoute with CesiumRoute with PushWSRaceRoute {
+trait CesiumWindRoute extends QueryProxyRoute with FSCachedProxyRoute with CesiumRoute with PushWSRaceRoute with CachedFileAssetRoute {
 
   //--- init wind fields
 
@@ -100,32 +96,32 @@ trait CesiumWindRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesiu
 
   def windRoute: Route = {
     get {
-      path("ui_cesium_wind.js") {
-        complete( ResponseData.js( CesiumWindRoute.getContent("ui_cesium_wind.js")))
-      } ~ path("wind-icon.svg") {
-        complete( ResponseData.svg( CesiumWindRoute.getContent("wind-icon.svg")))
-      } ~ pathPrefix("wind-data") {
-        extractUnmatchedPath { p =>
-          val file = new File(s"$windDir/$p")
-          FileUtils.fileContentsAsBytes(file) match {
-            case Some(content) => complete( ResponseData.bytes(content))
-            case None => complete(StatusCodes.NotFound, p.toString())
+        pathPrefix("wind-data") {
+          extractUnmatchedPath { p =>
+            val file = new File(s"$windDir/$p")
+            FileUtils.fileContentsAsBytes(file) match {
+              case Some(content) => complete( ResponseData.bytes(content))
+              case None => complete(StatusCodes.NotFound, p.toString())
+            }
           }
-        }
-      } ~ pathPrefix("wind" ~ Slash) {
-        extractUnmatchedPath { p =>
-          val pathName = s"wind/$p"
-          if (pathName.endsWith(".js")) {
-            complete( ResponseData.js( CesiumWindRoute.getContent(pathName)))
-          } else if (pathName.endsWith(".frag") || pathName.endsWith(".vert")) {
-            complete( ResponseData.glsl( CesiumWindRoute.getContent(pathName)))
-          } else {
-            complete(StatusCodes.NotFound, pathName)
+        } ~
+        pathPrefix("wind" ~ Slash) { // this is the client side shader code, not the dynamic wind data
+          extractUnmatchedPath { p =>
+            val pathName = s"wind/$p"
+            if (pathName.endsWith(".js")) {
+              complete( ResponseData.js( getFileAssetContent(pathName)))
+            } else if (pathName.endsWith(".frag") || pathName.endsWith(".vert")) {
+              complete( ResponseData.glsl( getFileAssetContent(pathName)))
+            } else {
+              complete(StatusCodes.NotFound, pathName)
+            }
           }
-        }
-      } ~ path("proxy") {  // TODO this is going away
-         completeProxied
-       }
+        } ~
+        path("proxy") {  // TODO this is going away
+          completeProxied
+        } ~
+        fileAsset("ui_cesium_wind.js") ~
+        fileAsset("wind-icon.svg")
     }
   }
 
@@ -173,10 +169,6 @@ trait CesiumWindRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesiu
   override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiWindWindow(), uiWindIcon)
 
   //--- client config
-}
-
-object CesiumWindApp extends CachedFileAssetMap {
-  val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
 }
 
 /**

@@ -28,7 +28,7 @@ import java.net.InetSocketAddress
 /**
   * a RaceRoute that needs to serve a 'config.js' script (ECMA module) as part of the content
   */
-trait ConfigScriptRaceRoute extends RaceRouteInfo {
+trait ConfigScriptRoute extends RaceRouteInfo {
 
   def configScript: Text.TypedTag[String] = script(src:="config.js", tpe:="module")
 
@@ -66,7 +66,7 @@ trait ConfigScriptRaceRoute extends RaceRouteInfo {
 /**
   * a ConfigScriptRaceRoute that requires user authentication (usually done in the document request)
   */
-trait AuthConfigScriptRaceRoute extends ConfigScriptRaceRoute with AuthRaceRoute {
+trait AuthConfigScriptRoute extends ConfigScriptRoute with AuthRaceRoute {
 
   override def completeConfigRequest (requestUri: Uri, remoteAddr: InetSocketAddress): Route = {
     completeAuthorized() {

@@ -27,6 +27,7 @@ import gov.nasa.race.core.{ConfigLoggable, Loggable, ParentActor, RaceActorSyste
 import gov.nasa.race.util.StringUtils
 import scalatags.Text
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
@@ -121,6 +122,7 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
 
   // loaded after all RACE specific resources
   def getPostambleBodyFragments: Seq[Text.TypedTag[String]] = Seq.empty
+
 }
 
 /**

@@ -18,12 +18,9 @@ package gov.nasa.race.cesium
 
 import com.typesafe.config.Config
 import gov.nasa.race.core.ParentActor
-import gov.nasa.race.http.{CachedFileAssetMap, DocumentRoute}
+import gov.nasa.race.http.DocumentRoute
 import gov.nasa.race.ui.UiSettingsRoute
 
-object CesiumApp extends CachedFileAssetMap {
-  val sourcePath = "./race-cesium/src/main/resources/gov/nasa/race/cesium"
-}
 
 /**
   * app that includes all of our Cesium sub-routes (tracks, layers, ..)
