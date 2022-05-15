@@ -533,8 +533,13 @@ abstract class JsonPullParser extends LogWriter with Thrower {
 
   def dateTimeValue: DateTime = {
     if (value.nonEmpty) {
-      if (isQuotedValue) DateTime.parseYMDTSlice(value)
-      else DateTime.ofEpochMillis(value.toLong)
+      if (isQuotedValue) {
+        DateTime.parseYMDTSlice(value)
+      } else {
+        // NOTE - that cuts out 01/01/1970 - 04/26/1970 in epoch millis
+        val n = value.toLong
+        if (n < 10000000000L) DateTime.ofEpochSeconds(n) else DateTime.ofEpochMillis(value.toLong)
+      }
     } else {
       throw exception("expected DateTime value")
     }

@@ -185,6 +185,28 @@ export function timeZone(tz) {
     else return tz;
 }
 
+const defaultDateTimeFormat = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    month: '2-digit',
+    day: '2-digit',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZoneName: 'short'
+});
+
+const defaultLocalDateTimeFormat = new Intl.DateTimeFormat('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+});
+
 const defaultTimeFormat = new Intl.DateTimeFormat('en-US', {
     timeZone: 'UTC',
     hour: 'numeric',
@@ -214,16 +236,20 @@ export function timeFormat(timeOpts) {
     return new Intl.DateTimeFormat('en-US', to);
 }
 
+export function toDateTimeString(d, fmt = defaultDateTimeFormat) {
+    return (d) ? fmt.format(d) : "-";
+}
+
+export function toLocalDateTimeString(d, fmt = defaultLocalDateTimeFormat) {
+    return (d) ? fmt.format(d) : "-";
+}
+
 export function toTimeString(d, fmt = defaultTimeFormat) {
-    if (d) {
-        return fmt.format(d);
-    } else {
-        return "-";
-    }
+    return (d) ? fmt.format(d) : "-";
 }
 
 export function toLocalTimeString(d, fmt = defaultLocalTimeFormat) {
-    return fmt.format(d);
+    return (d) ? fmt.format(d) : "-";
 }
 
 export function isUndefinedDateTime(d) {
@@ -241,4 +267,20 @@ export function intern(s) {
     } else {
         return sInterned;
     }
+}
+
+export function prependElement(e, array) {
+    var newArray = array.slice();
+    newArray.unshift(e);
+    return newArray;
+}
+
+//--- type tests
+
+export function isNumber(v) {
+    return Number.isFinite(v);
+}
+
+export function isString(v) {
+    return typeof v === 'string';
 }

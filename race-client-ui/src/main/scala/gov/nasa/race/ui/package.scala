@@ -33,6 +33,9 @@ package object ui {
   val NoId = ""
   val NoIcon = ""
   val NoWidth = ""
+  val NoSrc = ""
+  val NoPlaceHolder = ""
+  val NoDimensions = None
 
   lazy val htmlHead = scalatags.Text.all.head  // 'head' collides with a lot of other packages
 
@@ -90,14 +93,35 @@ package object ui {
     div(mods: _*)
   }
 
-  def uiNumField (label: String, eid: UiID): Text.TypedTag[String] = {
-    val mods = List(cls:="ui_field num", data("id"):=eid, data("label"):= label)
+  def uiNumField (label: String, eid: UiID, width: String=NoWidth, labelWidth: String=NoWidth): Text.TypedTag[String] = {
+    var mods = List(cls:="ui_field num", data("id"):=eid, data("label"):= label)
+    if (width.nonEmpty) mods = (data("width"):=width) :: mods
+    if (labelWidth.nonEmpty) mods = (data("label_width"):=labelWidth) :: mods
     div(mods: _*)
   }
 
-  def uiFieldGroup (): Text.TypedTag[String] = {
-    val mods = List(cls:="ui_container column bordered align_right")
+  def uiField (label: String, eid: UiID, isFixed: Boolean = false, width: String=NoWidth, labelWidth: String=NoWidth): Text.TypedTag[String] = {
+    val classes = if (isFixed) "ui_field fixed" else "ui_field"
+    var mods = List(cls:=classes, data("id"):=eid, data("label"):= label)
+    if (width.nonEmpty) mods = (data("width"):=width) :: mods
+    if (labelWidth.nonEmpty) mods = (data("label_width"):=labelWidth) :: mods
     div(mods: _*)
+  }
+
+  def uiFieldGroup (width: String=NoWidth, labelWidth: String=NoWidth): Text.TypedTag[String] = {
+    var mods = List(cls:="ui_container column bordered align_right")
+    if (width.nonEmpty) mods = (data("width"):=width) :: mods
+    if (labelWidth.nonEmpty) mods = (data("label_width"):=labelWidth) :: mods
+    div(mods: _*)
+  }
+
+  def uiImg (url: String=NoSrc, eid: UiID=NoId, placeHolder: String="no image yet", w:Option[Int] = None, h: Option[Int] = None): Text.TypedTag[String] = {
+    var mods = List(cls:="ui_img")
+    if (placeHolder.nonEmpty) mods = (alt:=placeHolder) :: mods
+    if (url.nonEmpty) mods = (src:=url) :: mods
+    ifSome(w){ x=> mods = (widthA:=x.toString) :: mods }
+    ifSome(h){ x=> mods = (heightA:=x.toString) :: mods }
+    img(mods: _*)
   }
 
   def uiRowContainer (align: String="", eid: UiID=NoId): Text.TypedTag[String] = {

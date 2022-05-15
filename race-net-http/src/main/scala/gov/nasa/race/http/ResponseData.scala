@@ -41,7 +41,8 @@ object ResponseData {
     "kmz" -> kmz,
     "frag" -> glsl,
     "vert" -> glsl,
-    "nc" -> bytes
+    "nc" -> bytes,
+    "webp" -> webp
     //... and many more
   )
 
@@ -106,6 +107,10 @@ object ResponseData {
 
   def glsl(content: Array[Byte]): HttpEntity.Strict = {
     HttpEntity( ContentType(MediaTypes.`text/plain`, HttpCharsets.`UTF-8`), content) // ?? not sure there is one for frag
+  }
+
+  def webp(content: Array[Byte]): HttpEntity.Strict = {
+    HttpEntity( ContentType(MediaTypes.`image/webp`), content)
   }
 
   def bytes(content: Array[Byte]): HttpEntity.Strict = {

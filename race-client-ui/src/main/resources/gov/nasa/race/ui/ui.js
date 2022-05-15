@@ -108,32 +108,57 @@ function _initializeWindows() {
 
 export function initWindow(e) {
     if (e.children.length == 0 || !e.children[0].classList.contains("ui_titlebar")) {
-        let tb = _createElement("DIV", "ui_titlebar", e.dataset.title);
+        createWindowComponents(e, e.dataset.title, true, e.dataset.icon); // document windows are always permanent
+    }
+    setWindowEventHandlers(e);
 
-        let icon = e.dataset.icon;
-        if (icon) {
-            let img = _createElement("IMG", "ui_titlebar_icon");
-            img.src = icon;
-            tb.appendChild(img);
-        }
+    if (e.dataset.onclose) w.closeAction = new Function(e.dataset.onclose);
+}
 
-        let cb = _createElement("BUTTON", "ui_close_button", "⨉");
-        cb.onclick = (event) => {
-            let w = event.target.closest('.ui_window');
-            if (w) closeWindow(w);
-        };
-        cb.setAttribute("tabindex", "-1");
-        tb.appendChild(cb);
+export function createWindow(title, isPermanent, closeAction, icon) {
+    let w = _createElement("DIV", "ui_window");
+    createWindowComponents(w, title, isPermanent, icon);
+    setWindowEventHandlers(w)
 
-        let wndContent = _createElement("DIV", "ui_window_content");
-        _moveChildElements(e, wndContent);
-        e.appendChild(tb);
-        e.appendChild(wndContent);
+    if (closeAction) w.closeAction = closeAction;
+
+    return w;
+}
+
+export function addWindow(w) {
+    document.body.appendChild(w);
+}
+
+function createWindowComponents(e, title, isPermanent, icon) {
+    let tb = _createElement("DIV", "ui_titlebar", title);
+
+    if (icon) {
+        let img = _createElement("IMG", "ui_titlebar_icon");
+        img.src = icon;
+        tb.appendChild(img);
     }
 
-    _makeDraggable(e);
+    let cb = _createElement("BUTTON", "ui_close_button", "⨉");
+    cb.onclick = (event) => {
+        let w = event.target.closest('.ui_window');
+        if (w) {
+            if (isPermanent) closeWindow(w);
+            else removeWindow(w);
+        }
+    };
+    cb.setAttribute("tabindex", "-1");
+    tb.appendChild(cb);
 
-    e.onclick = function() { _raiseWindowToTop(e); };
+    let wndContent = _createElement("DIV", "ui_window_content");
+    _moveChildElements(e, wndContent);
+
+    e.appendChild(tb);
+    e.appendChild(wndContent);
+}
+
+function setWindowEventHandlers(e) {
+    _makeDraggable(e);
+    e.onclick = function() { raiseWindowToTop(e); };
 }
 
 function _makeDraggable(e) {
@@ -146,7 +171,7 @@ function _makeDraggable(e) {
     titlebar.onmousedown = startDragWindow;
 
     function startDragWindow(mouseEvent) {
-        _raiseWindowToTop(e);
+        raiseWindowToTop(e);
         p3 = mouseEvent.clientX;
         p4 = mouseEvent.clientY;
         document.onmouseup = stopDragWindow;
@@ -184,16 +209,19 @@ function _addWindowOnTop(w) {
     _setWindowZs();
 }
 
-function _raiseWindowToTop(w) {
-    var idx = windows.indexOf(w);
-    let iTop = windows.length - 1;
+export function raiseWindowToTop(o) {
+    let w = getWindow(o);
+    if (w) {
+        var idx = windows.indexOf(w);
+        let iTop = windows.length - 1;
 
-    if (idx >= 0 && idx < iTop) {
-        for (let i = idx; i < iTop; i++) {
-            windows[i] = windows[i + 1];
+        if (idx >= 0 && idx < iTop) {
+            for (let i = idx; i < iTop; i++) {
+                windows[i] = windows[i + 1];
+            }
+            windows[iTop] = w;
+            _setWindowZs();
         }
-        windows[iTop] = w;
-        _setWindowZs();
     }
 }
 
@@ -207,28 +235,39 @@ function _removeWindowFromStack(w) {
 }
 
 export function showWindow(o) {
-    let e = _elementOf(o);
+    let e = getWindow(o);
     if (e) {
-        e.style.display = "block";
+        _addClass(e, "show");
         _addWindowOnTop(e);
     }
 }
 
 export function closeWindow(o) {
-    let e = _elementOf(o);
+    let e = getWindow(o);
     if (e) {
-        e.style.display = "none";
+        _removeClass(e, "show");
         _removeWindowFromStack(e);
+        if (e.closeAction) e.closeAction();
+    }
+}
+
+export function removeWindow(o) {
+    let e = getWindow(o);
+    if (e) {
+        _removeClass(e, "show")
+        _removeWindowFromStack(e);
+        e.parentElement.removeChild(e);
+        if (e.closeAction) e.closeAction();
     }
 }
 
 export function toggleWindow(event, o) {
     let e = _elementOf(o);
     if (e) {
-        if (!e.style.display || e.style.display == 'none') {
+        if (!_containsClass(e, "show")) {
             if (window.getComputedStyle(e).left == 'auto') { // no placement specified in CSS
                 let r = event.target.getBoundingClientRect();
-                _place(e, r.left, r.bottom);
+                setWindowLocation(e, r.left, r.bottom);
             }
             showWindow(e);
         } else {
@@ -238,19 +277,64 @@ export function toggleWindow(event, o) {
 }
 exportToMain(toggleWindow);
 
-function _place(e, x, y) {
-    // top right should always be visible so that we can move/hide
-    let w = e.offsetWidth;
-    let h = e.offsetHeight;
-    let sw = window.innerWidth;
-    let sh = window.innerHeight;
+export function setWindowLocation(o, x, y) {
+    let e = getWindow(o);
+    if (e) {
+        // top right should always be visible so that we can move/hide
+        let w = e.offsetWidth;
+        let h = e.offsetHeight;
+        let sw = window.innerWidth;
+        let sh = window.innerHeight;
 
-    if ((x + w) > sw) x = sw - w;
-    if ((y + h) > sh) y = sh - h;
-    if (y < 0) y = 0;
+        if ((x + w) > sw) x = sw - w;
+        if ((y + h) > sh) y = sh - h;
+        if (y < 0) y = 0;
 
-    e.style.left = x + "px";
-    e.style.top = y + "px";
+        e.style.left = x + "px";
+        e.style.top = y + "px";
+    }
+}
+
+export function setWindowSize(o, w, h) {
+    let e = getWindow(o);
+    if (e) {
+        // if dimensions are given as numbers we assume pixel
+        if (util.isNumber(w)) w = w.toString() + "px";
+        if (util.isNumber(h)) h = h.toString() + "px";
+
+        e.style.width = w;
+        e.style.height = h;
+    }
+}
+
+export function setWindowResizable(o, isResizable) {
+    let e = getWindow(o);
+    if (e) {
+        if (isResizable) {
+            _addClass(e, "resizable");
+        } else {
+            _removeClass(e, "resizable");
+        }
+    }
+}
+
+export function addWindowContent(o, ce) {
+    let e = getWindow(o)
+    if (e) {
+        let wc = _firstChildWithClass(e, "ui_window_content");
+        if (wc) {
+            wc.appendChild(ce);
+        }
+    }
+}
+
+export function getWindow(o) {
+    let e = _elementOf(o);
+    if (e) {
+        return _nearestElementWithClass(e, "ui_window");
+    } else {
+        return undefined;
+    }
 }
 
 //--- panels
@@ -375,7 +459,6 @@ function getIconBox() {
     let left = _rootVar("--icon-box-left");
     if (!iconBox.style.left && left) iconBox.style.left = left;
 
-
     return iconBox;
 }
 
@@ -402,10 +485,12 @@ function _initializeFields() {
         if (e.tagName == "DIV") {
             let id = e.dataset.id;
             let labelText = e.dataset.label;
-            let dataWidth = e.dataset.width;
+            let dataWidth = _inheritableData(e, 'width');
+            let labelWidth = _inheritableData(e, 'labelWidth');
 
             if (id && labelText) {
                 let label = _createElement("DIV", "ui_field_label", labelText);
+                if (labelWidth) label.style.width = labelWidth;
                 e.appendChild(label);
 
                 let field = _createElement("INPUT", e.classList);
@@ -883,7 +968,6 @@ function _computeSliderValue(e, v) {
     }
 }
 
-
 export function setSliderRange(o, min, max, step, numFormatter) {
     let e = getSlider(o);
     if (e) {
@@ -901,7 +985,6 @@ export function setSliderRange(o, min, max, step, numFormatter) {
         }
     }
 }
-
 
 export function setSliderValue(o, v) {
     let e = getSlider(o);
@@ -1736,6 +1819,17 @@ export function createColorInput(initClr, size, action) {
     return e;
 }
 
+//--- images
+
+export function createImage(src, placeholder, w, h) {
+    let e = document.createElement("img");
+    e.src = src;
+    if (placeholder) e.alt = placeholder;
+    if (w) e.width = w;
+    if (h) e.height = h;
+    return e;
+}
+
 //--- general utility functions
 
 function _elementOf(o) {
@@ -1985,6 +2079,20 @@ function _hasBorderedParent(e) {
         return (cl.contains('ui_container') && cl.contains('bordered'));
     }
     return false;
+}
+
+function _parentDataSet(e) {
+    let p = e.parentElement;
+    return (p) ? p.dataset : undefined;
+    _
+}
+
+function _inheritableData(e, key) {
+    do {
+        let v = e.dataset[key];
+        if (v) return v;
+        e = e.parentElement;
+    } while (e);
 }
 
 function _parseInt(s, defaultValue) {

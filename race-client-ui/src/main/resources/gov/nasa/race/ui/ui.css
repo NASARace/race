@@ -89,6 +89,10 @@ div.ui_window {
     background: var(--window-background);
 }
 
+div.ui_window.show {
+    display: block;
+}
+
 div.ui_window.resizable {
     /* display: inline-block; */
     width: inherit;
@@ -244,16 +248,17 @@ input.ui_field {
     background: var(--data-background);
     width: var(--field-value-width);
     height: var(--input-height);
+    text-align: left;
+    font: var(--font);
+}
+
+input.ui_field.fixed {
+    font: var(--mono-font);
 }
 
 input.ui_field.num {
     text-align: right;
     font: var(--mono-font);
-}
-
-input.ui_field.text {
-    display: inline-block;
-    font: var(--font);
 }
 
 

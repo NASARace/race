@@ -8,8 +8,9 @@ import sbt.{Keys, StdoutOutput, _}
 object CommonRaceSettings {
 
   val scalaVer = "2.13.8" // keep it as a ordinary var for libs that are Scala version dependent (e.g. scala-reflect)
+  val org = "gov.nasa.race"
 
-  lazy val commonRaceSettings =
+  lazy val commonRaceSettings = {
       PluginSettings.pluginSettings ++
       TaskSettings.taskSettings ++
       Seq(
@@ -43,8 +44,11 @@ object CommonRaceSettings {
         Test / fork := true,
         outputStrategy := Some(StdoutOutput),
         cleanFiles += baseDirectory.value / "tmp",
-        run / Keys.connectInput := true
+        run / Keys.connectInput := true,
+
+        organization := org
       )
+  }
 
   //import com.typesafe.sbt.pgp.PgpKeys.{publishLocalSigned, publishSigned}  // requires sbt-pgp plugin
 

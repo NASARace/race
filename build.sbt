@@ -10,7 +10,6 @@ ThisBuild / shellPrompt := { state => "[" + Project.extract(state).currentRef.pr
 enablePlugins(LaikaPlugin)
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
-  organization := "gov.nasa.race",
   version := "1.8.1"
 )
 

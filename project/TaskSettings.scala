@@ -20,7 +20,6 @@ import Keys._
 import complete.DefaultParsers._
 import RaceBuild._
 
-
 object TaskSettings {
   
   lazy val tree = taskKey[Unit]("print src/ tree of this project")
@@ -46,6 +45,7 @@ object TaskSettings {
   lazy val cargoBuildRelease = inputKey[Unit]("run 'cargo build --release' in current project")
   lazy val cargoClean = inputKey[Unit]("run 'cargo clean' in current project")
 
+  lazy val removeIvyLocal = taskKey[Unit]("delete .ivy2/local/<org>")
 
   lazy val taskSettings = Seq(
     //--- unix tree command (listing what is under current src/)
@@ -84,6 +84,14 @@ object TaskSettings {
     cargoBuild := CargoTask.cargoBuild( baseDirectory.value, CargoTask.pathParser.parsed),
     cargoBuildRelease := CargoTask.cargoBuildRelease( baseDirectory.value, CargoTask.pathParser.parsed),
     cargoClean := CargoTask.cargoClean( baseDirectory.value, CargoTask.pathParser.parsed),
+
+    removeIvyLocal := {
+      RemoveIvyLocal.removeIvyLocal()
+    },
+    publishLocal := {
+      removeIvyLocal.value
+      publishLocal.value
+    },
 
     //--- Laika wrappers
 
