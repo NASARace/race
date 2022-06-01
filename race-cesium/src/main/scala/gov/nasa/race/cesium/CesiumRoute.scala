@@ -41,7 +41,7 @@ object CesiumRoute {
 
   val imageryPrefixMatcher = PathMatcher(imageryPrefix / "[^/]+".r ~ Slash)
 
-  val defaultCesiumJsVersion = "1.92"
+  val defaultCesiumJsVersion = "1.93"
 
   val cesiumPathMatcher = PathMatchers.separateOnSlashes("Build/Cesium/")
   def cesiumJsUrl (version: String): String = {
@@ -73,7 +73,9 @@ trait CesiumRoute
 
   val accessToken = config.getVaultableString("access-token")
   val cesiumVersion = config.getStringOrElse("cesium-version", defaultCesiumJsVersion)
-  val proxyTerrain = config.getBoolean("proxy-elevation-provider")
+  val requestRenderMode = config.getBooleanOrElse("request-render", false)
+  val targetFrameRate = config.getIntOrElse("frame-rate", -1)
+  val proxyTerrain = config.getBooleanOrElse("proxy-elevation-provider", true)
   val terrainProvider = config.getStringOrElse("elevation-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
   val imageryLayers = ImageryLayer.readConfig(config)
   val layerMap: Map[String,String] = Map.from( imageryLayers.map( layer=> (layer.name, layer.url))) // symbolic map layer name -> url
@@ -171,15 +173,15 @@ trait CesiumRoute
     val wsToken = registerTokenForClient(remoteAddr)
 
     val terrain = if (proxyTerrain) CesiumRoute.terrainPrefix else terrainProvider
-
-    s"""
-      export const cesiumAccessToken = '${config.getVaultableString("access-token")}';
-      export const wsUrl = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';
-
-      export const imageryParams = ${imageryParams.toJs};
-      export const imageryLayers = ${StringUtils.mkString(imageryLayers,"[\n",",\n","\n]")(_.toJs)};
-      export const terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'});
-    """
+      s"""
+export const cesiumAccessToken = '${config.getVaultableString("access-token")}';
+export const wsUrl = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';
+export const requestRenderMode = $requestRenderMode;
+export const targetFrameRate = $targetFrameRate;
+export const imageryParams = ${imageryParams.toJs};
+export const imageryLayers = ${StringUtils.mkString(imageryLayers,"[\n  ",",\n  ","\n]")(_.toJs)};
+export const terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'});
+"""
   }
 
   // id required by Cesium scripts
@@ -216,12 +218,12 @@ trait CesiumRoute
         uiButton("Home", "main.setHomeView()"),
         uiButton("Down", "main.setDownView()")
       ),
+      uiColumnContainer("align_right")(
+        uiCheckBox("render on-demand", "main.toggleRequestRenderMode()", "view.rm"),
+        uiSlider("frame rate", "view.fr", "main.setFrameRate(event)")
+      ),
       uiPanel("map layers", true)(
         uiList("view.map.list", 10, "main.selectMapLayer(event)"),
-        uiRowContainer()(
-          uiButton("⬆︎", "main.raiseMapLayer()"),
-          uiButton("⬇︎", "main.lowerMapLayer()")
-        )
       ),
       uiPanel("layer parameters", false)(
         uiColumnContainer("align_right")(

@@ -74,19 +74,29 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner[Message] with Ra
     connections.foreach (e => pushTo(e._1,e._2, m))
   }
 
+  /**
+    * NOTE - this only pushed to a connected remoteAddr
+    * don't use in initializeConnection() which is called before the new client is added to connections
+    */
   protected def pushTo (remoteAddr: InetSocketAddress, m: Message): Unit = synchronized {
     ifSome(connections.get(remoteAddr)) { queue=>
       pushTo(remoteAddr,queue,m)
     }
   }
 
+  /**
+    * use this to send from initializeConnection(), which is called before updating connections hence we need
+    * to specify the queue explicitly
+    *
+    * TODO - rename to make this more prominent
+    */
   protected def pushTo(remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message], m: Message): Unit = synchronized {
     queue.offer(m).onComplete {
       case Success(_) => // all good (TODO should we check for Enqueued here?)
         info(s"pushing message $m to $remoteAddr")
 
       case Failure(_) =>
-        info(s"dropping connection: $remoteAddr")
+        warning(s"dropping connection: $remoteAddr")
         connections = connections.filter( e => e._1 ne remoteAddr)
     }
   }

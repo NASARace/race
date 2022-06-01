@@ -52,6 +52,10 @@ object FileUtils {
     } else None
   }
 
+  def resourceContentsAsStream (cls: Class[_],fileName: String): Option[InputStream] = {
+    Option(cls.getResourceAsStream(fileName))
+  }
+
   // platform charset
   def fileContentsAsString(file: File): Option[String] = {
     if (file.isFile) Some(new String(Files.readAllBytes(file.toPath))) else None

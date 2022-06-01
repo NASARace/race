@@ -18,10 +18,9 @@
 package gov.nasa.race.air
 
 import java.io._
-
 import com.typesafe.config.Config
 import gov.nasa.race._
-import gov.nasa.race.archive.ArchiveReader
+import gov.nasa.race.archive.{ArchiveEntry, ArchiveReader}
 import gov.nasa.race.common.{BMSearch, SearchStream}
 import gov.nasa.race.uom.DateTime
 

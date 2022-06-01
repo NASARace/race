@@ -10,12 +10,19 @@ var mapLayerView = undefined;
 var selectedMapLayer = undefined;
 var activeBaseLayer = undefined;
 
+var requestRenderMode = false;
+var defaultTargetFrameRate = undefined;
+var targetFrameRate = -1;
+
 var imageryLayers = config.imageryLayers;
 var imageryParams = {...config.imageryParams }; // we might still adjust them based on theme (hence we have to copy)
 
+var pendingRenderRequest = false;
 
 ui.registerLoadFunction(function initialize() {
     Cesium.Ion.defaultAccessToken = config.cesiumAccessToken;
+
+    requestRenderMode = config.requestRenderMode;
 
     viewer = new Cesium.Viewer('cesiumContainer', {
         terrainProvider: config.terrainProvider,
@@ -26,8 +33,14 @@ ui.registerLoadFunction(function initialize() {
         navigationHelpButton: false,
         homeButton: false,
         timeline: false,
-        animation: false
+        animation: false,
+        requestRenderMode: requestRenderMode
     });
+
+    setTargetFrameRate(config.targetFrameRate);
+    initFrameRateSlider();
+
+    if (requestRenderMode) ui.setCheckBox("view.rm", true);
 
     setCanvasSize();
     window.addEventListener('resize', setCanvasSize);
@@ -47,8 +60,56 @@ ui.registerLoadFunction(function initialize() {
 
     ui.registerThemeChangeHandler(themeChanged);
 
+    viewer.scene.postRender.addEventListener(function(scene, time) {
+        pendingRenderRequest = false;
+    });
+
     console.log("ui_cesium initialized");
 });
+
+function initFrameRateSlider() {
+    let e = ui.getSlider('view.fr');
+    if (e) {
+        ui.setSliderRange(e, 0.0, 60, 10, util.f_0);
+        ui.setSliderValue(e, targetFrameRate);
+    }
+}
+
+function setTargetFrameRate(fr) {
+    targetFrameRate = fr;
+    if (fr > 0) {
+        viewer.targetFrameRate = targetFrameRate;
+    } else {
+        viewer.targetFrameRate = undefined; // whatever the browser default animation rate is
+    }
+}
+
+export function lowerFrameRateWhile(action, lowFr) {
+    viewer.targetFrameRate = lowFr;
+    action();
+    viewer.targetFrameRate = targetFrameRate;
+}
+
+export function lowerFrameRateFor(msec, lowFr) {
+    let curFr = viewer.targetFrameRate;
+    viewer.targetFrameRate = lowFr;
+    setTimeout(() => {
+        viewer.targetFrameRate = curFr;
+        requestRender();
+    }, msec);
+}
+
+export function setRequestRenderMode(cond) {
+    viewer.requestRenderMode = cond;
+    ui.setCheckBox("view.rm", cond);
+}
+
+export function requestRender() {
+    if (requestRenderMode && !pendingRenderRequest) {
+        pendingRenderRequest = true;
+        viewer.scene.requestRender();
+    }
+}
 
 function themeChanged() {
     imageryLayers.forEach(li => li.imageryParams = li.originalImageryParams); // restore original imageryParams
@@ -267,6 +328,22 @@ export function addDataSource(dataSrc) {
     viewer.dataSources.add(dataSrc);
 }
 
+export function removeDataSource(dataSrc) {
+    viewer.dataSources.remove(dataSrc);
+}
+
+export function toggleDataSource(dataSrc) {
+    if (viewer.dataSources.contains(dataSrc)) {
+        viewer.dataSources.remove(dataSrc);
+    } else {
+        viewer.dataSources.add(dataSrc);
+    }
+}
+
+export function isDataSourceShowing(dataSrc) {
+    return viewer.dataSources.contains(dataSrc);
+}
+
 export function clearSelectedEntity() {
     viewer.selectedEntity = null;
 }
@@ -360,6 +437,16 @@ export function toggleFullScreen(event) {
 }
 ui.exportToMain(toggleFullScreen);
 
+ui.exportToMain(function toggleRequestRenderMode() {
+    requestRenderMode = !requestRenderMode;
+    viewer.scene.requestRenderMode = requestRenderMode;
+});
+
+ui.exportToMain(function setFrameRate(event) {
+    let v = ui.getSliderValue(event.target);
+    setTargetFrameRate(v);
+});
+
 ui.exportToMain(function setImageryProvider(event, providerName) {
     let p = config.imageryProviders.find(p => p.name == providerName);
     if (p) {
@@ -388,18 +475,22 @@ ui.exportToMain(function setMapAlpha(event) {
         let v = ui.getSliderValue(event.target);
         selectedMapLayer.layer.alpha = v;
         getModifiableImageryParams(selectedMapLayer).alpha = v;
+        requestRender();
     }
 });
 
 ui.exportToMain(function setMapBrightness(event) {
     let v = ui.getSliderValue(event.target);
     setMapLayerBrightness(v);
+    requestRender();
+
 });
 
 function setMapLayerBrightness(v) {
     if (selectedMapLayer) {
         selectedMapLayer.layer.brightness = v;
         getModifiableImageryParams(selectedMapLayer).brightness = v;
+        requestRender();
     }
 }
 
@@ -408,30 +499,35 @@ ui.exportToMain(function setMapContrast(event) {
         let v = ui.getSliderValue(event.target);
         selectedMapLayer.layer.contrast = v;
         getModifiableImageryParams(selectedMapLayer).contrast = v;
+        requestRender();
     }
 });
 
 ui.exportToMain(function setMapHue(event) {
     let v = ui.getSliderValue(event.target);
     setMapLayerHue(v);
+    requestRender();
 });
 
 function setMapLayerHue(v) {
     if (selectedMapLayer) {
         selectedMapLayer.layer.hue = (v * Math.PI) / 180; // needs radians
         getModifiableImageryParams(selectedMapLayer).hue = v;
+        requestRender();
     }
 }
 
 ui.exportToMain(function setMapSaturation(event) {
     let v = ui.getSliderValue(event.target);
     setMapLayerSaturation(v);
+    requestRender();
 });
 
 function setMapLayerSaturation(v) {
     if (selectedMapLayer) {
         selectedMapLayer.layer.saturation = v;
         getModifiableImageryParams(selectedMapLayer).saturation = v;
+        requestRender();
     }
 }
 
@@ -440,5 +536,6 @@ ui.exportToMain(function setMapGamma(event) {
         let v = ui.getSliderValue(event.target);
         selectedMapLayer.layer.gamma = v;
         getModifiableImageryParams(selectedMapLayer).gamma = v;
+        requestRender();
     }
 });

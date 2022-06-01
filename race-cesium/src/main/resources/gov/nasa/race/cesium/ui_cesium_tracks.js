@@ -229,10 +229,12 @@ function handleSources(sources) {
 function handleTrackMessage(track) {
     //console.log(JSON.stringify(track));
     updateTrackEntries(track);
+    uiCesium.requestRender();
 }
 
 function handleTrackListMessage(tracks) { // bulk update
     for (track of tracks) updateTrackEntries(track);
+    uiCesium.requestRender();
 }
 
 function handleDropped(drop) {
@@ -244,6 +246,7 @@ function handleDropped(drop) {
         let te = ts.trackEntries.get(label);
         if (te) {
             removeTrackEntry(ts, te);
+            uiCesium.requestRender();
         }
     }
 }

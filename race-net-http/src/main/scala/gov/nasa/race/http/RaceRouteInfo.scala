@@ -136,6 +136,8 @@ trait SubscribingRaceRoute extends RaceRouteInfo with RaceDataClient
   */
 trait ContinuousTimeRaceRoute extends RaceRouteInfo {
   val simClock = RaceActorSystem(system).simClock
+
+  def dateTime = simClock.dateTime
 }
 
 

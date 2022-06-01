@@ -133,6 +133,8 @@ trait CsvPullParser {
     (idx < limit)
   }
 
+  @inline def skipLine(): Boolean = skipRecordSeparator()
+
   def skipToNextRecord(): Boolean = {
     nValues = 0
     skipToEndOfRecord()

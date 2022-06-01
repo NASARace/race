@@ -735,6 +735,7 @@ function _updateClock(e, t) {
         e._uiW0 = t;
 
         let date = new Date(t);
+        e._uiDate = date;
         e.children[0].innerText = e._uiDateFmt.format(date);
         e.children[1].innerText = e._uiTimeFmt.format(date);
 
@@ -744,6 +745,7 @@ function _updateClock(e, t) {
         } else if (_isShowing(e)) {
             let s = e._uiS0 + (t - e._uiW0) * e._uiTimeScale;
             let date = new Date(s);
+            e._uiDate = date;
             let day = s / MILLIS_IN_DAY;
             if (day != e._uiSday) {
                 e.children[0].innerText = e._uiDateFmt.format(date);
@@ -754,11 +756,28 @@ function _updateClock(e, t) {
     }
 }
 
+export function getClockDate(o) {
+    let e = getClock(o);
+    if (e) {
+        return e._uiDate;
+    }
+    return undefined;
+}
+
+export function getClockEpochMillis(o) {
+    let e = getClock(o);
+    if (e) {
+        return e._uiDate.getTime();
+    }
+    return undefined;
+}
+
 export function setClock(o, dateSpec, timeScale) {
     let e = getClock(o);
     if (e) {
         let date = new Date(dateSpec);
         if (date) {
+            e._uiDate = date;
             e._uiS0 = date.valueOf();
             e._uiSday = e._uiS0 / MILLIS_IN_DAY;
 
@@ -1183,7 +1202,7 @@ export function setCheckBox(o, check = true) {
     let e = getCheckBox(o);
     if (e) {
         if (check) _addClass(e, "checked");
-        else e.classList.remove("checked");
+        else _removeClass(e, "checked");
     }
 }
 
@@ -1536,13 +1555,57 @@ export function setListItems(o, items) {
     }
 }
 
+function selectAndShow(e, ie) {
+    if (ie) {
+        _setSelectedItemElement(e, ie);
+        ie.scrollIntoView();
+    }
+}
+
 export function setSelectedListItem(o, item) {
     let e = getList(o);
     if (e) {
-        let ie = e._uiItemMap.get(item);
-        if (ie) {
-            _setSelectedItemElement(e, ie);
-            ie.scrollIntoView();
+        selectAndShow(e, e._uiItemMap.get(item));
+    }
+}
+
+export function setSelectedListItemIndex(o, idx) {
+    let listBox = getList(o);
+    if (listBox) {
+        selectAndShow(listBox, _nthChildOf(listBox, idx));
+    }
+}
+
+export function selectFirstListItem(o) {
+    let listBox = getList(o);
+    if (listBox) {
+        selectAndShow(listBox, listBox.firstChild);
+    }
+}
+
+export function selectLastListItem(o) {
+    let listBox = getList(o);
+    if (listBox) {
+        selectAndShow(listBox, listBox.lastChild);
+    }
+}
+
+export function selectNextListItem(o) {
+    let listBox = getList(o);
+    if (listBox) {
+        let sel = listBox._uiSelectedItemElement;
+        if (sel) {
+            selectAndShow(listBox, sel.nextElementSibling);
+        }
+    }
+}
+
+export function selectPrevListItem(o) {
+    let listBox = getList(o);
+    if (listBox) {
+        let sel = listBox._uiSelectedItemElement;
+        if (sel) {
+            selectAndShow(listBox, sel.previousElementSibling);
         }
     }
 }
@@ -1558,11 +1621,22 @@ export function getSelectedListItem(o) {
     } else throw "not a list";
 }
 
+export function getSelectedListItemIndex(o) {
+    let listBox = getList(o);
+    if (listBox) {
+        let sel = listBox._uiSelectedItemElement;
+        if (sel) {
+            return _childIndexOf(sel);
+        }
+    }
+    return -1;
+}
+
 export function appendListItem(o, item) {
     let e = getList(o);
     if (e) {
-        let ie = _createElement("DIV", "ui_list_item", item);
-        ie._uiItem = item;
+        let proto = e._uiRowPrototype;
+        let ie = _createListItemElement(e, item, proto);
         e.appendChild(ie);
     }
 }

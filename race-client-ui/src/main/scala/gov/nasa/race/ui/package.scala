@@ -79,8 +79,9 @@ package object ui {
     input(mods: _*)
   }
 
-  def uiCheckBox (label: String, action: String=NoAction, eid: UiID=NoId): Text.TypedTag[String] = {
-    var mods = List(cls:="ui_checkbox", data("label"):= label)
+  def uiCheckBox (label: String, action: String=NoAction, eid: UiID=NoId, isSelected: Boolean = false): Text.TypedTag[String] = {
+    val uiClasses = if (isSelected) "ui_checkbox checked" else "ui_checkbox"
+    var mods = List(cls:=uiClasses, data("label"):= label)
     if (action.nonEmpty) mods = (onclick:=action) :: mods
     if (eid.nonEmpty) mods = (id:=eid) :: mods
     div(mods: _*)

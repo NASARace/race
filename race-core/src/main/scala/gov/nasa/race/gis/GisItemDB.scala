@@ -445,7 +445,7 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     private[GisItemDB]  def canContain(d: Double): Boolean
     private[GisItemDB]  def update(d: Double, iOff: Int): Unit
 
-    // we only need a order-preserving value (save the sqrt)
+    // we only need an order-preserving value (save the sqrt)
     private[GisItemDB]  def computeDist(x2: Double, y2: Double, z2: Double): Double = {
       val d2 = squared(x - x2) + squared(y - y2) + squared(z - z2)
       if (d2 > 1e10) { // if distance > 100,000m we approximate with sphere

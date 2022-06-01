@@ -65,9 +65,9 @@
     --panel-border-top: 1px solid var(--border-color);
     --panel-background: var(--background);
     /* scrollbars */
-    --scrollbar-track-width: 0.6rem;
+    --scrollbar-track-width: 0.7rem;
     --scrollbar-track-color: rgb(44, 44, 44);
-    --scrollbar-thumb-width: 0.5rem;
+    --scrollbar-thumb-width: 0.6rem;
     --scrollbar-thumb-color: rgb(100, 100, 100);
     /* menus */
     --popup-menu-border: 1px solid rgb(24, 24, 24);

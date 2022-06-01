@@ -18,7 +18,7 @@ package gov.nasa.race.land
 
 import akka.actor.ExtendedActorSystem
 import com.typesafe.config.Config
-import gov.nasa.race.archive.{ArchiveReader, ArchiveWriter}
+import gov.nasa.race.archive.{ArchiveEntry, ArchiveReader, ArchiveWriter, StreamArchiveReader}
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream, createOutputStream}
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{JsonPullParser, JsonSerializable, JsonWriter, LineBuffer, Utf8CsvPullParser}
@@ -215,14 +215,11 @@ class GpsPosArchiveWriter(val oStream: OutputStream, val pathName: String="<unkn
 /**
   * corresponding archive reader
   */
-class GpsPosArchiveReader(val iStream: InputStream, val pathName: String="<unknown>", bufLen: Int) extends ArchiveReader with GpsPosCsvParser {
-  val lineBuffer = new LineBuffer(iStream,bufLen)
-
+class GpsPosArchiveReader(val iStream: InputStream, val pathName: String="<unknown>", bufLen: Int)
+                                                     extends StreamArchiveReader with GpsPosCsvParser {
   def this(conf: Config) = this(createInputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096))
 
-  override def hasMoreArchivedData: Boolean = {
-    iStream.available > 0
-  }
+  val lineBuffer = new LineBuffer(iStream,bufLen)
 
   override def readNextEntry(): Option[ArchiveEntry] = {
     if (lineBuffer.nextLine()) {
@@ -235,8 +232,6 @@ class GpsPosArchiveReader(val iStream: InputStream, val pathName: String="<unkno
       } else None
     } else None
   }
-
-  override def close(): Unit = iStream.close()
 }
 
 //--- JSON parser

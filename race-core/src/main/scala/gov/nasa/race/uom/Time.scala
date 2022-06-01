@@ -44,6 +44,7 @@ object Time {
   @inline def Minutes(m: Long): Time = new Time(m * MillisInMinute)
   @inline def Hours(h: Long): Time = new Time(h * MillisInHour)
   @inline def Days(d: Long): Time = new Time(d * MillisInDay)
+  @inline def HM(h: Long, m: Long): Time = new Time(h * MillisInHour + m * MillisInMinute)
   @inline def HMS(h: Long, m: Long, s: Long): Time = new Time(h * MillisInHour + m * MillisInMinute + s * 1000)
   @inline def HMSms(h: Long, m: Long, s: Long, ms: Long): Time = {
     new Time(h * MillisInHour + m * MillisInMinute + s * 1000 + ms)

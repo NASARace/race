@@ -57,17 +57,20 @@ trait ArchiveWriter {
   def handlePathNameFailure = throw new RuntimeException(s"not a writable pathname: $pathName")
 }
 
+/**
+  * archived message
+  */
+class ArchiveEntry (var date: DateTime, var msg: Any) extends Dated
 
 /**
   * type that reads time-stamped ArchiveEntry objects from archives
   */
 trait ArchiveReader extends DateAdjuster {
-  class ArchiveEntry (var date: DateTime, var msg: Any) extends Dated
 
   //--- optimization to reduce heap pressure by avoiding a ton of short living Option objects
 
-  // NOTE - this breaks immutability of the return value. Use only in a single threaded context
-  // that does not store ArchiveEntries
+  // NOTE - this breaks immutability of the return value.
+  // Use only in a single threaded context that does not store ArchiveEntries
   // the only reason this exists is to avoid Option allocation while still using their semantics in clients
 
   protected val nextEntry = new ArchiveEntry(DateTime.UndefinedDateTime,null)
@@ -87,4 +90,14 @@ trait ArchiveReader extends DateAdjuster {
   def close(): Unit
 
   val pathName: String
+}
+
+/**
+  * an ArchiveReader that works off an InputStream
+  */
+trait StreamArchiveReader extends ArchiveReader {
+  val iStream: InputStream
+
+  override def hasMoreArchivedData: Boolean = iStream.available > 0
+  override def close(): Unit = iStream.close()
 }

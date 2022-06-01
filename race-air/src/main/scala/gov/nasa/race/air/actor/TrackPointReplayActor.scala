@@ -17,11 +17,10 @@
 package gov.nasa.race.air.actor
 
 import java.io.{File, InputStream}
-
 import com.typesafe.config.Config
 import gov.nasa.race.actor.ReplayActor
 import gov.nasa.race.air.FlightPos
-import gov.nasa.race.archive.ArchiveReader
+import gov.nasa.race.archive.{ArchiveEntry, ArchiveReader}
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.geo.GeoPosition

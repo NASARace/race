@@ -40,18 +40,24 @@ class Clock (initTime: DateTime = DateTime.now,
   protected var _timeScale = initTimeScale
   protected var _base = initTime // sim time
   protected var _end = endTime
+
   protected var _initMillis = System.currentTimeMillis  // wall time
   protected var _stoppedAt: Long = if (stopped) _initMillis else 0 // wall time
 
   def currentMillis = if (_stoppedAt > 0) _stoppedAt else System.currentTimeMillis
 
   @inline def timeScale: Double = _timeScale
-  def base = _base
-  def end = _end
-  def initMillis = _initMillis
-  @inline def stoppedAt = _stoppedAt
-  def baseMillis = _base.toEpochMillis
-  def endMillis = endTimeMillis
+
+  // sim time
+  def start: DateTime = _base
+  def base: DateTime = _base
+  def end: DateTime = _end
+
+  // those are all wall clock millis
+  def initMillis: Long = _initMillis
+  @inline def stoppedAt: Long = _stoppedAt
+  def baseMillis: Long = _base.toEpochMillis
+  def endMillis: Long = endTimeMillis
 
   @inline def isStopped = _stoppedAt != 0
 

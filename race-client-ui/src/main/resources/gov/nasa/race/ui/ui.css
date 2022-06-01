@@ -602,6 +602,14 @@ div.ui_list_subitem {
     white-space: nowrap;
 }
 
+div.ui_list_subitem.align_left {
+    text-align: left;
+}
+
+div.ui_list_subitem.align_right {
+    text-align: right;
+}
+
 
 /* tab lists */
 

@@ -42,6 +42,8 @@ object DateTime {
   final val MsecPerDay = 1000*60*60*24
   final val MsecPerHour = 1000*60*60
 
+  final val utcId = ZoneId.of("UTC")
+
   //--- the constructors
 
   @inline def now: DateTime = new DateTime(System.currentTimeMillis)
@@ -94,6 +96,23 @@ object DateTime {
 
         val zdt = ZonedDateTime.of(y,M,d, H,m,s,S, zoneId)
         new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) * 1000 + S / 1000000)
+
+      case _ => throw new RuntimeException(s"invalid date spec: $spec")
+    }
+  }
+
+  val YMD_RE = """(\d{4})[\/-](\d{1,2})[\/-](\d{1,2}) ?(?:([+-]\d{1,2})(?:\:(\d{1,2})))? ?\[?([\w\/]+)?+\]?""".r
+
+  def parseYMD(spec: CharSequence, defaultZone: ZoneId = ZoneId.systemDefault): DateTime = {
+    spec match {
+      case YMD_RE(year,month,day,offHour,offMin,zId) =>
+        val zoneId = getZoneId(zId,offHour,offMin, defaultZone)
+        val y = Integer.parseInt(year)
+        val M = Integer.parseInt(month)
+        val d = Integer.parseInt(day)
+
+        val zdt = ZonedDateTime.of(y,M,d, 0,0,0,0, zoneId)
+        new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) * 1000)
 
       case _ => throw new RuntimeException(s"invalid date spec: $spec")
     }

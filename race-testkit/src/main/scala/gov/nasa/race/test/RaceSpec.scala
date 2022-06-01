@@ -17,13 +17,13 @@
 
 package gov.nasa.race.test
 
-import java.io.File
-
+import java.io.{File, FileInputStream, InputStream}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest._
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
+import java.util.zip.GZIPInputStream
 import scala.reflect.ClassTag
 
 
@@ -80,6 +80,11 @@ trait RaceSpec extends Suite with Matchers with OptionValues with Inside with Sc
   def baseResourceFile(fileName: String): File = {
     val rf = new File(codeSource, fileName)
     if (rf.exists) rf else fail(s"resource file not found: $rf")
+  }
+
+  def baseResourceStream(fileName: String): InputStream = {
+    val is = new FileInputStream( baseResourceFile(fileName))
+    if (fileName.endsWith(".gz")) new GZIPInputStream(is) else is
   }
 
   def createConfig(s: String) = ConfigFactory.parseString(s)

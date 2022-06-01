@@ -1,0 +1,5 @@
+latitude,longitude,brightness,scan,track,acq_date,acq_time,satellite,instrument,confidence,version,bright_t31,frp,daynight
+38.61877,-121.29271,308.4,0.43,0.46,2020-08-16,1024,1,VIIRS,n,2.0NRT,293.7,1.3,N
+37.84794,-121.78542,367,0.5,0.66,2020-08-16,2006,1,VIIRS,h,2.0NRT,300.9,14.6,D
+37.84356,-121.77808,341.8,0.5,0.66,2020-08-16,2006,1,VIIRS,n,2.0NRT,300.1,16.9,D
+37.84519,-121.7811,347.5,0.5,0.66,2020-08-16,2006,1,VIIRS,n,2.0NRT,300.9,16.9,D

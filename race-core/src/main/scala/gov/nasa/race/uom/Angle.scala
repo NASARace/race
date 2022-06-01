@@ -41,7 +41,9 @@ object Angle {
   final val MinutesInRadian = DegreesInRadian * 60.0
   final val Angle0 = new Angle(0)
   final val Angle90 = new Angle(π_2)
+  final val AngleNeg90 = new Angle(-π_2)
   final val Angle180 = new Angle(π)
+  final val AngleNeg180 = new Angle(-π)
   final val Angle270 = new Angle(π3_2)
   final val UndefinedAngle = new Angle(Double.NaN)
   @inline def isDefined(x: Angle): Boolean  = !x.d.isNaN
@@ -130,7 +132,9 @@ class Angle protected[uom] (val d: Double) extends AnyVal with MaybeUndefined {
 
   // use only for sub-range
   @inline def < (x: Angle) = d < x.d
+  @inline def <= (x: Angle) = d <= x.d
   @inline def > (x: Angle) = d > x.d
+  @inline def >= (x: Angle) = d >= x.d
 
   @inline def =:= (x: Angle) = d == x.d // use this if you really mean equality
   @inline def ≡ (x: Angle) = d == x.d

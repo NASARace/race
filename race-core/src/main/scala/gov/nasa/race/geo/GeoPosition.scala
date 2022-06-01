@@ -66,6 +66,12 @@ trait GeoPosition extends JsonSerializable {
   @inline final def altMeters: Double = altitude.toMeters
   @inline final def altFeet: Int = altitude.toFeet.toInt
 
+  // this assumes normalized angles (boundaries count as both)
+  @inline final def isWest: Boolean = λ <= Angle0 && λ >= AngleNeg180
+  @inline final def isEast: Boolean = λ >= Angle0 && λ <= Angle180
+  @inline final def isNorth: Boolean = φ >= Angle0 && φ <= AngleNeg90
+  @inline final def isSouth: Boolean = φ <= Angle0 && φ >= AngleNeg90
+
   override def toString: String = f"${getClass.getSimpleName}(φ=${φ.toDegrees}%+3.6f°,λ=${λ.toDegrees}%+3.6f°,alt=${altitude.toMeters}%.1fm)"
   def toGenericString3D: String = f"φ=${φ.toDegrees}%+3.6f°,λ=${λ.toDegrees}%+3.6f°,alt=${altitude.toMeters}%.1fm"
   def toGenericString2D: String = f"(φ=${φ.toDegrees}%+3.6f°,λ=${λ.toDegrees}%+3.6f°)"

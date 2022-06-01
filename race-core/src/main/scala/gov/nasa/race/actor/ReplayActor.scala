@@ -19,7 +19,7 @@ package gov.nasa.race.actor
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.archive.ArchiveReader
+import gov.nasa.race.archive.{ArchiveEntry, ArchiveReader}
 import gov.nasa.race.common.Counter
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{ClockAdjuster, ContinuousTimeRaceActor}
@@ -166,7 +166,7 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
   }
 
   def reachedEndOfArchive = {
-    info(s"reached end of replay stream ${reader.pathName}")
+    warning(s"reached end of replay stream ${reader.pathName}")
     reader.close()  // no need to keep it around
     noMoreData = true
   }
@@ -179,24 +179,25 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
         val msg = e.msg
         checkInitialClockReset(date)
 
-        if (exceedsEndTime(date)) {
-          info(s"first message exceeds configured end-time")
+        if (exceedsEndTime(date)) { // past configured end-time, we are done here
+          warning(s"first message exceeds configured end-time")
           false
 
         } else {
-          val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
-          if (dt > SchedulerThresholdMillis) { // far enough in the future to be scheduled
-            isFirst = false
-            replayMessageLater(msg, dt, date)
-            true
+          if (skipEntry(e)) {
+            entrySkipped(e)
+            scheduleFirst(skipped + 1)
 
-          } else { // now, or has already passed
-            if (-dt > skipThresholdMillis) { // outside replay time window
-              scheduleFirst(skipped + 1) // skip this message
+          } else {
+            val dt = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date))
+            if (dt > SchedulerThresholdMillis) { // far enough in the future to be scheduled
+              isFirst = false
+              replayMessageLater(firstMessage(msg), dt, date)
+              true
             } else {
               info(s"skipping first $skipped messages")
               isFirst = false
-              if (replayMessageNow(msg, date)) scheduleNext(0)
+              if (replayMessageNow( firstMessage(msg), date)) scheduleNext(0)
               true
             }
           }
@@ -207,6 +208,17 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
         false
     }
   }
+
+  // override if we need to include some history
+  protected def skipEntry (e: ArchiveEntry): Boolean = {
+    e.date < baseSimTime
+  }
+
+  // override if we need to keep track of skipped entries
+  protected def entrySkipped(e: ArchiveEntry): Unit = {}
+
+  // override if we need to modify the first message to provide context, e.g. to include skipped data
+  protected def firstMessage (msg: Any): Any = msg
 
   // this should only be called after publishing the previous entry to guarantee that we process entries in order
   @tailrec final def scheduleNext (skipped: Int=0): Unit = {

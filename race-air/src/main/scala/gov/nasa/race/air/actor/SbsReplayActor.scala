@@ -20,7 +20,7 @@ import java.io.InputStream
 import com.typesafe.config.Config
 import gov.nasa.race.actor.Replayer
 import gov.nasa.race.air.SbsUpdater
-import gov.nasa.race.archive.ArchiveReader
+import gov.nasa.race.archive.{ArchiveEntry, ArchiveReader}
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream}
 import gov.nasa.race.common.LineBuffer
 import gov.nasa.race.config.ConfigUtils._

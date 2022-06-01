@@ -18,9 +18,8 @@
 package gov.nasa.race.air
 
 import java.io.{InputStream, OutputStream}
-
 import com.typesafe.config.Config
-import gov.nasa.race.archive.{TextLineArchiveReader, TimedTextLineArchiveWriter}
+import gov.nasa.race.archive.{ArchiveEntry, TextLineArchiveReader, TimedTextLineArchiveWriter}
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream, createOutputStream}
 import gov.nasa.race.uom.DateTime
 
