@@ -103,4 +103,26 @@ object Datum {
 
     Meters(sqrt(((RE_E2 * cos_φ).`²` + (RE_N2 * sin_φ).`²`)/(RE_E * cos_φ).`²` + (RE_N * sin_φ).`²`))
   }
+
+  def parallelDistance (pos1: GeoPosition, pos2: GeoPosition): Length = {
+    val lon1 = pos1.lon
+    val lon2 = pos2.lon
+    val dLon = if (lon2 > lon1) (lon2 - lon1) else (lon1 - lon2)
+
+    val mlat = (pos1.lat + pos2.lat) / 2
+    val r = parallelRadius(mlat)
+
+    Meters(dLon.toRadians * r)
+  }
+
+  def meridionalDistance (pos1: GeoPosition, pos2: GeoPosition): Length = {
+    val lat1 = pos1.lat
+    val lat2 = pos2.lat
+    val dlat = if (lat2 > lat1) lat2 - lat1 else lat1 - lat2
+
+    val mlat = (lat1 + lat2) / 2
+    val r = meridionalCurvatureRadius(mlat)
+
+    Meters(dlat.toRadians * r)
+  }
 }

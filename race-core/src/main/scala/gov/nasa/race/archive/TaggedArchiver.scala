@@ -22,7 +22,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.ConfigurableStreamCreator._
 import gov.nasa.race.common.{AsciiBuffer, ByteSlice, MutAsciiSlice, MutCharSeqByteSlice, MutRawByteSlice, Parser, StringDataBuffer, Utf8Buffer}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.uom.DateTime
+import gov.nasa.race.uom.{DateTime, Time}
 import gov.nasa.race.uom.DateTime._
 import gov.nasa.race.uom.Time._
 import gov.nasa.race.util.{ArrayUtils, NumUtils}
@@ -196,6 +196,7 @@ trait TaggedArchiveReader extends ArchiveReader {
   protected var extraFileHeader: Array[Byte] = Array.empty[Byte]
 
   protected var entryDate: DateTime = UndefinedDateTime
+  protected var entryDateOffset: Time = UndefinedTime
   protected var entryLength: Int = -1
 
   def getRefDate: DateTime = refDate
@@ -240,7 +241,8 @@ trait TaggedArchiveReader extends ArchiveReader {
     while (true) {
       if (iStream.read(buf, 0, entryHeaderLength) == entryHeaderLength) {
         slice.setRange(2, 8)
-        entryDate = refDate + Milliseconds(slice.toHexInt)
+        entryDateOffset = Milliseconds(slice.toHexInt)
+        entryDate = refDate + entryDateOffset
         slice.setRange(11, 8)
         entryLength = slice.toHexInt
         if (entryLength > 0) {
@@ -302,7 +304,8 @@ trait TaggedArchiveReader extends ArchiveReader {
   protected def readEntryHeaderFields(): Boolean = {
     if (iStream.read(buf, 0, entryHeaderLength - 2) == entryHeaderLength - 2){
       slice.setRange(0, 8)
-      entryDate = refDate + Milliseconds(slice.toHexInt)
+      entryDateOffset = Milliseconds(slice.toHexInt)
+      entryDate = refDate + entryDateOffset
       slice.setRange(9, 8)
       entryLength = slice.toHexInt
       true

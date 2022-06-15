@@ -350,6 +350,10 @@ trait CharSeqByteSlice extends ByteSlice with CharSequence {
     }
   }
 
+  def toOptionalDouble: Double = {
+    if (isEmpty) Double.NaN else toDouble
+  }
+
   // turn into String with replaced \x chars
   def toEscString (i0: Int = off, len: Int = len): String = {
     val data = this.data

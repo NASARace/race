@@ -100,8 +100,13 @@ export function lowerFrameRateFor(msec, lowFr) {
 }
 
 export function setRequestRenderMode(cond) {
-    viewer.requestRenderMode = cond;
+    requestRenderMode = cond;
+    viewer.scene.requestRenderMode = cond;
     ui.setCheckBox("view.rm", cond);
+}
+
+export function isRequestRenderMode() {
+    return requestRenderMode;
 }
 
 export function requestRender() {
@@ -109,6 +114,13 @@ export function requestRender() {
         pendingRenderRequest = true;
         viewer.scene.requestRender();
     }
+}
+
+export function withSampledTerrain(positions, level, action) {
+    const promise = Cesium.sampleTerrain(viewer.terrainProvider, level, positions);
+    Promise.resolve(promise).then(function(updatedPositions) {
+        action(updatedPositions);
+    });
 }
 
 function themeChanged() {
@@ -342,6 +354,14 @@ export function toggleDataSource(dataSrc) {
 
 export function isDataSourceShowing(dataSrc) {
     return viewer.dataSources.contains(dataSrc);
+}
+
+export function addPrimitive(prim) {
+    viewer.scene.primitives.add(prim);
+}
+
+export function removePrimitive(prim) {
+    viewer.scene.primitives.remove(prim);
 }
 
 export function clearSelectedEntity() {

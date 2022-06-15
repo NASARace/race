@@ -17,6 +17,8 @@
 package gov.nasa.race.http
 
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
+import akka.stream.QueueOfferResult
+import akka.stream.QueueOfferResult.{Dropped, Enqueued, QueueClosed}
 import akka.stream.scaladsl.{Flow, Sink, SourceQueueWithComplete}
 import akka.{Done, NotUsed}
 import gov.nasa.race.common.JsonWriter
@@ -92,12 +94,29 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner[Message] with Ra
     */
   protected def pushTo(remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message], m: Message): Unit = synchronized {
     queue.offer(m).onComplete {
-      case Success(_) => // all good (TODO should we check for Enqueued here?)
-        info(s"pushing message $m to $remoteAddr")
+      case Success(v) =>
+        v match {
+          case QueueOfferResult.Enqueued => // all good
+            info(s"pushing message $m to $remoteAddr")
+            //println(s"@@@@ enqueued message ${m.toString.substring(0,55)} to $remoteAddr")
 
-      case Failure(_) =>
-        warning(s"dropping connection: $remoteAddr")
-        connections = connections.filter( e => e._1 ne remoteAddr)
+          case QueueOfferResult.Dropped =>
+            warning(s"dropped message to: $remoteAddr")
+            //println(s"@@@@ DROPPED message to: $remoteAddr")
+
+          case QueueOfferResult.QueueClosed =>
+            warning(s"connection closed: $remoteAddr")
+            //println(s"@@@@ CLOSED connection: $remoteAddr")
+            connections = connections.filter(e => e._1 ne remoteAddr)
+
+          case QueueOfferResult.Failure(f) =>
+            warning(s"dropping connection: $remoteAddr because of $f")
+            //println(s"@@@@ dropping connection: $remoteAddr because of $f")
+            connections = connections.filter( e => e._1 ne remoteAddr)
+        }
+
+      case Failure(e) =>
+          println("@@@ FAILURE: ${m.toString.substring(0,55)} => $e")
     }
   }
 

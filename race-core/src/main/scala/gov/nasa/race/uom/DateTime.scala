@@ -49,6 +49,7 @@ object DateTime {
   @inline def now: DateTime = new DateTime(System.currentTimeMillis)
   @inline def ofEpochMillis(millis: Long) = new DateTime(millis)
   @inline def ofEpochSeconds(secs: Long) = new DateTime(secs*1000)
+  @inline def ofEpochFractionalSeconds (secs: Double) = new DateTime( (secs*1000).toLong)
 
   @inline def apply(year: Int, month: Int, day: Int, hour: Int, minutes: Int, secs: Int, ms: Int, zoneId: ZoneId): DateTime = {
     val zdt = ZonedDateTime.of(year,month,day, hour,minutes,secs,ms * 1000000, zoneId)
@@ -120,7 +121,7 @@ object DateTime {
 
   def getZoneId (zid: String, offHour: String, offMin: String, defaultZone: ZoneId): ZoneId = {
     if (offHour == null) {
-      if (zid == null) defaultZone else ZoneId.of(zid)
+      if (zid == null) defaultZone else ZoneId.of(zid, ZoneId.SHORT_IDS)
 
     } else { // zone name is ignored, use explicit offset
       val h = Integer.parseInt(offHour)
@@ -382,6 +383,7 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
 
   @inline def toEpochMillis: Long = millis
   @inline def toLocalMillis: Long = (millis + LocalOffsetMillis)
+  def toEpochSeconds: Long = millis/1000
 
   @inline def toInstant: Instant = Instant.ofEpochMilli(millis)
   @inline def toZonedDateTime (zoneId: ZoneId): ZonedDateTime = {

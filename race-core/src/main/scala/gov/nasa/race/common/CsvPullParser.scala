@@ -81,18 +81,21 @@ trait CsvPullParser {
     true
   }
 
-  def skip (nValues: Int): Unit = {
+  def skip (nSkip: Int): Unit = {
     val data = this.data
     var i = idx
     var n = 0
 
-    while (i < limit && n < nValues) {
+    while (i < limit && n < nSkip) {
       if (isRecordSeparator(data(i))) {
         idx = i
         return
       }
 
-      if (data(i) == ',') i += 1
+      if (data(i) == ',') {
+        i += 1
+        nValues += 1
+      }
 
       if (data(i) == '"') {
         i = skipToEndOfStringValue(i + 1) + 1
@@ -150,6 +153,8 @@ trait CsvPullParser {
   def hasMoreValues: Boolean = isValueSeparator(data(idx))
 
   def readNextValue(): Utf8Slice = if (parseNextValue()) value else throw new CsvParseException("no value left")
+
+  def isLineStart: Boolean = nValues == 0
 
   //--- internals
 

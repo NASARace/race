@@ -30,7 +30,7 @@ class TrackEntry {
         this.trackSource = trackSource;
 
         this.id = track.label;
-        this.trace = new CircularBuffer(config.maxTraceLength);
+        this.trace = new CircularBuffer(config.track.maxTraceLength);
     }
 
     assetDisplay() {
@@ -380,8 +380,8 @@ function hasTrackIdChanged(track) {
 }
 
 function getTrackColor(trackSourceId) {
-    let trackColor = config.trackColors.get(trackSourceId);
-    if (!trackColor) trackColor = config.trackColor;
+    let trackColor = config.track.colors.get(trackSourceId);
+    if (!trackColor) trackColor = config.track.color;
     return trackColor;
 }
 
@@ -422,11 +422,11 @@ function getHeightReference(track) {
 
 function trackEntityPoint(trackEntry, trackColor, heightRef, entityPrototype) {
     return {
-        pixelSize: config.trackPointSize,
+        pixelSize: config.track.pointSize,
         color: trackColor,
-        outlineColor: config.trackPointOutlineColor,
-        outlineWidth: config.trackPointOutlineWidth,
-        distanceDisplayCondition: config.trackPointDC,
+        outlineColor: config.track.pointOutlineColor,
+        outlineWidth: config.track.pointOutlineWidth,
+        distanceDisplayCondition: config.track.pointDC,
         //heightReference: heightRef
     };
 }
@@ -443,10 +443,10 @@ function trackEntityModel(trackEntry, trackColor, heightRef, entityPrototype) {
                 //colorBlendMode: Cesium.ColorBlendMode.HIGHLIGHT,
                 colorBlendMode: Cesium.ColorBlendMode.MIX,
                 colorBlendAmount: 0.7,
-                silhouetteColor: config.trackModelOutlineColor,
-                silhouetteSize: config.trackModelOutlineWidth,
-                minimumPixelSize: config.trackModelSize,
-                distanceDisplayCondition: config.trackModelDC,
+                silhouetteColor: config.track.modelOutlineColor,
+                silhouetteSize: config.track.modelOutlineWidth,
+                minimumPixelSize: config.track.modelSize,
+                distanceDisplayCondition: config.track.modelDC,
                 //heightReference: heightRef
             };
         } else {
@@ -464,7 +464,7 @@ function trackEntityBillboard(trackEntry, trackColor, heightRef, entityPrototype
             return {
                 image: "track-asset/" + track.sym,
                 color: trackColor,
-                distanceDisplayCondition: config.trackBillboardDC,
+                distanceDisplayCondition: config.track.billboardDC,
                 heightReference: heightRef
             };
         } else {
@@ -480,16 +480,16 @@ function trackEntityLabel(trackEntry, trackColor, heightRef) {
         scale: 0.8,
         horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
         verticalOrigin: Cesium.VerticalOrigin.TOP,
-        font: config.trackLabelFont,
+        font: config.track.labelFont,
         fillColor: trackColor,
         showBackground: true,
-        backgroundColor: config.trackLabelBackground, // alpha does not work against model
+        backgroundColor: config.track.labelBackground, // alpha does not work against model
         outlineColor: trackColor,
         outlineWidth: 1,
-        pixelOffset: config.trackLabelOffset,
+        pixelOffset: config.track.labelOffset,
         //disableDepthTestDistance: config.minLabelDepth,
         disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        distanceDisplayCondition: config.trackLabelDC,
+        distanceDisplayCondition: config.track.labelDC,
         heightReference: heightRef
     };
 }
@@ -564,19 +564,19 @@ function createTrackInfoAsset(trackEntry, pos) {
 
             label: {
                 text: infoText,
-                font: config.trackInfoFont,
+                font: config.track.infoFont,
                 scale: 0.8,
                 horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
                 verticalOrigin: Cesium.VerticalOrigin.TOP,
                 fillColor: trackColor,
                 showBackground: true,
-                backgroundColor: config.trackLabelBackground, // alpha does not work against model
+                backgroundColor: config.track.labelBackground, // alpha does not work against model
                 outlineColor: trackColor,
                 outlineWidth: 1,
-                pixelOffset: config.trackInfoOffset,
+                pixelOffset: config.track.infoOffset,
                 //disableDepthTestDistance: config.minLabelDepth,
                 disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                distanceDisplayCondition: config.trackInfoDC
+                distanceDisplayCondition: config.track.infoDC
             }
         });
 
@@ -676,8 +676,8 @@ function createTrajectoryAsset(trackEntry, isWall) {
                 material: Cesium.Color.fromAlpha(trackColor, 0.2),
                 outline: true,
                 outlineColor: Cesium.Color.fromAlpha(trackColor, 0.5),
-                outlineWidth: config.trackPathWidth,
-                distanceDisplayCondition: config.trackPathDC
+                outlineWidth: config.track.pathWidth,
+                distanceDisplayCondition: config.track.pathDC
             }
         });
     } else {
@@ -687,9 +687,9 @@ function createTrajectoryAsset(trackEntry, isWall) {
             polyline: {
                 positions: trackEntry.assets.trajectoryPositions, // posCallback,
                 clampToGround: isGroundPath,
-                width: isGroundPath ? config.trackPath2dWidth : config.trackPathWidth,
+                width: isGroundPath ? config.track.path2dWidth : config.track.pathWidth,
                 material: trackColor,
-                distanceDisplayCondition: config.trackPathDC
+                distanceDisplayCondition: config.track.pathDC
             }
         });
     }

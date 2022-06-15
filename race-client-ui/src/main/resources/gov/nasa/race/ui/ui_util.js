@@ -143,6 +143,13 @@ export const f_5 = new Intl.NumberFormat('en-US', { notation: 'compact', maximum
 
 const f_N = [f_0, f_1, f_2, f_3, f_4, f_5];
 
+export const fmax_0 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 });
+export const fmax_1 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
+export const fmax_2 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 });
+export const fmax_3 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 3 });
+export const fmax_4 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 4 });
+export const fmax_5 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 5 });
+
 //--- position formatting
 
 export function toLatLonString(lat, lon, decimals = 5) {
@@ -294,4 +301,37 @@ export function isNumber(v) {
 
 export function isString(v) {
     return typeof v === 'string';
+}
+
+//--- geo & math
+
+const e2_wgs84 = 0.00669437999014;
+const a_wgs84 = 6378137.0;
+const mrcNom_wgs84 = a_wgs84 * (1.0 - e2_wgs84);
+
+const rad2deg = 180.0 / Math.PI;
+
+export function toRadians(deg) {
+    return deg / rad2deg;
+}
+
+export function toDegrees(rad) {
+    return rad * rad2deg;
+}
+
+export function sin2(rad) {
+    let x = Math.sin(rad);
+    return x * x;
+}
+
+export function meanRadiusOfCurvature(latDeg) {
+    return mrcNom_wgs84 / Math.pow(1.0 - e2_wgs84 * sin2(toRadians(latDeg)), 1.5);
+}
+
+export function deltaDeg(latDeg, length) {
+    return length / meanRadiusOfCurvature(latDeg);
+}
+
+export function roundToNearest(x, d) {
+    return Math.round(x / d) * d;
 }

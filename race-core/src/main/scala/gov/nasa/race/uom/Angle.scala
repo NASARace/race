@@ -117,11 +117,11 @@ class Angle protected[uom] (val d: Double) extends AnyVal with MaybeUndefined {
   @inline def negative = new Angle(-d)
 
   //--- numeric and comparison operators
-  @inline def + (x: Angle) = new Angle(d + x.d)
-  @inline def - (x: Angle) = new Angle(d - x.d)
+  @inline def + (x: Angle): Angle = new Angle(d + x.d)
+  @inline def - (x: Angle): Angle = new Angle(d - x.d)
 
-  @inline def * (x: Double) = new Angle(d * x)
-  @inline def / (x: Double) = new Angle(d / x)
+  @inline def * (x: Double): Angle = new Angle(d * x)
+  @inline def / (x: Double): Angle = new Angle(d / x)
   @inline def / (x: Angle)(implicit r: AngleDisambiguator.type): Double = d / x.d
 
   @inline def ≈ (x: Angle)(implicit εAngle: Angle) = Math.abs(d - x.d) <= εAngle.d

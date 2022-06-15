@@ -77,6 +77,21 @@ trait ByteSlice {
   @inline final def == (other: ByteSlice): Boolean = (other ne null) && (len == other.len) && equalsData(other.data,other.off)
   @inline final def != (other: ByteSlice): Boolean = (other eq null) || (len != other.len) || !equalsData(other.data,other.off)
 
+  def startsWith (other: ByteSlice): Boolean = {
+    if (len >= other.len){
+      val bs = this.data
+      val os = other.data
+      var i = off
+      var j = other.off
+      var jEnd = j + other.len
+      while (j < jEnd) {
+        if (bs(i) != os(j)) return false
+        i += 1
+        j += 1
+      }
+      true
+    } else false
+  }
 
   // note this returns the absolute index
   def indexOf (v: Byte, fromIndex: Int): Int = {
@@ -112,6 +127,13 @@ trait ByteSlice {
 
   def toByteArray: Array[Byte] = data.clone
   override def toString: String = if (len > 0) new String(data,off,len) else ""
+
+  def subString (sOff: Int, sLen: Int): String = {
+    if (sOff >= 0 && sOff < len) {
+      val l = Math.min(len-sOff, sLen)
+      new String(data, off+sOff, l)
+    } else ""
+  }
 
   def copyDataRange (copyOff: Int, copyLen: Int): Array[Byte] = {
     val a = createNewArray(copyLen)

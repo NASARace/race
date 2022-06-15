@@ -212,6 +212,14 @@ package object race {
     res
   }
 
+  def whileSome[T](opt: =>Option[T])(f: T=>Unit): Unit = {
+    var o = opt
+    while (o.isDefined) {
+      f(o.get)
+      o = opt
+    }
+  }
+
   def forever (f: =>Unit): Unit = {
     while(true) f
   }

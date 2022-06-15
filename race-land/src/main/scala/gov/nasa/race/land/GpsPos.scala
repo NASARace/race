@@ -61,6 +61,7 @@ import gov.nasa.race.land.GpsPos._
   * a moving GPS track that can have a role/org
   *
   * note that not all fields might be set (according to sender capabilities) so check for undefined values
+  * note also that we don't use a case class here since we might need to extend this class
   *
   * DOP (dilution of precision) valuess:
   *   1      Ideal - Highest possible confidence level to be used for applications demanding the highest possible precision at all times.
@@ -91,6 +92,14 @@ class GpsPos(
   def vr: Speed = UndefinedSpeed // we are on the ground
   override def toString(): String = f"""GpsGroundPos("$id",$date,${position.toGenericString3D},𝚫=${accuracy.toMeters}%.1fm,↖︎=${heading.toDegrees}%.0f°,d=${distance.toMeters}%.0fm,$org,$role,0x${status.toHexString})"""
   override def displayAttrs: Int = TrackedObject.DspGroundFlag
+
+  // NOTE - this needs to be overridden for derived classes
+  def copy (id: String=id, date: DateTime = date,
+            position: GeoPosition = position, accuracy: Length = accuracy,
+            heading: Angle = heading, speed: Speed = speed, distance: Length = distance,
+            org: Int = org, role: Int = role, status: Int = status): GpsPos = {
+    new GpsPos(id,date,position,accuracy,heading,speed,distance,org,role,status)
+  }
 
   def serializeMembersTo (writer: JsonWriter): Unit = {
     writer
@@ -130,7 +139,7 @@ class GpsPos(
       .writeIntMember(STATUS, status)
   }
 
-  def serializeCsvTo (ps: PrintStream): Unit = {
+  def serializeCsvMembersTo (ps: PrintStream): Unit = {
     ps.print(id); ps.print(',')
     ps.print(date.toEpochMillis); ps.print(',')
 
@@ -143,9 +152,14 @@ class GpsPos(
     if (speed.isDefined) ps.print(speed.toMetersPerSecond); ps.print(',')
     if (distance.isDefined) ps.print(distance.toMeters); ps.print(',')
 
-    if (org != UndefinedOrg) ps.println(org); ; ps.print(',')
+    if (org != UndefinedOrg) ps.print(org); ; ps.print(',')
     if (role != UndefinedRole) ps.print(role); ps.print(',')
     if (status != UndefinedStatus) ps.print(status)
+  }
+
+  def serializeCsvTo (ps: PrintStream): Unit = {
+    serializeCsvMembersTo(ps)
+    ps.println()
   }
 }
 
@@ -206,7 +220,6 @@ class GpsPosArchiveWriter(val oStream: OutputStream, val pathName: String="<unkn
         ps.print(date.toEpochMillis)
         ps.print(',')
         gps.serializeCsvTo(ps)
-        ps.println()
         true
     }
   }
@@ -227,7 +240,7 @@ class GpsPosArchiveReader(val iStream: InputStream, val pathName: String="<unkno
         val date = DateTime.ofEpochMillis(readNextValue().toLong)
         parseGpsPos() match {
           case SuccessValue(gps) => archiveEntry(date,gps)
-          case Failure(_) => None
+          case Failure(msg) => None
         }
       } else None
     } else None
@@ -298,11 +311,11 @@ trait GpsPosCsvParser extends Utf8CsvPullParser {
       val lat: Angle = Degrees(readNextValue().toDouble)
       val lon: Angle = Degrees(readNextValue().toDouble)
       val alt: Length = Meters(readNextValue().toDouble)
-      val acc: Length = Meters(readNextValue().toDouble)
+      val acc: Length = Meters(readNextValue().toOptionalDouble)
 
-      val hdg: Angle = Degrees(readNextValue().toDouble)
-      val spd: Speed = MetersPerSecond(readNextValue().toDouble)
-      val dist: Length = Meters(readNextValue().toDouble)
+      val hdg: Angle = Degrees(readNextValue().toOptionalDouble)
+      val spd: Speed = MetersPerSecond(readNextValue().toOptionalDouble)
+      val dist: Length = Meters(readNextValue().toOptionalDouble)
 
       val org: Int = readNextValue().toInt
       val role: Int = readNextValue().toInt

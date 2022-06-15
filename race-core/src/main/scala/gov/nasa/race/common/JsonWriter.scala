@@ -166,6 +166,8 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
   def length: Int = buf.length
   def clear(): JsonWriter = { initialize; this }
 
+  def writeln(): Unit = buf.append("\n") // for explicit formatting
+
   @inline final def push (t: ElementType): Unit = {
     elementStack += t
   }

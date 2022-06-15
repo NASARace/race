@@ -38,6 +38,8 @@ abstract class XmlPullParser2  {
   protected var limit: Int = 0
   protected var idx = 0 // points to the next unprocessed byte in data
 
+  final val CDATA = ConstAsciiSlice("<![CDATA[")
+
   protected final val tagState = new TagState
   protected final val attrState = new AttrState
   protected final val endTagState = new EndTagState
@@ -382,6 +384,15 @@ abstract class XmlPullParser2  {
     state.parseContent
     getNextContentString
     DateTime.parseYMDTSlice(contentString)
+  }
+
+  def readCdataContent: String = {
+    state.parseContent
+    if (rawContent.startsWith(CDATA)){
+      rawContent.subString(9, rawContent.len - 12 )
+    } else {
+      throw new XmlParseException("no CDATA content")
+    }
   }
 
   //--- raw content retrieval

@@ -73,10 +73,11 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
 
   //--- the layer config (TODO - refactor)
   private val layerName = config.getStringOrElse("hotspot.name","hotspot")
-  private val layerPath = config.getStringOrElse("hotspot.path", "/fire/detection")
+  private val layerPath = config.getStringOrElse("hotspot.cat", "/fire/detection")
   private val layerDescription = config.getStringOrElse("hotspot.description", "VIIRS/MODIS satellite hotspots")
   private val layerShow = config.getBooleanOrElse("hotspot.show", true)
   private val hotspotHistory = config.getFiniteDurationOrElse("hotspot.history", 7.days) // in days
+  private val angularResolution = config.getDoubleOrElse("hotspot.grid-resolution", 0.0) // 0.0001 is about 10m in conus
 
   private val timeSteps = getHotspotTimeSteps()
   private val brightnessThreshold = config.getOptionalConfig("hotspot.bright").map { c =>
@@ -138,7 +139,8 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
       ),
       uiPanel("layer parameters", false)(
         uiColumnContainer("align_right")(
-          uiSlider("history [days]", "hotspot.history", "main.setHotspotHistory(event)")
+          uiSlider("history [d]", "hotspot.history", "main.setHotspotHistory(event)"),
+          uiSlider("grid resolution [°]", "hotspot.resolution", "main.setHotspotResolution(event)")
         )
       )
     )
@@ -153,6 +155,7 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
   name: '$layerName',
   path: '$layerPath',
   show: $layerShow,
+  resolution: $angularResolution,
   history: ${hotspotHistory.toHours/24},
   timeSteps: ${StringUtils.mkString(timeSteps,"[\n    ", ",\n    ", "  ]")(_.toConfigString())},
   bright: ${brightnessThreshold.toConfigString()},
@@ -170,8 +173,8 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
   def initializeHotspotConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
     synchronized {
       hotspots.foreach { hs=>
-          val msg = serializeHotspots(hs)
-          pushTo(ctx.remoteAddress, queue, TextMessage.Strict(msg))
+        val msg = serializeHotspots(hs)
+        pushTo(ctx.remoteAddress, queue, TextMessage.Strict(msg))
       }
     }
   }

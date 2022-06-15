@@ -40,6 +40,8 @@ const LOADING = "…";
 const LOADED = "○";
 const SHOWING = "●";
 
+var restoreRequestRendering = false;
+
 class WindEntry {
     constructor(windField) {
         this.id = windField.name;
@@ -66,11 +68,23 @@ class WindEntry {
                 }
                 this.load();
 
+                if (uiCesium.isRequestRenderMode) {
+                    restoreRequestRendering = true;
+                    uiCesium.setRequestRenderMode(false);
+                }
+
+
             } else { // hide
                 if (this.status == SHOWING) {
                     this.status = LOADED;
                 }
                 this.unload();
+
+                if (restoreRequestRendering) {
+                    restoreRequestRendering = false;
+                    uiCesium.setRequestRenderMode(true);
+                    uiCesium.requestRender();
+                }
             }
 
             ui.updateListItem(windView, this);

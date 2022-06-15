@@ -105,7 +105,7 @@ function loadLayer(layerEntry) {
     if (fut) {
         fut.then(ds => {
             console.log("layer loaded " + ds.name);
-            ds.show = layerEntry.show;
+            //ds.show = layerEntry.show;
             layerEntry.dataSource = ds;
             layerEntry.status = layerEntry.show ? SHOWING : LOADED;
             ui.updateListItem(layerView, layerEntry);
@@ -122,7 +122,8 @@ function _loadDataSource(layerEntry, resource) {
     if (url.includes('.kml') || url.includes('.kmz')) {
         return Cesium.KmlDataSource.load(resource, {
             camera: viewer.scene.camera,
-            canvas: viewer.scene.canvas
+            canvas: viewer.scene.canvas,
+            screenOverlayContainer: viewer.container,
         });
 
     } else if (url.includes('.geojson') || url.includes('.topojson')) { // TODO - need to get render params from server

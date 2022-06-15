@@ -28,8 +28,9 @@ import gov.nasa.race.ui.UiSettingsRoute
 class CesiumApp (val parent: ParentActor, val config: Config) extends DocumentRoute
   with UiSettingsRoute
   with CesiumBldgRoute
-  with CesiumGpsRoute
   with CesiumTrackRoute
   with CesiumLayerRoute
   with CesiumWindRoute
+  with CesiumHotspotRoute
+
 

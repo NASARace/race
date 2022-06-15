@@ -40,10 +40,10 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute with CachedFileAsse
   val trackColor = config.getStringOrElse("color", "yellow")
 
   // channel specific colors
-  val trackColors = config.getKeyValuePairsOrElse("track-colors", Seq.empty)
+  val trackColors = config.getKeyValuePairsOrElse("track.colors", Seq.empty)
 
   // model and billboard assets. Note we only send/reference the keys - the values are our resource locations and should not be exposed
-  val trackAssets = Map.from(config.getKeyValuePairsOrElse("track-assets", Seq(("model","generic_track.glb"))))
+  val trackAssets = Map.from(config.getKeyValuePairsOrElse("track.assets", Seq(("model","generic_track.glb"))))
 
   def sendSourceList (remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
     var srcList = channelMap.values
@@ -165,44 +165,47 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute with CachedFileAsse
     def _double (key: String, defaultValue: Double): Double = config.getDoubleOrElse(key,defaultValue)
     def _string (key: String, defaultValue: String): String = config.getStringOrElse(key,defaultValue)
 
-    val trackLabelOffsetX = _int("track-label-offset.x", 12)
-    val trackLabelOffsetY = _int("track-label-offset.y", 10)
-    val trackPointDist = _int("track-point-dist", 120000)
+    val trackLabelOffsetX = _int("track.label-offset.x", 12)
+    val trackLabelOffsetY = _int("track.label-offset.y", 10)
+    val trackInfoOffsetX = _int("track.info-offset.x",trackLabelOffsetX)
+    val trackInfoOffsetY = _int("track.info-offset.y",trackLabelOffsetY + 16)
+    val trackPointDist = _int("track.point-dist", 120000)
 
     s"""
-export const trackColor = Cesium.Color.fromCssColorString('${_string("color", trackColor)}');
-export const trackColors = new Map(${trackColors.map(e=> s"['${e._1}',Cesium.Color.fromCssColorString('${e._2}')]").mkString("[",",","]")});
+export const track = {
+  color: Cesium.Color.fromCssColorString('${_string("color", trackColor)}'),
+  colors: new Map(${trackColors.map(e=> s"['${e._1}',Cesium.Color.fromCssColorString('${e._2}')]").mkString("[",",","]")}),
 
-export const trackLabelFont = '${_string("track-label", "16px sans-serif")}';
-export const trackLabelOffset = new Cesium.Cartesian2( $trackLabelOffsetX, $trackLabelOffsetY);
-export const trackLabelBackground = Cesium.Color.fromCssColorString('${_string( "track-label-bg", "black")}');
-export const trackLabelDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-label-dist", 200000)});
+  labelFont: '${_string("track.label-font", "16px sans-serif")}',
+  labelOffset: new Cesium.Cartesian2( $trackLabelOffsetX, $trackLabelOffsetY),
+  labelBackground: Cesium.Color.fromCssColorString('${_string( "track.label-bg", "black")}'),
+  labelDC: new Cesium.DistanceDisplayCondition( 0, ${_int("track.label-dist", 200000)}),
 
-export const trackPointSize = ${_int("track-point-size", 5)};
-export const trackPointOutlineColor = Cesium.Color.fromCssColorString('${_string("track-point-outline-color", "black")}');
-export const trackPointOutlineWidth = ${_double("track-point-outline-width", 1)};
-export const trackPointDC = new Cesium.DistanceDisplayCondition( $trackPointDist, Number.MAX_VALUE);
+  pointSize: ${_int("track.point-size", 5)},
+  pointOutlineColor: Cesium.Color.fromCssColorString('${_string("track.point-outline-color", "black")}'),
+  pointOutlineWidth: ${_double("track.point-outline-width", 1)},
+  pointDC: new Cesium.DistanceDisplayCondition( $trackPointDist, Number.MAX_VALUE),
 
-export const trackModelSize = ${_int( "track-model-size", 20) };
-export const trackModelDC = new Cesium.DistanceDisplayCondition( 0, $trackPointDist);
-export const trackModelOutlineColor = Cesium.Color.fromCssColorString('${_string("track-model-outline-color", "black")}');
-export const trackModelOutlineWidth = ${_double("track-model-outline-width", 2.0)};
-export const trackModelOutlineAlpha = ${_double("track-model-outline-alpha", 1.0)};
+  modelSize: ${_int( "track.model-size", 20) },
+  modelDC: new Cesium.DistanceDisplayCondition( 0, $trackPointDist),
+  modelOutlineColor: Cesium.Color.fromCssColorString('${_string("track.model-outline-color", "black")}'),
+  modelOutlineWidth: ${_double("track.model-outline-width", 2.0)},
+  modelOutlineAlpha: ${_double("track.model-outline-alpha", 1.0)},
 
-export const trackBillboardDC = new Cesium.DistanceDisplayCondition( 0, $trackPointDist);
+  billboardDC: new Cesium.DistanceDisplayCondition( 0, $trackPointDist),
 
-export const trackInfoFont = '${_string("track-info", "14px monospace")}';
-export const trackInfoOffset = new Cesium.Cartesian2( ${_int("track-info-offset.x", trackLabelOffsetX)}, ${_int("track-info-offset.y", trackLabelOffsetY + 16)});
-export const trackInfoDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-info-dist", 80000)});
+  infoFont: '${_string("track.info-font", "14px monospace")}',
+  infoOffset:  new Cesium.Cartesian2( $trackInfoOffsetX, $trackInfoOffsetY),
+  infoDC: new Cesium.DistanceDisplayCondition( 0, ${_int("track.info-dist", 80000)}),
 
-export const trackPathLength = ${_int("track-path-length", 0)};
-export const trackPathDC = new Cesium.DistanceDisplayCondition( 0, ${_int("track-path-dist", 1000000)});
-export const trackPathColor = Cesium.Color.fromCssColorString('${_string("track-path-color", trackColor)}');
-export const trackPathWidth = ${_int("track-path-width", 1)};
-export const trackPath2dWidth = ${_int("track-path-2d-width", 3)};
+  pathLength: ${_int("track.path-length", 0)},
+  pathDC: new Cesium.DistanceDisplayCondition( 0, ${_int("track.path-dist", 1000000)}),
+  pathColor: Cesium.Color.fromCssColorString('${_string("track.path-color", trackColor)}'),
+  pathWidth: ${_int("track.path-width", 1)},
+  path2dWidth: ${_int("track.path-2d-width", 3)},
 
-export const maxTraceLength = ${_int("max-trace-length", 200)};
-     """
+  maxTraceLength: ${_int("max-trace-length", 200)},
+};"""
   }
 }
 

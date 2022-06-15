@@ -29,6 +29,7 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
     """
       |<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
       |<top>
+      |   <name><![CDATA[Track 1]]></name>
       |   <middle>
       |       <bottom1 attr1="123 < 321" attr2="whatdoiknow" attr3="skip this"/>
       |       <number> 1.234 <!-- in [fops/brizl] --> </number>
@@ -56,6 +57,7 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
     val attr2 = ConstAsciiSlice("attr2")
     val number = ConstAsciiSlice("number")
     val middle = ConstAsciiSlice("middle")
+    val name = ConstAsciiSlice("name")
 
     if (parser.parseNextTag) {
       if (parser.tag == top) assert(parseTop)
@@ -68,6 +70,10 @@ class XmlPullParser2Spec extends AnyFlatSpec with RaceSpec {
 
         if (parser.isStartTag){
           parser.tag match {
+            case `name` =>
+              val cdata = parser.readCdataContent
+              println(s"name CDATA: '$cdata'")
+              assert(cdata == "Track 1")
             case `bottom1`  => assert(parseBottom1Attrs)
             case `number`  =>
               if (parser.parseContent && parser.getNextContentString) {

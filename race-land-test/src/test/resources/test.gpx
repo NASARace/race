@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+    <gpx version="1.1"
+    creator="Avenza Maps - https://www.avenzamaps.com/maps/how-it-works.html"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="http://www.topografix.com/GPX/1/1"
+xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<trk>
+    <name><![CDATA[team1]]></name>
+    <desc><![CDATA[hand crew]]></desc>
+    <trkseg>
+        <trkpt lat="37.24493853" lon="-122.14486312">
+            <ele>693.162</ele>
+            <time>2020-08-22T13:13:12-07:00</time>
+        </trkpt>
+        <trkpt lat="37.244926" lon="-122.14484395">
+            <ele>695.975</ele>
+            <time>2020-08-22T13:13:43-07:00</time>
+        </trkpt>
+        <trkpt lat="37.24491277" lon="-122.14486404">
+            <ele>694.719</ele>
+            <time>2020-08-22T13:13:46-07:00</time>
+        </trkpt>
+        <trkpt lat="37.24488447" lon="-122.14485998">
+            <ele>694.767</ele>
+            <time>2020-08-22T13:14:21-07:00</time>
+        </trkpt>
+        <trkpt lat="37.24485967" lon="-122.14485756">
+            <ele>694.85</ele>
+            <time>2020-08-22T13:14:24-07:00</time>
+        </trkpt>
+        <trkpt lat="37.24483413" lon="-122.14485469">
+            <ele>695.031</ele>
+            <time>2020-08-22T13:14:33-07:00</time>
+        </trkpt>
+        <trkpt lat="37.2448131" lon="-122.1448508">
+            <ele>694.154</ele>
+            <time>2020-08-22T13:14:35-07:00</time>
+        </trkpt>
+    </trkseg>
+</trk>
+</gpx>

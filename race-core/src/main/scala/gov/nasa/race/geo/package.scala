@@ -49,6 +49,8 @@ package object geo {
   final val B = RE_N
   final val AB2 = RE_E2 * RE_N2
 
+  final val MRC_FACTOR = (1.0 - E2) / A2
+
   final val NM_DEG = NM * 60.0
   def angularDistance (l: Length) = Degrees(l / NM_DEG)
 
@@ -67,6 +69,27 @@ package object geo {
 
   def metersPerParallelDeg(lat: Angle): Length = Meters(parallelRadius(lat) * Angle.DegreesInRadian)
   def metersPerMeridianDeg(lat: Angle): Length = Meters(meridionalCurvatureRadius(lat) * Angle.DegreesInRadian)
+
+  def degPerParallelMeter(lat: Angle): Angle = Radians( 1.0 / parallelRadius(lat))
+  def degPerParallelLength(lat: Angle, l: Length): Angle = Radians( l.toMeters / parallelRadius(lat))
+
+  def degPerMeridianMeter(lat: Angle): Angle = Radians( 1.0 / meridionalCurvatureRadius(lat))
+  def degPerMeridianLength(lat: Angle, l: Length): Angle = Radians( l.toMeters / meridionalCurvatureRadius(lat))
+
+  def primeVerticalRadiusOfCurvature (lat: Angle): Length = Meters(A / Math.sqrt(1.0 - E2 * Sin2(lat)))
+  def meridionalRadiusOfCurvature (lat: Angle): Length = Meters(MRC_FACTOR * cubed(primeVerticalRadiusOfCurvature(lat).toMeters))
+
+  def averageRadiusOfCurvature (lat: Angle): Length = {
+    val prc = primeVerticalRadiusOfCurvature(lat).toMeters
+    val mrc = MRC_FACTOR * cubed(prc)
+    Meters(Math.sqrt(prc * mrc))
+  }
+  def meanRadiusOfCurvature (lat: Angle): Length = {
+    val prc = primeVerticalRadiusOfCurvature(lat).toMeters
+    val mrc = MRC_FACTOR * cubed(prc)
+    Meters(2.0 / (1.0/prc + 1.0/mrc))
+  }
+
 
   final val CONTIG_US_CENTER_LAT = Degrees(39.8333333)
   final val CONTIG_US_CENTER_LON = Degrees(-98.583333)

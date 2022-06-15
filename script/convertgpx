@@ -1,0 +1,10 @@
+#!/bin/bash
+
+DIR="$(dirname ${BASH_SOURCE[0]})"
+SCRIPT=$DIR/../race-tools/target/universal/stage/bin/race-tools
+
+if [ -x $SCRIPT ]; then
+  $SCRIPT -main gov.nasa.race.tool.GpxArchiveConverter $@
+else
+  echo "script $SCRIPT does not exist, run sbt race-tools/stage"
+fi

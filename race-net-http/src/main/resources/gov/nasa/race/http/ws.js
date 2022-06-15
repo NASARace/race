@@ -60,6 +60,7 @@ function handleServerMessage(msg) {
         if (wsHandlers[i](msgType, msg)) return;
     }
 
+
     // if we get here the message was ignored
 }
 

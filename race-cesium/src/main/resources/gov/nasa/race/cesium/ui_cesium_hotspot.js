@@ -13,22 +13,23 @@ class HotspotEntry {
 
 var hotspotEntries = [];
 var hotspotView = undefined;
-var dataSource = undefined;
 var timeSteps = undefined;
 var brightThreshold = undefined;
 var frpThreshold = undefined;
+var resolution = 0.0002;
+
+var pixelPrimitive = undefined;
+var brightPrimitive = undefined;
 
 ui.registerLoadFunction(function initialize() {
     hotspotView = initHotspotView();
     initHotspotSliders();
     ws.addWsHandler(config.wsUrl, handleWsHotspotMessages);
 
-    dataSource = new Cesium.CustomDataSource("hotspots");
-    uiCesium.addDataSource(dataSource);
-
     timeSteps = config.hotspot.timeSteps;
     brightThreshold = config.hotspot.bright;
     frpThreshold = config.hotspot.frp;
+    resolution = config.hotspot.resolution;
 
     console.log("ui_cesium_hotspot initialized");
 });
@@ -48,6 +49,10 @@ function initHotspotSliders() {
     let e = ui.getSlider('hotspot.history');
     ui.setSliderRange(e, 0, 7, 1, util.f_0);
     ui.setSliderValue(e, config.hotspot.history);
+
+    e = ui.getSlider('hotspot.resolution');
+    ui.setSliderRange(e, 0.0000, 0.003, 0.0001, util.fmax_4);
+    ui.setSliderValue(e, config.hotspot.resolution);
 }
 
 
@@ -64,10 +69,28 @@ function handleWsHotspotMessages(msgType, msg) {
     }
 }
 
+function setPixelGrid(pix) {
+    if (resolution) {
+        let glat = util.roundToNearest(pix.lat, resolution);
+        let glon = util.roundToNearest(pix.lon, resolution);
+
+        let s = util.fmax_4.format(glat) + ',' + util.fmax_4.format(glon);
+        let id = util.intern(s); // we don't want gazillions of duplicate strings
+
+        pix.glat = glat;
+        pix.glon = glon;
+        pix.id = id;
+    } else {
+        pix.glat = undefined;
+        pix.glon = undefined;
+        pix.id = undefined;
+    }
+}
+
 function handleHotspotsMessage(hotspots) {
-    hotspots.forEach(h => {
-        h.id = util.toLatLonString(h.lat, h.lon, 4);
-    });
+    if (resolution) {
+        hotspots.forEach(pix => setPixelGrid(pix));
+    }
 
     let hsEntry = new HotspotEntry(hotspots);
     addHotspotEntry(hsEntry);
@@ -116,11 +139,15 @@ function computeHotspotPixels(hsIdx) {
         if (e.date > cutoff) {
             let hs = e.hotspots;
             for (var j = 0; j < hs.length; j++) {
-                let h = hs[j];
-                let k = h.id;
-                if (!seen.has(k)) {
-                    seen.add(k);
-                    pixels.push(h);
+                let pix = hs[j];
+                let k = pix.id;
+                if (k) {
+                    if (!seen.has(k)) {
+                        seen.add(k);
+                        pixels.push(pix);
+                    }
+                } else {
+                    pixels.push(pix);
                 }
             }
         } else {
@@ -135,98 +162,87 @@ function createPixelAssets(pixels) {
     let refDate = pixels[0].date;
     let lastDate = undefined;
     let clr = undefined;
+    let clrAttr = undefined;
 
-    let entities = dataSource.entities;
-    entities.suspendEvents();
-    //uiCesium.removeDataSource(dataSource);
-    entities.values.forEach(e => e.show = false);
+    clearPrimitives();
+    let geoms = [];
+    let points = [];
 
-    for (var i = pixels.length - 1; i >= 0; i--) {
+    for (var i = 0; i < pixels.length; i++) {
         let pix = pixels[i];
 
         if (pix.date != lastDate) {
             clr = getPixelColor(pix, refDate);
+            clrAttr = Cesium.ColorGeometryInstanceAttribute.fromColor(clr);
             lastDate = pix.date;
         }
 
         if (clr) {
-            setPixelAsset(entities, pix, clr);
+            // TODO - should we use glat/glon if defined ? 
+            let lat = pix.lat;
+            let lon = pix.lon;
+
+            let geom = new Cesium.GeometryInstance({
+                geometry: new Cesium.CircleGeometry({
+                    center: Cesium.Cartesian3.fromDegrees(lon, lat, 0.0),
+                    radius: pix.size / 2,
+                    granularity: pixGranularity,
+                    vertexFormat: Cesium.VertexFormat.POSITION_ONLY
+                }),
+                attributes: {
+                    color: clrAttr
+                }
+            })
+            geoms.push(geom);
+
             if (clr === timeSteps[0].color && pix.brightness > brightThreshold.kelvin) {
-                setBrightAsset(entities, pix);
+                let point = {
+                    position: Cesium.Cartographic.fromDegrees(lon, lat),
+                    pixelSize: 3,
+                    color: brightThreshold.color
+                };
+                if (pix.frp > frpThreshold.megawatts) {
+                    point.outlineWidth = 1.0;
+                    point.outlineColor = frpThreshold.color;
+                }
+                points.push(point);
             }
         }
     }
 
-    //uiCesium.addDataSource(dataSource);
-    entities.resumeEvents();
+    if (points.length > 0) {
+        let positions = points.map(e => e.position);
+        uiCesium.withSampledTerrain(positions, 11, (updatedPositions) => {
+            brightPrimitive = new Cesium.PointPrimitiveCollection({
+                blendOption: Cesium.BlendOption.OPAQUE
+            });
+
+            for (var i = 0; i < updatedPositions.length; i++) {
+                let pt = points[i];
+                let pos = updatedPositions[i];
+                pt.position = Cesium.Cartesian3.fromRadians(pos.longitude, pos.latitude, pos.height);
+                brightPrimitive.add(pt);
+            }
+
+            uiCesium.addPrimitive(brightPrimitive);
+        });
+    }
+
+    if (geoms.length > 0) {
+        pixelPrimitive = new Cesium.GroundPrimitive({
+            geometryInstances: geoms,
+            allowPicking: false,
+            asynchronous: true,
+            releaseGeometryInstances: true,
+            classificationType: Cesium.ClassificationType.TERRAIN,
+        });
+        uiCesium.addPrimitive(pixelPrimitive);
+    }
+
     uiCesium.requestRender();
 }
 
-const pixGranularity = Cesium.Math.toRadians(10);
-
-function setPixelAsset(entities, pix, clr) {
-    let e = entities.getById(pix.id);
-    if (e) {
-        e.ellipse.material = clr;
-        e.show = true;
-
-    } else {
-        let r = pix.size / 2;
-        let e = new Cesium.Entity({
-            id: pix.id,
-            position: Cesium.Cartesian3.fromDegrees(pix.lon, pix.lat),
-            ellipse: {
-                //center: pos,
-                material: clr,
-                semiMajorAxis: r,
-                semiMinorAxis: r,
-                granularity: pixGranularity,
-                vertexFormat: Cesium.VertexFormat.POSITION_ONLY
-            }
-        });
-        entities.add(e);
-    }
-}
-
-const dd = 0.0015;
-
-function _setPixelAsset(entities, pix, clr) {
-    let e = entities.getById(pix.id);
-    if (e) {
-        e.rectangle.material = clr;
-        e.show = true;
-    } else {
-        let e = new Cesium.Entity({
-            id: pix.id,
-            position: Cesium.Cartesian3.fromDegrees(pix.lon, pix.lat, 0.0),
-            rectangle: {
-                coordinates: Cesium.Rectangle.fromDegrees(pix.lon - dd, pix.lat - dd, pix.lon + dd, pix.lat + dd),
-                material: clr
-            }
-        });
-        entities.add(e);
-    }
-}
-
-function setBrightAsset(entities, pix) {
-    let bid = pix.id + "-bright";
-    let e = entities.getById(bid);
-    if (e) {
-        e.show = true;
-
-    } else {
-        e = new Cesium.Entity({
-            id: bid,
-            position: Cesium.Cartesian3.fromDegrees(pix.lon, pix.lat, 1.0),
-            point: {
-                color: brightThreshold.color,
-                heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
-                pixelSize: 3
-            }
-        });
-        entities.add(e);
-    }
-}
+const pixGranularity = Cesium.Math.toRadians(5);
 
 function getPixelColor(pixel, refDate) {
     let dt = (refDate - pixel.date) / 3600000; // in hours
@@ -237,24 +253,40 @@ function getPixelColor(pixel, refDate) {
     return timeSteps[timeSteps.length - 1].color; // TODO - shall we use the last as the catch-all?
 }
 
+function clearPrimitives() {
+    if (pixelPrimitive) uiCesium.removePrimitive(pixelPrimitive);
+    pixelPrimitive = undefined;
+
+    if (brightPrimitive) uiCesium.removePrimitive(brightPrimitive);
+    brightPrimitive = undefined;
+}
+
+function showPrimitives(isVisible) {
+    if (brightPrimitive) brightPrimitive.show = isVisible;
+    if (pixelPrimitive) pixelPrimitive.show = isVisible;
+    uiCesium.requestRender();
+}
+
 //--- interaction
 
 ui.exportToMain(function toggleShowHotspots(event) {
-    uiCesium.toggleDataSource(dataSource);
-    uiCesium.requestRender();
+    showPrimitives(ui.isCheckBoxSelected(event.target));
 });
 
 ui.exportToMain(function setHotspotHistory(event) {
 
 });
 
-ui.exportToMain(function selectHotspotTime(event) {
-    let selIdx = ui.getSelectedListItemIndex(hotspotView);
+function showPixels(selIdx) {
     if (selIdx >= 0) {
         let pixels = computeHotspotPixels(selIdx);
         //if (pixels.length > 100) uiCesium.lowerFrameRateFor(pixels.length * 5, 5);
         createPixelAssets(pixels);
     }
+}
+
+ui.exportToMain(function selectHotspotTime(event) {
+    showPixels(ui.getSelectedListItemIndex(hotspotView));
 });
 
 ui.exportToMain(function earliestHotspotTime(event) {
@@ -275,11 +307,24 @@ ui.exportToMain(function latestHotspotTime(event) {
 
 ui.exportToMain(function clearHotspots() {
     ui.clearSelectedListItem(hotspotView);
-    dataSource.entities.removeAll();
+    clearPrimitives();
+    uiCesium.requestRender();
 });
 
 ui.exportToMain(function resetDisplayParams() {
     timeSteps = structuredClone(config.hotspot.timeSteps);
     brightThreshold = structuredClone(config.hotspot.bright);
     frpThreshold = structuredClone(config.hotspot.frp);
+});
+
+ui.exportToMain(function setHotspotResolution(event) {
+    let v = ui.getSliderValue(event.target);
+    resolution = v;
+    hotspotEntries.forEach(e => {
+        e.hotspots.forEach(pix => setPixelGrid(pix));
+    });
+
+    if (pixelPrimitive) {
+        showPixels(ui.getSelectedListItemIndex(hotspotView));
+    }
 });

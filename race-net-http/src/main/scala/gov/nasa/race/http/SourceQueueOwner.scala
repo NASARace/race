@@ -25,16 +25,20 @@ import gov.nasa.race.config.ConfigUtils._
 
 /**
   * abstract akka stream type that hold a queue source to which we want to explicitly push
+  *
+  * TODO - should we move this to Source.queue(bufSize) which will cause offer() to synchronously
+  * return a QueueOfferResult so that we can handle in the sender?
   */
 trait SourceQueueOwner[T] {
 
   val config: Config
   implicit val materializer: Materializer
 
-  val srcBufSize = config.getIntOrElse("source-queue", 16)
-  val srcPolicy = config.getStringOrElse( "source-policy", "dropTail") match {
+  val srcBufSize = config.getIntOrElse("source-queue", 256)
+
+  val srcPolicy = config.getStringOrElse( "source-policy", "fail") match {
     case "dropHead" => OverflowStrategy.dropHead
-    case "dropNew" => OverflowStrategy.dropNew // dropNew is deprecated
+    //case "dropNew" => OverflowStrategy.dropNew // dropNew is deprecated -> use Source.queue(srcBufSize) to materialize
     case "dropTail" => OverflowStrategy.dropTail
     case "dropBuffer" => OverflowStrategy.dropBuffer
     case "fail" => OverflowStrategy.fail
