@@ -175,7 +175,7 @@ trait FSCachedProxyRoute extends ProxyRaceRoute {
   override protected def fetchData (unmatchedPath : Uri.Path, reqUri: String): Route = {
 
     def completeWithServerRequest (file: File, reqUri: String): Route = {
-      onComplete(runServerRequest(reqUri)) {
+      onComplete( runServerRequest(reqUri)) {
         case Success((strictEntity,response)) =>
           val data = strictEntity.getData().toArray
           saveFile(file, data, strictEntity.contentType, None /* response.header[Expires] */)

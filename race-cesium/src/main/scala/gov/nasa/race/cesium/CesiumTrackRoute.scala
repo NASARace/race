@@ -205,7 +205,8 @@ export const track = {
   path2dWidth: ${_int("track.path-2d-width", 3)},
 
   maxTraceLength: ${_int("max-trace-length", 200)},
-};"""
+};
+"""
   }
 }
 
