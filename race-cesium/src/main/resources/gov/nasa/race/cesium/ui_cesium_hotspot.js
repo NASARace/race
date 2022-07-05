@@ -14,12 +14,12 @@ class HotspotEntry {
 var hotspotEntries = [];
 var hotspotView = undefined;
 var timeSteps = undefined;
-var brightThreshold = undefined;
+var tempThreshold = undefined;
 var frpThreshold = undefined;
 var resolution = 0.0002;
 
 var pixelPrimitive = undefined;
-var brightPrimitive = undefined;
+var tempPrimitive = undefined;
 
 ui.registerLoadFunction(function initialize() {
     hotspotView = initHotspotView();
@@ -27,7 +27,7 @@ ui.registerLoadFunction(function initialize() {
     ws.addWsHandler(config.wsUrl, handleWsHotspotMessages);
 
     timeSteps = config.hotspot.timeSteps;
-    brightThreshold = config.hotspot.bright;
+    tempThreshold = config.hotspot.temp;
     frpThreshold = config.hotspot.frp;
     resolution = config.hotspot.resolution;
 
@@ -195,11 +195,11 @@ function createPixelAssets(pixels) {
             })
             geoms.push(geom);
 
-            if (clr === timeSteps[0].color && pix.brightness > brightThreshold.kelvin) {
+            if (clr === timeSteps[0].color && pix.temp > tempThreshold.kelvin) {
                 let point = {
                     position: Cesium.Cartographic.fromDegrees(lon, lat),
                     pixelSize: 3,
-                    color: brightThreshold.color
+                    color: tempThreshold.color
                 };
                 if (pix.frp > frpThreshold.megawatts) {
                     point.outlineWidth = 1.0;
@@ -213,7 +213,7 @@ function createPixelAssets(pixels) {
     if (points.length > 0) {
         let positions = points.map(e => e.position);
         uiCesium.withSampledTerrain(positions, 11, (updatedPositions) => {
-            brightPrimitive = new Cesium.PointPrimitiveCollection({
+            tempPrimitive = new Cesium.PointPrimitiveCollection({
                 blendOption: Cesium.BlendOption.OPAQUE
             });
 
@@ -221,10 +221,10 @@ function createPixelAssets(pixels) {
                 let pt = points[i];
                 let pos = updatedPositions[i];
                 pt.position = Cesium.Cartesian3.fromRadians(pos.longitude, pos.latitude, pos.height);
-                brightPrimitive.add(pt);
+                tempPrimitive.add(pt);
             }
 
-            uiCesium.addPrimitive(brightPrimitive);
+            uiCesium.addPrimitive(tempPrimitive);
         });
     }
 
@@ -257,12 +257,12 @@ function clearPrimitives() {
     if (pixelPrimitive) uiCesium.removePrimitive(pixelPrimitive);
     pixelPrimitive = undefined;
 
-    if (brightPrimitive) uiCesium.removePrimitive(brightPrimitive);
-    brightPrimitive = undefined;
+    if (tempPrimitive) uiCesium.removePrimitive(tempPrimitive);
+    tempPrimitive = undefined;
 }
 
 function showPrimitives(isVisible) {
-    if (brightPrimitive) brightPrimitive.show = isVisible;
+    if (tempPrimitive) tempPrimitive.show = isVisible;
     if (pixelPrimitive) pixelPrimitive.show = isVisible;
     uiCesium.requestRender();
 }
@@ -313,7 +313,7 @@ ui.exportToMain(function clearHotspots() {
 
 ui.exportToMain(function resetDisplayParams() {
     timeSteps = structuredClone(config.hotspot.timeSteps);
-    brightThreshold = structuredClone(config.hotspot.bright);
+    tempThreshold = structuredClone(config.hotspot.temp);
     frpThreshold = structuredClone(config.hotspot.frp);
 });
 

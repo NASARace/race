@@ -16,6 +16,8 @@
  */
 package gov.nasa.race.common
 
+import gov.nasa.race.core.Loggable
+
 /**
   * something that can produce info/warning/error log messages but does not know the logging context (console, actor etc)
   */
@@ -34,6 +36,12 @@ trait LogWriter {
     _info = infoLogger
     _warning = warningLogger
     _error = errorLogger
+  }
+
+  def setLogging (logger: Loggable): Unit = {
+    _info = logger.info
+    _warning = logger.warning
+    _error = logger.error
   }
 
   // invocation is public

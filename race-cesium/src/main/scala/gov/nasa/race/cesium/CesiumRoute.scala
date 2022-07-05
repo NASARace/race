@@ -71,7 +71,7 @@ trait CesiumRoute
 
   //--- Cesium specific configuration
 
-  val accessToken = config.getVaultableString("access-token")
+  val accessToken = config.getVaultableStringOrElse("access-token", "")
   val cesiumVersion = config.getStringOrElse("cesium-version", defaultCesiumJsVersion)
   val requestRenderMode = config.getBooleanOrElse("request-render", false)
   val targetFrameRate = config.getIntOrElse("frame-rate", -1)
@@ -171,16 +171,18 @@ trait CesiumRoute
   def basicCesiumConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
 
     val wsToken = registerTokenForClient(remoteAddr)
-
     val terrain = if (proxyTerrain) CesiumRoute.terrainPrefix else terrainProvider
+
       s"""
-export const cesiumAccessToken = '${config.getVaultableString("access-token")}';
 export const wsUrl = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';
-export const requestRenderMode = $requestRenderMode;
-export const targetFrameRate = $targetFrameRate;
-export const imageryParams = ${imageryParams.toJs};
-export const imageryLayers = ${StringUtils.mkString(imageryLayers,"[\n  ",",\n  ","\n]")(_.toJs)};
-export const terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'});
+export const cesium = {
+  accessToken: '$accessToken',
+  requestRenderMode: $requestRenderMode,
+  targetFrameRate: $targetFrameRate,
+  imageryParams: ${imageryParams.toJs},
+  imageryLayers: ${StringUtils.mkString(imageryLayers,"[\n  ",",\n  ","\n]")(_.toJs)},
+  terrainProvider: new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'}),
+};
 """
   }
 

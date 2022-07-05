@@ -24,7 +24,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.ParentActor
 import gov.nasa.race.http._
-import gov.nasa.race.ui.{extModule, uiCheckBox, uiIcon, uiList, uiRowContainer, uiWindow}
+import gov.nasa.race.ui.{extModule, uiCheckBox, uiIcon, uiList, uiPanel, uiRowContainer, uiWindow}
 import gov.nasa.race.uom.DateTime
 import scalatags.Text
 
@@ -32,7 +32,7 @@ import java.io.File
 import scala.collection.mutable
 import scala.collection.mutable.SeqMap
 
-case class CesiumLayer (name: String, url: String, file: Option[File], show: Boolean) { //.. probably more attributes to follow
+case class CesiumLayer (name: String, url: String, file: Option[File], show: Boolean, preFetch: Boolean = true) { //.. probably more attributes to follow
   def date = file.map( f=> DateTime.ofEpochMillis(f.lastModified())).getOrElse(DateTime.UndefinedDateTime)
 }
 
@@ -53,12 +53,13 @@ trait CesiumLayerRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesi
 
   override def onRaceStarted(server: HttpServer): Boolean = {
     layers.values.foreach { layer =>
-      getFileFromRequestUri(layer.url) match {
-        case Some(file) =>
-          fetchFile(file, layer.url){
-            push(layerMessage(layer))
+      if (layer.preFetch) {
+        getFileFromRequestUri(layer.url) match {
+          case Some(file) => fetchFile(file, layer.url){
+            info(s"retrieved: ${layer.url}")
           }
-        case None => // ignore
+          case None => // ignore
+        }
       }
     }
     super.onRaceStarted(server)
@@ -88,9 +89,7 @@ trait CesiumLayerRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesi
   def uiLayerWindow(title: String="Layers"): Text.TypedTag[String] = {
     uiWindow(title, "layers", "layer-icon.svg")(
       uiList("layers.list", 10, "main.selectLayer(event)"),
-      uiRowContainer()(
-        uiCheckBox("show layer", "main.toggleLayer(event)", "layers.show")
-      )
+      uiPanel("layer parameters", false)()
     )
   }
   def uiLayerIcon: Text.TypedTag[String] = {

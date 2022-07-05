@@ -38,6 +38,7 @@ class DateException (msg: String) extends RuntimeException(msg)
 object DateTime {
   val UNDEFINED_MILLIS = -9007199254740991L   // we can't use Long.MinValue since it wouldn't map into javascript (Number.MIN_SAFE_INTEGER)
   val NEVER_MILLIS = Long.MaxValue
+  val J2000_MILLIS = 946684800000L
 
   final val MsecPerDay = 1000*60*60*24
   final val MsecPerHour = 1000*60*60
@@ -50,6 +51,8 @@ object DateTime {
   @inline def ofEpochMillis(millis: Long) = new DateTime(millis)
   @inline def ofEpochSeconds(secs: Long) = new DateTime(secs*1000)
   @inline def ofEpochFractionalSeconds (secs: Double) = new DateTime( (secs*1000).toLong)
+  @inline def ofJ2000EpochSeconds (secs: Long) = new DateTime(secs*1000 + J2000_MILLIS)
+  @inline def ofInstant(instant: Instant) = new DateTime( instant.toEpochMilli)
 
   @inline def apply(year: Int, month: Int, day: Int, hour: Int, minutes: Int, secs: Int, ms: Int, zoneId: ZoneId): DateTime = {
     val zdt = ZonedDateTime.of(year,month,day, hour,minutes,secs,ms * 1000000, zoneId)
@@ -117,6 +120,19 @@ object DateTime {
 
       case _ => throw new RuntimeException(s"invalid date spec: $spec")
     }
+  }
+
+  val shortZoneIds = Map(
+    "EST" -> ZoneId.of("UTC-5"),
+    "EDT" -> ZoneId.of("UTC-4"),
+    "CST" -> ZoneId.of("UTC-6"),
+    "CDT" -> ZoneId.of("UTC-5"),
+    "PST" -> ZoneId.of("UTC-8"),
+    "PDT" -> ZoneId.of("UTC-7")
+  )
+
+  def getZoneId (zid: String): ZoneId = {
+    shortZoneIds.getOrElse(zid, ZoneId.of(zid, ZoneId.SHORT_IDS))
   }
 
   def getZoneId (zid: String, offHour: String, offMin: String, defaultZone: ZoneId): ZoneId = {
@@ -410,6 +426,8 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
   @inline def getDayOfMonth: Int = toZonedDateTime.getDayOfMonth
   @inline def getDayOfMonth (zoneId: ZoneId): Int = toZonedDateTime(zoneId).getDayOfMonth
   @inline def getLocalDayOfMonth: Int = getDayOfMonth(LocalZoneId)
+
+  @inline def getDayOfYear: Int = toZonedDateTime.getDayOfYear
 
   @inline def getYMD: (Int,Int,Int) = {
     val zdt = toZonedDateTime

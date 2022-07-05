@@ -50,7 +50,7 @@ object CesiumHotspotRoute {
     HotspotTimeStep( 36, "#ad000066")
   )
 
-  val defaultBrightnessThreshold = BrightnessThreshold(310,"#ffff00")
+  val defaultTempThreshold = TempThreshold(310,"#ffff00")
   val defaultFrpThreshold = FrpThreshold(10, "#000000")
 }
 import CesiumHotspotRoute._
@@ -60,7 +60,7 @@ abstract class ColorThreshold (val valueUnit: String, val v: Int, color: String)
 }
 
 case class HotspotTimeStep (h: Int, clr: String) extends ColorThreshold("hours", h, clr)
-case class BrightnessThreshold (k: Int, clr: String) extends ColorThreshold("kelvin", k, clr)
+case class TempThreshold(k: Int, clr: String) extends ColorThreshold("kelvin", k, clr)
 case class FrpThreshold (mw: Int, clr: String) extends ColorThreshold("megawatts", mw, clr)
 
 /**
@@ -69,7 +69,7 @@ case class FrpThreshold (mw: Int, clr: String) extends ColorThreshold("megawatts
 trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTimeRaceRoute {
   private val writer = new JsonWriter()
 
-  protected val hotspots = mutable.ArrayDeque.empty[Hotspots]
+  protected val hotspots = mutable.ArrayDeque.empty[Hotspots[_]]
 
   //--- the layer config (TODO - refactor)
   private val layerName = config.getStringOrElse("hotspot.name","hotspot")
@@ -80,11 +80,11 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
   private val angularResolution = config.getDoubleOrElse("hotspot.grid-resolution", 0.0) // 0.0001 is about 10m in conus
 
   private val timeSteps = getHotspotTimeSteps()
-  private val brightnessThreshold = config.getOptionalConfig("hotspot.bright").map { c =>
-    BrightnessThreshold( c.getInt("kelvin"), c.getString("color"))
-  }.getOrElse(defaultBrightnessThreshold)
+  private val tempThreshold = config.getOptionalConfig("hotspot.temp").map { c =>
+    TempThreshold( c.getInt("threshold"), c.getString("color"))
+  }.getOrElse(defaultTempThreshold)
   private val frpThreshold = config.getOptionalConfig("hotspot.frp").map { c=>
-    FrpThreshold( c.getInt("megawatts"), c.getString("color"))
+    FrpThreshold( c.getInt("threshold"), c.getString("color"))
   }.getOrElse(defaultFrpThreshold)
 
   def getHotspotTimeSteps(): Seq[HotspotTimeStep] = {
@@ -158,7 +158,7 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
   resolution: $angularResolution,
   history: ${hotspotHistory.toHours/24},
   timeSteps: ${StringUtils.mkString(timeSteps,"[\n    ", ",\n    ", "  ]")(_.toConfigString())},
-  bright: ${brightnessThreshold.toConfigString()},
+  temp: ${tempThreshold.toConfigString()},
   frp: ${frpThreshold.toConfigString()}
 };"""
   }
@@ -182,7 +182,7 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
   override def receiveData: Receive = receiveHotspotData.orElse(super.receiveData)
 
   def receiveHotspotData: Receive = {
-    case BusEvent(channel,hs:Hotspots,sender) =>
+    case BusEvent(channel,hs:Hotspots[_],sender) =>
       synchronized {
         hotspots += hs
         if (hasConnections) push( TextMessage.Strict(serializeHotspots(hs)))
@@ -190,7 +190,7 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
     case BusEvent(channel,h: Hotspot,sender) =>
   }
 
-  def serializeHotspots( hs: Hotspots): String = {
+  def serializeHotspots( hs: Hotspots[_]): String = {
     writer.clear()
 
     writer.beginObject

@@ -1454,13 +1454,13 @@ export function setListItemDisplay(o, styleWidth, attrs, mapFunc) {
 function _setSubItemsOf(ie, item) {
     for (let i = 0; i < ie.childElementCount; i++) {
         let ce = ie.children[i];
-        let val = ce._uiMapFunc(item);
+        let v = ce._uiMapFunc(item);
 
-        if (val instanceof HTMLElement) {
+        if (v instanceof HTMLElement) {
             _removeChildrenOf(ce); // there can only be one
-            ce.appendChild(val);
+            ce.appendChild(v);
         } else {
-            ce.innerText = val;
+            ce.innerText = v;
         }
     }
 }
@@ -1650,6 +1650,17 @@ export function insertListItem(o, item, idx) {
             e.insertBefore(ie, e.children[idx]);
         } else {
             e.appendChild(ie);
+        }
+    }
+}
+
+export function replaceListItem(o, item, idx) {
+    let e = getList(o);
+    if (e) {
+        if (idx >= 0 && idx < e.childElementCount) {
+            let ie = e.children[idx];
+            e._uiItemMap.delete(ie._uiItem);
+            _setListItem(e, ie, item);
         }
     }
 }

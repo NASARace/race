@@ -189,6 +189,13 @@ val kafkaVersion = "3.1.0"
 
   val kafkaAll = Seq(kafka,kafkaRaft,kafkaTools) 
 
+  //--- AWS SDK
+  val awsS3 = "software.amazon.awssdk" % "s3" % "2.17.214"
+
+  //--- NetCDF
+  val cdmCore = "edu.ucar" % "cdm-core" % "5.5.3"
+  val cdmResolver = "unidata" at "https://artifacts.unidata.ucar.edu/repository/unidata-all/"
+
   //--- DDS Java 5 PSM
   // add implementation libraries and settings in local-build.sbt - this is only an abstract interface for compilation
   val omgDDS = "org.omg.dds" % "java5-psm" % "1.0"
@@ -213,7 +220,9 @@ val kafkaVersion = "3.1.0"
 
   //--- this is used from build.sbt to add dependency resolvers
 
-  val dependencyResolvers: Seq[Resolver] = Nil
+  val dependencyResolvers: Seq[Resolver] = Seq(
+    cdmResolver
+  )
 
   //val sonatypeNexusSnapshots = "Sonatype Nexus Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots" // squants
   //val pcmSnapshots = "Local Maven Repository" at "file://"+Path.userHome.absolutePath+ "/git/pcm-mvn/snapshots"

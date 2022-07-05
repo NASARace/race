@@ -14,18 +14,18 @@ var requestRenderMode = false;
 var defaultTargetFrameRate = undefined;
 var targetFrameRate = -1;
 
-var imageryLayers = config.imageryLayers;
-var imageryParams = {...config.imageryParams }; // we might still adjust them based on theme (hence we have to copy)
+var imageryLayers = config.cesium.imageryLayers;
+var imageryParams = {...config.cesium.imageryParams }; // we might still adjust them based on theme (hence we have to copy)
 
 var pendingRenderRequest = false;
 
 ui.registerLoadFunction(function initialize() {
-    Cesium.Ion.defaultAccessToken = config.cesiumAccessToken;
+    if (config.cesium.accessToken) Cesium.Ion.defaultAccessToken = config.cesium.accessToken;
 
-    requestRenderMode = config.requestRenderMode;
+    requestRenderMode = config.cesium.requestRenderMode;
 
     viewer = new Cesium.Viewer('cesiumContainer', {
-        terrainProvider: config.terrainProvider,
+        terrainProvider: config.cesium.terrainProvider,
         skyBox: false,
         infoBox: false,
         baseLayerPicker: false,
@@ -37,7 +37,7 @@ ui.registerLoadFunction(function initialize() {
         requestRenderMode: requestRenderMode
     });
 
-    setTargetFrameRate(config.targetFrameRate);
+    setTargetFrameRate(config.cesium.targetFrameRate);
     initFrameRateSlider();
 
     if (requestRenderMode) ui.setCheckBox("view.rm", true);
@@ -137,7 +137,7 @@ function adjustImageryParams() {
     let docStyle = getComputedStyle(document.documentElement);
     let anyChanged = false;
 
-    imageryParams = {...config.imageryParams }; // reset
+    imageryParams = {...config.cesium.imageryParams }; // reset
 
     let hue = docStyle.getPropertyValue("--map-hue");
     if (hue) {
@@ -177,7 +177,7 @@ function initImageryLayers() {
         // save the original imageryParams so that we can later-on restore
         il.originalImageryParams = il.imageryParams;
 
-        let ip = il.imageryParams ? il.imageryParams : config.imageryParams
+        let ip = il.imageryParams ? il.imageryParams : config.cesium.imageryParams
         setLayerImageryParams(layer, ip);
 
         if (il.show) {
@@ -237,7 +237,7 @@ function initMapLayerView() {
             { name: "id", width: "12rem", attrs: ["alignLeft"], map: e => e.description }
         ]);
 
-        ui.setListItems(view, config.imageryLayers);
+        ui.setListItems(view, config.cesium.imageryLayers);
     }
 
     return view;
@@ -465,25 +465,6 @@ ui.exportToMain(function toggleRequestRenderMode() {
 ui.exportToMain(function setFrameRate(event) {
     let v = ui.getSliderValue(event.target);
     setTargetFrameRate(v);
-});
-
-ui.exportToMain(function setImageryProvider(event, providerName) {
-    let p = config.imageryProviders.find(p => p.name == providerName);
-    if (p) {
-        console.log("switching to " + p.name);
-        viewer.imageryProvider = p.provider;
-    } else {
-        console.log("unknown imagery provider: " + providerName);
-    }
-});
-
-ui.exportToMain(function toggleOverlayProvider(event, providerName) {
-    let provider = config.overlayProviders.find(p => p.name == providerName);
-    if (provider) {
-        console.log("toggle overlay" + providerName);
-    } else {
-        console.log("unknown overlay provider: " + providerName);
-    }
 });
 
 

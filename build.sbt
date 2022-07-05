@@ -85,7 +85,7 @@ lazy val raceAir = createProject("race-air", commonSettings).
 
 lazy val raceLand = createProject("race-land", commonSettings).
   dependsOn(raceCore,raceNetHttp).
-  addLibraryDependencies(akkaAll)
+  addLibraryDependencies(akkaAll,awsS3,cdmCore)
 
 lazy val raceWW = createProject("race-ww", commonSettings).
   dependsOn(raceCore,raceSwing).

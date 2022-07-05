@@ -39,4 +39,5 @@ package object uom {
   implicit object SpeedDisambiguator
   implicit object AreaDisambiguator
   implicit object TemperatureDisambiguator
+  implicit object PowerDisambiguator
 }

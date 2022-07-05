@@ -18,6 +18,7 @@ package gov.nasa.race.uom
 
 import Length._
 import gov.nasa.race.MaybeUndefined
+import gov.nasa.race.uom.Area.{squareMetersInAcre, squareMetersInSquareMile}
 
 /**
   * area quantities
@@ -31,8 +32,14 @@ object Area {
   final val UndefinedArea = new Area(Double.NaN)
   final val Area0 = new Area(0.0)
 
+  final val squareMetersInAcre = 4046.8564224
+  final val squareMetersInSquareMile = 1609.344 * 1609.344
+
   //--- constructors
   def SquareMeters (d: Double) = new Area(d)
+  def SquareKilometers (d: Double) = new Area(d*1e6)
+  def SquareMiles (d: Double) = new Area(d * squareMetersInSquareMile)
+  def Acres (d: Double) = new Area(d * squareMetersInAcre)
 
   @inline def √ (a: Area)(implicit r: AreaDisambiguator.type): Length = Meters(Math.sqrt(a.d))
 
@@ -50,6 +57,14 @@ class Area protected[uom] (val d: Double) extends AnyVal
                                    with Ordered[Area] with MaybeUndefined {
 
   @inline def toSquareMeters: Double = d
+  @inline def toSquareKilometers: Double = d / 1e6
+  @inline def toAcres: Double = d / squareMetersInAcre
+  @inline def toSquareMiles: Double = d / squareMetersInSquareMile
+
+  @inline def toRoundedSquareMeters: Long = d.round
+  @inline def toRoundedSquareKilometers: Long = toSquareKilometers.round
+  @inline def toRoundedAcres: Long = toAcres.round
+  @inline def toRoundedSquareMiles: Long = toSquareMiles.round
 
   @inline def / (x: Double): Area = new Area(d/x)
   @inline def / (x: Length)(implicit r: AreaDisambiguator.type): Length = new Length(d/x.d)

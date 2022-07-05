@@ -7,10 +7,11 @@ import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
 var layerView = undefined;
-var layerEntries = new SkipList( // id-sorted display list for trackEntryView
+var layerEntries = new Map();
+var layerEntryList = new SkipList( // id-sorted display list for trackEntryView
     3, // max depth
     (a, b) => a.id < b.id, // sort function
-    (a, b) => a.id == b.id // identity function
+    (a, b) => a.id === b.id // identity function
 );
 
 const REMOTE = "";
@@ -62,7 +63,8 @@ function initLayerView() {
     let view = ui.getList("layers.list");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit"], [
-            { name: "show", width: "2rem", attrs: [], map: e => e.status },
+            { name: "show", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowLayer) },
+            { name: "status", width: "2rem", attrs: [], map: e => e.status },
             { name: "id", width: "10rem", attrs: ["alignLeft"], map: e => e.id },
             {
                 name: "date",
@@ -73,6 +75,18 @@ function initLayerView() {
         ]);
     }
     return view;
+}
+
+function toggleShowLayer(event) {
+    let cb = ui.getCheckBox(event.target);
+    if (cb) {
+        let le = ui.getListItemOfElement(cb);
+        if (le) {
+            le.setVisible(ui.isCheckBoxSelected(cb));
+            ui.updateListItem(layerView, le);
+            uiCesium.requestRender();
+        }
+    }
 }
 
 function handleWsLayerMessages(msgType, msg) {
@@ -86,9 +100,16 @@ function handleWsLayerMessages(msgType, msg) {
 }
 
 function handleLayerMessage(layer) {
-    let e = new LayerEntry(layer);
-    let idx = layerEntries.insert(e);
-    ui.insertListItem(layerView, e, idx);
+    let e = layerEntries.get(layer.name);
+    if (e) {
+        e.layer = layer;
+        ui.updateListItem(layerView, e);
+    } else {
+        e = new LayerEntry(layer);
+        layerEntries.set(layer.name, e);
+        let idx = layerEntryList.insert(e);
+        ui.insertListItem(layerView, e, idx);
+    }
 
     if (layer.show) {
         setTimeout(() => loadLayer(e), 3000); // FIXME - only defer if page is loading
@@ -139,18 +160,3 @@ function _loadDataSource(layerEntry, resource) {
 }
 
 //--- user interface
-
-ui.exportToMain(function selectLayer(event) {
-    let le = event.detail.curSelection;
-    if (le) {
-        ui.setCheckBox("layers.show", le.show);
-    }
-})
-
-ui.exportToMain(function toggleLayer(event) {
-    let le = ui.getSelectedListItem(layerView);
-    if (le) {
-        le.setVisible(ui.isCheckBoxSelected(event));
-        ui.updateListItem(layerView, le);
-    }
-})

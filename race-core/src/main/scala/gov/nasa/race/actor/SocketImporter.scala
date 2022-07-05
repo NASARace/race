@@ -20,6 +20,7 @@ import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
 import akka.actor.ActorRef
 import com.typesafe.config.Config
+import gov.nasa.race.common.DataAcquisitionThread
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{RaceActor, RaceContext}
 import gov.nasa.race.ifSome
@@ -29,16 +30,8 @@ import java.io.IOException
 /**
   * root type for socket data acquisition threads
   */
-abstract class SocketDataAcquisitionThread(name: String) extends Thread(name) {
-  protected var isDone: AtomicBoolean = new AtomicBoolean(false)
-
-  setDaemon(true) // data acquisition threads are always daemons
-
-  // this can be called from the outside and has to be thread safe
-  def terminate: Unit = {
-    isDone.set(true)
-    if (isAlive && !isDone.get) interrupt()
-  }
+abstract class SocketDataAcquisitionThread(name: String) extends DataAcquisitionThread {
+  setName(name)
 }
 
 /**
@@ -90,7 +83,7 @@ trait SocketImporter extends RaceActor {
   override def onTerminateRaceActor(originator: ActorRef) = {
     // make sure to let thread know about termination before pulling the rug under its feet by closing the socket
     ifSome(thread) { t =>
-      t.terminate
+      t.terminate()
       thread = None
     }
 

@@ -231,13 +231,12 @@ object FileUtils {
     } else None
   }
 
-  def ensureDir (pathName: String): Option[File] = ensureDir(new File(pathName))
-
   def ensureDir (dir: File): Option[File] = {
     if (!dir.isDirectory) {
       if (dir.mkdirs) Some(dir) else None
     } else Some(dir)
   }
+  def ensureDir (pathName: String): Option[File] = ensureDir(new File(pathName))
 
   def ensureWritableDir(dir: File): Option[File] = {
     ensureDir(dir) match {
@@ -245,13 +244,13 @@ object FileUtils {
       case None => None
     }
   }
+  def ensureWritableDir (pathName: String): Option[File] = ensureWritableDir(new File(pathName))
 
   def ensureWritable(file: File): Option[File] = {
     if (ensureWritableDir(file.getParentFile).isDefined){
       if (!file.exists || file.canWrite) Some(file) else None
     } else None
   }
-
   def ensureWritable(pathName: String): Option[File] = ensureWritable(new File(pathName))
 
   def ensureEmptyWritable (file: File): Option[File] = {

@@ -45,7 +45,7 @@ class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", buf
   def this(conf: Config) = this(createInputStream(conf), // this takes care of optional compression
                                 configuredPathName(conf),
                                 conf.getIntOrElse("buffer-size",4096),
-                                conf.getMappedStringOrElse("default-zone", ZoneId.of, ZoneId.systemDefault)
+                                conf.getMappedStringOrElse("default-zone", DateTime.getZoneId, ZoneId.systemDefault)
                                ) // size has to hold at least 2 records
 
   val updater: SbsUpdater = new SbsUpdater( Some(this), defaultZone)

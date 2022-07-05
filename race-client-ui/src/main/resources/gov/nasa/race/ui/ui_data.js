@@ -81,13 +81,20 @@ class SkipList {
         this.maxLevel = 0; // index - there always is at least one level
     }
 
-    includes(data) {
+    indexOf(data) {
         let n = this.head;
         for (let lvl = this.maxLevel; lvl >= 0; lvl--) {
-            while (n.next[lvl] && this.isBefore(n.next[lvl].data, data)) n = n.next[lvl];
+            while (n.next[lvl] && this.isBefore(n.next[lvl].data, data)) {
+                idx += n.width[lvl];
+                n = n.next[lvl];
+            }
         }
         n = n.next[0];
-        return (n && this.isSame(data, n.data))
+        return (n && this.isSame(data, n.data)) ? idx : -1;
+    }
+
+    includes(data) {
+        return this.indexOf(data) != -1;
     }
 
     randomLevel() {
@@ -96,7 +103,7 @@ class SkipList {
         return lvl;
     }
 
-    insert(data) {
+    insert(data, insertFunc, updateFunc) {
         let idx = 0; // eventually holds level 0 index of new element
         let nodeLevel = 0;
         let update = new Array(this.maxLevel + 1);
@@ -114,7 +121,9 @@ class SkipList {
 
         n = n.next[0];
         if (n && this.isSame(n.data, data)) { // update (keep it similar to Map)
+            let oldData = n.data;
             n.data = data;
+            if (updateFunc) updateFunc(idx, oldData);
 
         } else { // insert or append
             nodeLevel = this.randomLevel();
@@ -154,6 +163,7 @@ class SkipList {
             }
 
             this.size++;
+            if (insertFunc) insertFunc(idx);
         }
 
         return idx;
@@ -358,12 +368,13 @@ class CircularBuffer {
     }
 
 
-    reverseAt (i) {
+    reverseAt(i) {
         if (i >= 0 && i < this.size) {
             let idx = (this.i1 - i);
             if (idx < 0) idx = this.maxSize + idx;
             return this.buffer[idx];
-        } else return undefined;    }
+        } else return undefined;
+    }
 
     *
     [Symbol.iterator]() {

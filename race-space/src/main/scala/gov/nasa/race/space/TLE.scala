@@ -16,8 +16,8 @@
  */
 package gov.nasa.race.space
 
-import gov.nasa.race.util.SubstringParser
 import gov.nasa.race.common._
+import gov.nasa.race.util.SubstringParser
 
 /**
   * class that represents Two Line Element (TLE) orbit specifications as defined on

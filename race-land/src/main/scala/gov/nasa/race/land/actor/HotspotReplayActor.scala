@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.actor.Replayer
 import gov.nasa.race.archive.ArchiveEntry
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.land.HotspotArchiveReader
+import gov.nasa.race.land.ViirsHotspotArchiveReader
 import gov.nasa.race.uom.Time
 import gov.nasa.race.uom.Time.Seconds
 
@@ -34,8 +34,8 @@ import scala.concurrent.duration.DurationInt
   * Hotspot replay actors are a bit different in that they accumulate older entries that still fall into the
   * configured history duration, i.e. the first entry might have more data than its associated time in the archive
   */
-class InTimeHotspotReplayActor (val config: Config) extends Replayer[HotspotArchiveReader]{
-  override def createReader = new HotspotArchiveReader(config)
+class InTimeHotspotReplayActor (val config: Config) extends Replayer[ViirsHotspotArchiveReader]{
+  override def createReader = new ViirsHotspotArchiveReader(config)
 
   // how far we reach back for the first entry
   val hotspotHistory: Time = Seconds(config.getFiniteDurationOrElse("hotspot.history", 7.days).toSeconds)
