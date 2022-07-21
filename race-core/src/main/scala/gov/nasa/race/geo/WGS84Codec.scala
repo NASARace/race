@@ -16,6 +16,14 @@
  */
 package gov.nasa.race.geo
 
+object WGS84Codec {
+  val pow10 = Array( 1, 10, 100, 1000, 10000, 100000, 1000000)
+}
+import WGS84Codec._
+import gov.nasa.race.util.NumUtils
+
+import scala.math.BigDecimal.RoundingMode
+
 /**
   * encode/decode lat lon in degrees to/from 64 bit preserving 6 decimal places, which gives us about 10cm accuracy
   * see http://www.dupuis.me/node/35
@@ -28,6 +36,16 @@ package gov.nasa.race.geo
 class WGS84Codec {
   final val eps = 0.00000000001
   final val frac = 10000000.0
+
+  // round decimal places before doing the conversion
+  def encode (latDeg: Double, lonDeg: Double, decimals: Int): Long = {
+    if (decimals < 0 || decimals > 6) throw new RuntimeException(s"decimals out of range[1..6]: $decimals")
+
+    val lat = NumUtils.round( latDeg, decimals)
+    val lon = NumUtils.round( lonDeg, decimals)
+
+    encode(lat,lon)
+  }
 
   def encode (latDeg: Double, lonDeg: Double): Long = {
     // this takes care of the numeric anomaly at lonDeg = +- 180.0
@@ -50,6 +68,18 @@ class WGS84Codec {
     e
   }
 
+  // version to use if codec has to be thread safe
+  def getLatLonDeg (e: Long): (Double,Double) = {
+    val grid = (e & 0xffff).toInt
+    val ilon = ((e >> 16) & 0xffff) + (((e >> 48) & 0xff).toInt << 16)
+    val ilat = ((e >> 32) & 0xffff) + (((e >> 56) & 0xff).toInt << 16)
+
+    val lon = (grid % 360) + (ilon.toDouble / frac) - 180.0
+    val lat = (grid / 360) + (ilat.toDouble / frac) - 90.0
+
+    (lat,lon)
+  }
+
   // store result without the need for allocation
   var latDeg: Double = 0
   var lonDeg: Double = 0
@@ -61,5 +91,11 @@ class WGS84Codec {
 
     lonDeg = (grid % 360) + (ilon.toDouble / frac) - 180.0
     latDeg = (grid / 360) + (ilat.toDouble / frac) - 90.0
+  }
+
+  def decode (e: Long, decimals: Int): Unit = {
+    decode(e)
+    latDeg = NumUtils.round( latDeg, decimals)
+    lonDeg = NumUtils.round( lonDeg, decimals)
   }
 }

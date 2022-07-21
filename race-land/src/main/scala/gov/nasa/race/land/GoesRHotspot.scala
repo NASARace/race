@@ -16,13 +16,18 @@
  */
 package gov.nasa.race.land
 
+import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.JsonWriter
-import gov.nasa.race.geo.GeoPosition
+import gov.nasa.race.geo.{GeoMap, GeoPosition}
 import gov.nasa.race.uom.Length.Meters
-import gov.nasa.race.uom.{Area, DateTime, Length, Power, Temperature}
+import gov.nasa.race.uom.{Area, DateTime, Length, Power, Temperature, Time}
 import gov.nasa.race.land.Hotspot._
 
 object GoesRHotspot {
+  val MASK = asc("mask")
+  val N_TOTAL = asc("nTotal")
+  val N_GOOD = asc("nGood")
+  val N_PROBABLE = asc("nProbable")
 
   // data quality flag, see see https://www.goes-r.gov/products/docs/PUG-L2+-vol5.pdf pg.494pp
   val DQF_UNKNOWN = -1
@@ -49,6 +54,7 @@ object GoesRHotspot {
 
   def isValidFirePixel (mask: Int): Boolean = mask >= 10 && mask <= 35
 }
+import GoesRHotspot._
 
 /**
   * class representing a potential fire pixel as reported by GOES-R ABI L2 Fire (Hot Spot Characterization) data product
@@ -74,6 +80,15 @@ case class GoesRHotspot (
     this(date, pix.center, pix.dqf, pix.mask, pix.temp, pix.frp, pix.area, pix.bounds, sat)
   }
 
+  //--- pixel classification
+  def hasValues: Boolean = temp.isDefined && area.isDefined && frp.isDefined // correlates with isGoodPixel
+  def hasSomeValues: Boolean = temp.isDefined || area.isDefined || frp.isDefined // correlates with isHighProbabilityPixel or isMediumProbabilityPixel
+
+  def isGoodPixel: Boolean = (mask == MASK_GOOD) || (mask == MASK_TEMP_GOOD)
+  def isProbablePixel: Boolean = isHighProbabilityPixel || isMediumProbabilityPixel
+  def isHighProbabilityPixel: Boolean = (mask == MASK_HIGH_PROB) || (mask == MASK_TEMP_HIGH_PROB)
+  def isMediumProbabilityPixel: Boolean = (mask == MASK_MED_PROB) || (mask == MASK_TEMP_MED_PROB)
+
   override def serializeMembersTo (writer: JsonWriter): Unit = {
     writer
       .writeDateTimeMember(DATE,date)
@@ -81,6 +96,16 @@ case class GoesRHotspot (
       .writeDoubleMember(LON, position.lonDeg,FMT_3_5)
       .writeDoubleMember(TEMP, temp.toKelvin,FMT_3_1)
       .writeDoubleMember(FRP, frp.toMegaWatt,FMT_1_1)
+      .writeLongMember(AREA, area.toSquareMeters.round)
+      .writeArrayMember(BOUNDS){ w=>
+        bounds.foreach { p =>
+          w.writeArray { w=>
+            w.writeDouble(p.latDeg)
+            w.writeDouble(p.lonDeg)
+          }
+        }
+      }
+      .writeIntMember(MASK, mask)
       .writeStringMember(SOURCE,source)
 
       .writeIntMember(SIZE, pixelSize.toMeters.toInt)
@@ -94,4 +119,91 @@ case class GoesRHotspot (
   override def toString: String = s"{src: $source, pos: ${_pos}, temp: ${_temp}, frp: ${_frp}, area: ${_area}, mask: $mask"
 }
 
+/**
+  * match-able collection
+  */
 case class GoesRHotspots (date: DateTime, src: String, elems: Array[GoesRHotspot]) extends Hotspots[GoesRHotspot]
+
+/**
+  * a GeoMap that supports the following constraints on GoesRHotspot history logs
+  *
+  *   - bounded history (invariant maxHistory)
+  *   - last hotspot not older than maxMissing with respect to ref date
+  *   - all hotspots not older than maxAge with respect to ref date
+  */
+class GoesrHotspotMap (decimals: Int, val maxHistory: Int, val maxAge: Time, val maxMissing: Time) extends GeoMap[Seq[GoesRHotspot]](decimals) {
+
+  protected var lastDate: DateTime = DateTime.UndefinedDateTime
+  protected var lastReportedDate: DateTime = DateTime.UndefinedDateTime
+
+  protected var nLastUpdate: Int = 0
+  protected var nLastGood: Int = 0
+  protected var nLastProbable: Int = 0
+  protected var changed: Boolean = false
+
+  def getLastDate: DateTime = lastDate
+
+  def getLastUpdateCount: Int = nLastUpdate
+  def getLastGoodCount: Int = nLastGood
+  def getLastProbableCount: Int = nLastProbable
+
+  def resetNlast(): Unit = {
+    nLastUpdate = 0
+    nLastGood = 0
+    nLastProbable = 0
+  }
+
+  def hasChanged: Boolean = changed
+  def resetChanged(): Unit = changed = false
+
+  override def addOneRaw (k: Long, v: Seq[GoesRHotspot]): elems.type = {
+    changed = true
+    super.addOneRaw(k,v)
+  }
+
+  def updateWith ( h: GoesRHotspot): Unit = {
+    val k = key(h.position)
+    elems.get(k) match {
+      case Some(hs) => addOneRaw(k, h +: hs.take(maxHistory-1))
+      case None => addOneRaw(k, Seq(h))
+    }
+
+    if (h.date > lastDate) {
+      lastDate = h.date
+      resetNlast()
+    }
+
+    if (h.date == lastDate) {
+      nLastUpdate += 1
+      if (h.isGoodPixel) nLastGood += 1
+      else if (h.isProbablePixel) nLastProbable += 1
+    }
+  }
+
+  def purgeOldHotspots (d: DateTime): Boolean = {
+
+    //--- purge entries that haven't been updated for at least maxMissing
+    foreachRaw { (k,hs) =>
+      if (hs.isEmpty || d.timeSince(hs.head.date) > maxMissing) {
+        removeRaw(k)
+        changed = true
+      }
+    }
+
+    //--- purge all entry hotspots that are older than maxAge
+    foreachRaw { (k,hs) =>
+      val hsKeep = hs.filter( h=> d.timeSince(h.date) < maxAge)
+      if (hsKeep ne hs) {
+        if (hsKeep.isEmpty){
+          removeRaw(k)
+          changed = true
+        } else {
+          addOneRaw(k, hsKeep)
+          changed = true
+        }
+      }
+    }
+
+    changed
+  }
+}

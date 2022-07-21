@@ -21,6 +21,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatcher, PathMatchers, Route}
 import akka.stream.scaladsl.SourceQueueWithComplete
+import com.typesafe.config.Config
 import gov.nasa.race.cesium.CesiumRoute.cesiumJsUrl
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.http._
@@ -41,7 +42,7 @@ object CesiumRoute {
 
   val imageryPrefixMatcher = PathMatcher(imageryPrefix / "[^/]+".r ~ Slash)
 
-  val defaultCesiumJsVersion = "1.94"
+  val defaultCesiumJsVersion = "1.95"
 
   val cesiumPathMatcher = PathMatchers.separateOnSlashes("Build/Cesium/")
   def cesiumJsUrl (version: String): String = {
@@ -83,6 +84,12 @@ trait CesiumRoute
   // these can be overridden by what is in the theme, which can be overridden what is specified in the layer itself
   // (if the layer has a spec that prevents anything but manual modification on the client side)
   val imageryParams = ImageryLayer.getDefaultImageryParams(config.getOptionalConfig("imagery-params"))
+
+  //--- dev & debugging
+  override def addResourceFileAssetResolvers(): Unit = {
+    super.addResourceFileAssetResolvers()
+    addResourceFileAssetResolvers("race-cesium/src/main/resources/gov/nasa/race/cesium")("ui_cesium.js")
+  }
 
   //--- cesium related routes
 
@@ -169,11 +176,10 @@ trait CesiumRoute
 
   // to be called from the concrete getConfig() implementation
   def basicCesiumConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
-
     val wsToken = registerTokenForClient(remoteAddr)
     val terrain = if (proxyTerrain) CesiumRoute.terrainPrefix else terrainProvider
 
-      s"""
+    s"""
 export const wsUrl = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';
 export const cesium = {
   accessToken: '$accessToken',
@@ -256,4 +262,28 @@ export const cesium = {
     uiIcon("time-icon.svg", "main.toggleWindow(event,'time')", "time_icon")
   }
 
+  //--- misc
+  protected def cesiumColor(cfg: Config, key: String, fallback: =>String): String = {
+    s"""Cesium.Color.fromCssColorString('${cfg.getStringOrElse(key, fallback)}')"""
+  }
+
+  //--- to be used as config and window fragments by concrete CesiumRoutes with configurable layer info
+
+  def cesiumLayerConfig (cfg: Config, layerName: String, layerDescription: String, show: Boolean=true): String = {
+    s"""layer: {
+    name: "${cfg.getStringOrElse("layer-name", layerName)}",
+    description: "${cfg.getStringOrElse("description", layerDescription)}",
+    show: ${cfg.getBooleanOrElse("show", show)},
+  }"""
+  }
+
+  def cesiumLayerPanel (wid: String, showAction: String, showInitial:Boolean = true): Text.TypedTag[String] = {
+    uiPanel("layer", true)(
+      uiRowContainer()(
+        uiCheckBox( "show: ", showAction, NoId, showInitial),
+        uiLabel( wid+".layer")
+      ),
+      uiLabel( wid+".descr")
+    )
+  }
 }

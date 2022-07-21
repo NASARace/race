@@ -290,7 +290,7 @@ object ConfigUtils {
 
 
 
-    def getKeyValuePairsOrElse(key: String, fallback: Seq[(String,String)]): Seq[(String,String)] = {
+    def getKeyValuePairsOrElse(key: String, fallback: =>Seq[(String,String)]): Seq[(String,String)] = {
       try {
         conf.getStringList(key).asScala.toSeq.map { s=>
           keyValRE.findFirstIn(s) match {

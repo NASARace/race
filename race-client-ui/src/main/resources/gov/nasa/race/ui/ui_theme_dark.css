@@ -58,10 +58,14 @@
     --window-background: var(--background);
     --window-border: 1px solid var(--border-color);
     --window-shadow: var(--box-shadow);
+    --window-padding: 0.8rem;
+    --window-gap: var(--gap);
     --window-z: 50;
     /* panels */
     --panel-padding-top: 6px;
     --panel-padding-bottom: 3px;
+    --panel-header-margin-top: 1rem;
+    --panel-header-margin-bottom: 0.2rem;
     --panel-border-top: 1px solid var(--border-color);
     --panel-background: var(--background);
     /* scrollbars */
@@ -121,6 +125,7 @@
     --list-hover-background: rgb(80, 80, 80);
     --list-selection-color: var(--selected-data-color);
     --list-selection-background: var(--selection-background);
+    --list-header-font: var(--font-small);
     /* clocks */
     --clock-date-font: var(--font-small);
     --clock-time-font: bold 120% Courier;
@@ -133,7 +138,7 @@
     --slider-range-color: rgba(200, 200, 200, 0.6);
     /* general containers */
     --container-padding: 4px;
-    --container-margin: var(--margin);
+    --container-margin: var(--margin) 0 var(--margin) 0;
     --container-gap: 4px;
     /* generic map rendering */
     --map-brightness: 0.6;

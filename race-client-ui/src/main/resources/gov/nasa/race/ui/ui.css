@@ -132,8 +132,8 @@ div.ui_window_content {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 3px;
-    padding: 5px;
+    gap: var(--window-gap);
+    padding: var(--window-padding);
     color: var(--window-color);
     background: var(--window-background);
     border: none;
@@ -195,10 +195,16 @@ div.ui_panel_header {
     padding-bottom: var(--panel-padding-bottom);
     border: none;
     border-top: var(--panel-border-top);
+    margin-top: var(--panel-header-margin-top);
+    margin-bottom: var(--panel-header-margin-bottom);
     /*font-size: 115%;*/
     /*font-weight: bold;*/
     width: 100%;
     align-items: flex-start;
+}
+
+div.ui_panel_header:first-child {
+    margin-top: 0;
 }
 
 div.ui_panel_header.expanded::before {
@@ -223,12 +229,24 @@ div.ui_panel {
     overflow: hidden;
     /*background: var(--panel-background);*/
     background: transparent;
+    gap: var(--gap);
+}
+
+
+/* stand-alone text element */
+
+div.ui_label {
+    display: inline-block;
+    white-space: pre;
+}
+
+div.ui_label.permanent {
+    height: var(--field-height);
+    line-height: var(--field-height);
 }
 
 
 /* fields (label + display) */
-
-div.ui_field {}
 
 div.ui_field_label {
     display: inline-block;
@@ -238,6 +256,7 @@ div.ui_field_label {
     vertical-align: middle;
     /* width: var(--field-label-width); */
     height: var(--field-height);
+    white-space: pre;
 }
 
 input.ui_field {
@@ -557,6 +576,28 @@ div.ui_radio_label {
 
 /* list boxes */
 
+div.ui_list_wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    background: transparent;
+}
+
+div.ui_list_header {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    flex-grow: 0;
+    background: transparent;
+    font: var(--list-header-font);
+    margin: var(--list-item-padding);
+}
+
+div.ui_list_subitem.header {
+    flex-grow: 0;
+    min-height: 3px;
+}
+
 div.ui_list {
     color: var(--list-color);
     background: var(--data-background);
@@ -566,7 +607,7 @@ div.ui_list {
     min-width: var(--list-width);
     min-height: calc( 2 * var(--list-item-height));
     box-sizing: border-box;
-    overflow-y: auto;
+    overflow-y: scroll;
     overflow-x: auto;
 }
 
@@ -599,7 +640,7 @@ div.ui_list_subitem {
     text-overflow: "…";
     background: transparent;
     text-align: left;
-    white-space: nowrap;
+    white-space: pre;
 }
 
 div.ui_list_subitem.align_left {
@@ -658,7 +699,7 @@ div.ui_menuitem:not([class*="disabled"]):hover {
 div.ui_container {
     display: flex;
     flex-wrap: nowrap;
-    padding: var(--container-padding);
+    /* padding: var(--container-padding); */
     margin: var(--container-margin);
     gap: var(--container-gap);
     background: transparent;
@@ -678,6 +719,10 @@ div.ui_container.row {
 
 div.ui_container.column {
     flex-direction: column;
+}
+
+div.spacer {
+    flex-grow: 10;
 }
 
 div.align_left {

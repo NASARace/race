@@ -143,6 +143,12 @@ package object ui {
     div(mods: _*)
   }
 
+  // TODO - suboptimal. In general we want layout&presentation out of the view DSL
+  def uiHorizontalSpacer(minWidthInRem: Int): Text.TypedTag[String] = {
+    val mods = List(cls:="spacer", style:=s"min-width: ${minWidthInRem}rem")
+    div(mods: _*)
+  }
+
   def uiTextInput (label: String, eid: UiID, action: String=NoAction, placeHolder: String="", width: String=NoWidth): Text.TypedTag[String] = {
     var mods = List(cls:="ui_field text input", data("id"):=eid, data("label"):= label)
     if (action.nonEmpty) mods = (onchange:=action) :: mods
@@ -151,9 +157,19 @@ package object ui {
     div(mods: _*)
   }
 
-  def uiList (eid: UiID, maxRows: Int, selectAction: String=NoAction, clickAction: String=NoAction, contextMenuAction: String=NoAction): Text.TypedTag[String] = {
+  def uiLabel (eid: UiID, isPermanent: Boolean=false, maxWidthInRem:Int=0, minWidthInRem:Int=0): Text.TypedTag[String] = {
+    val classList = if (isPermanent) "ui_label permanent" else "ui_label"
+    var mods = List(cls:=classList, id:=eid)
+    if (maxWidthInRem > 0) mods = (style:=s"max-width: ${maxWidthInRem}rem") :: mods
+    if (minWidthInRem > 0) mods = (style:=s"min-width: ${minWidthInRem}rem") :: mods
+    div(mods: _*)
+  }
+
+  def uiList (eid: UiID, maxRows: Int,
+              selectAction: String=NoAction, clickAction: String=NoAction, contextMenuAction: String=NoAction, dblClickAction: String=NoAction): Text.TypedTag[String] = {
     var mods = List(cls:="ui_list", id:=eid, data("rows"):=maxRows)
     if (clickAction.nonEmpty) mods = (onclick:=clickAction) :: mods
+    if (dblClickAction.nonEmpty) mods = (ondblclick:=dblClickAction) :: mods
     if (selectAction.nonEmpty) mods = (data("onselect"):=selectAction) :: mods
     if (contextMenuAction.nonEmpty) mods = (oncontextmenu:=contextMenuAction) :: mods
     div(mods: _*)

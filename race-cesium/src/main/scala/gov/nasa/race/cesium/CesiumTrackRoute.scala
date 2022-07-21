@@ -124,22 +124,19 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute with CachedFileAsse
 
   def uiTrackWindow(title: String="Tracks"): Text.TypedTag[String] = {
     uiWindow(title,"tracks", "track-icon.svg")(
-      uiList("tracks.sources", 5, "main.selectSource(event)", NoAction, "main.popupMenu(event,'tracks.sources_menu')")(
-        uiPopupMenu("tracks.sources_menu")(
-          uiMenuItem("show", "main.toggleShowSource(event)",NoId, true),
-          hr(),
-          uiMenuItem("show all", "main.showAllSources(event)")
-        )
+      cesiumLayerPanel("tracks", "main.toggleShowTracks(event)"),
+      uiPanel("track sources")(
+        uiList("tracks.sources", 5, "main.selectSource(event)", NoAction)
       ),
-
-      uiTextInput("query","tracks.query", "main.queryTracks(event)", "enter track query"),
-      uiList("tracks.list", 10, "main.selectTrack(event)"),
-
-      uiRowContainer()(
-        uiCheckBox("show path", "main.toggleShowPath(event)", "tracks.path"),
-        uiRadio("line", "main.setLinePath(event)", "tracks.line"),
-        uiRadio("wall", "main.setWallPath(event)", "tracks.wall"),
-        uiButton("Reset", "main.resetPaths()")
+      uiPanel("tracks")(
+        uiTextInput("query","tracks.query", "main.queryTracks(event)", "enter track query", width="12rem"),
+        uiList("tracks.list", 10, "main.selectTrack(event)"),
+        uiRowContainer()(
+          uiCheckBox("show path", "main.toggleShowPath(event)", "tracks.path"),
+          uiRadio("line", "main.setLinePath(event)", "tracks.line"),
+          uiRadio("wall", "main.setWallPath(event)", "tracks.wall"),
+          uiButton("Reset", "main.resetPaths()")
+        )
       )
     )
   }
@@ -161,50 +158,49 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute with CachedFileAsse
     * might be client- or request specific
     */
   def trackConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
-    def _int (key: String, defaultValue: Int): Int = config.getIntOrElse(key,defaultValue)
-    def _double (key: String, defaultValue: Double): Double = config.getDoubleOrElse(key,defaultValue)
-    def _string (key: String, defaultValue: String): String = config.getStringOrElse(key,defaultValue)
+    val cfg = config.getConfig("track")
 
-    val trackLabelOffsetX = _int("track.label-offset.x", 12)
-    val trackLabelOffsetY = _int("track.label-offset.y", 10)
-    val trackInfoOffsetX = _int("track.info-offset.x",trackLabelOffsetX)
-    val trackInfoOffsetY = _int("track.info-offset.y",trackLabelOffsetY + 16)
-    val trackPointDist = _int("track.point-dist", 120000)
+    val trackLabelOffsetX = cfg.getIntOrElse("label-offset.x", 12)
+    val trackLabelOffsetY = cfg.getIntOrElse("label-offset.y", 10)
+    val trackInfoOffsetX = cfg.getIntOrElse("info-offset.x",trackLabelOffsetX)
+    val trackInfoOffsetY = cfg.getIntOrElse("info-offset.y",trackLabelOffsetY + 16)
+    val trackPointDist = cfg.getIntOrElse("point-dist", 120000)
 
     s"""
 export const track = {
-  color: Cesium.Color.fromCssColorString('${_string("color", trackColor)}'),
+  ${cesiumLayerConfig(cfg, "/tracking/bay-area", " air and ground tracks in San Francisco Bay Area")},
+  color: ${cesiumColor(cfg, "color", "Yellow")},
   colors: new Map(${trackColors.map(e=> s"['${e._1}',Cesium.Color.fromCssColorString('${e._2}')]").mkString("[",",","]")}),
 
-  labelFont: '${_string("track.label-font", "16px sans-serif")}',
+  labelFont: '${cfg.getStringOrElse("label-font", "16px sans-serif")}',
   labelOffset: new Cesium.Cartesian2( $trackLabelOffsetX, $trackLabelOffsetY),
-  labelBackground: Cesium.Color.fromCssColorString('${_string( "track.label-bg", "black")}'),
-  labelDC: new Cesium.DistanceDisplayCondition( 0, ${_int("track.label-dist", 200000)}),
+  labelBackground: ${cesiumColor(cfg, "label-bg", "black")},
+  labelDC: new Cesium.DistanceDisplayCondition( 0, ${cfg.getIntOrElse("label-dist", 200000)}),
 
-  pointSize: ${_int("track.point-size", 5)},
-  pointOutlineColor: Cesium.Color.fromCssColorString('${_string("track.point-outline-color", "black")}'),
-  pointOutlineWidth: ${_double("track.point-outline-width", 1)},
+  pointSize: ${cfg.getIntOrElse("point-size", 5)},
+  pointOutlineColor: ${cesiumColor(cfg,"point-outline-color", "black")},
+  pointOutlineWidth: ${cfg.getIntOrElse("point-outline-width", 1)},
   pointDC: new Cesium.DistanceDisplayCondition( $trackPointDist, Number.MAX_VALUE),
 
-  modelSize: ${_int( "track.model-size", 20) },
+  modelSize: ${cfg.getIntOrElse( "model-size", 20) },
   modelDC: new Cesium.DistanceDisplayCondition( 0, $trackPointDist),
-  modelOutlineColor: Cesium.Color.fromCssColorString('${_string("track.model-outline-color", "black")}'),
-  modelOutlineWidth: ${_double("track.model-outline-width", 2.0)},
-  modelOutlineAlpha: ${_double("track.model-outline-alpha", 1.0)},
+  modelOutlineColor: '${cfg.getStringOrElse("model-outline-color", "black")}',
+  modelOutlineWidth: '${cfg.getDoubleOrElse("model-outline-width", 2.0)}',
+  modelOutlineAlpha: '${cfg.getDoubleOrElse("model-outline-alpha", 1.0)}',
 
   billboardDC: new Cesium.DistanceDisplayCondition( 0, $trackPointDist),
 
-  infoFont: '${_string("track.info-font", "14px monospace")}',
+  infoFont: '${cfg.getStringOrElse("info-font", "14px monospace")}',
   infoOffset:  new Cesium.Cartesian2( $trackInfoOffsetX, $trackInfoOffsetY),
-  infoDC: new Cesium.DistanceDisplayCondition( 0, ${_int("track.info-dist", 80000)}),
+  infoDC: new Cesium.DistanceDisplayCondition( 0, ${cfg.getIntOrElse("info-dist", 80000)}),
 
-  pathLength: ${_int("track.path-length", 0)},
-  pathDC: new Cesium.DistanceDisplayCondition( 0, ${_int("track.path-dist", 1000000)}),
-  pathColor: Cesium.Color.fromCssColorString('${_string("track.path-color", trackColor)}'),
-  pathWidth: ${_int("track.path-width", 1)},
-  path2dWidth: ${_int("track.path-2d-width", 3)},
+  pathLength: ${cfg.getIntOrElse("path-length", 0)},
+  pathDC: new Cesium.DistanceDisplayCondition( 0, ${cfg.getIntOrElse("path-dist", 1000000)}),
+  pathColor: ${cesiumColor(cfg,"path-color", trackColor)},
+  pathWidth: ${cfg.getIntOrElse("path-width", 1)},
+  path2dWidth: ${cfg.getIntOrElse("path-2d-width", 3)},
 
-  maxTraceLength: ${_int("max-trace-length", 200)},
+  maxTraceLength: ${cfg.getIntOrElse("max-trace-length", 200)},
 };
 """
   }

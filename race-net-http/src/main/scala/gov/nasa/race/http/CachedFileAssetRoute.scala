@@ -16,9 +16,12 @@
  */
 package gov.nasa.race.http
 
+import akka.http.scaladsl.model.{HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, path}
 import akka.http.scaladsl.server.Route
+import com.typesafe.config.Config
 import gov.nasa.race.common.CachedByteFile
+import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.ifSome
 import gov.nasa.race.util.ClassUtils.linearizedSuperTypesOf
 import gov.nasa.race.util.{ClassUtils, FileUtils, SeqUtils, StringUtils}
@@ -88,6 +91,19 @@ trait CachedFileAssetRoute extends RaceRouteInfo {
     }
   }
 
+  def addResourceFileAssetResolvers (dir: String)(fnames: String*): Unit = {
+    fnames.foreach( fn=>addFileAssetResolver(new Regex(fn), this.getClass, false, Some(dir)))
+  }
+
+  /**
+   * resolve file assets from the src/main/resources/... dir instead of jars, which is useful for development
+   */
+  def addResourceFileAssetResolvers (): Unit = {
+    addResourceFileAssetResolvers("race-client-ui/src/main/resources/gov/nasa/race/ui")(
+      "ui.css", "ui_theme_dark.css", "ui.js", "ui_data.js", "ui_utils.js"
+    )
+  }
+
   def clearCachedFileAsset (fileName: String): Unit = {
     cachedFiles = cachedFiles - fileName
     cachedResources = cachedResources - fileName
@@ -134,6 +150,23 @@ trait CachedFileAssetRoute extends RaceRouteInfo {
   def fileAsset(fileName: String): Route = {
     path(fileName) {
       complete( ResponseData.forExtension( FileUtils.getExtension(fileName), getFileAssetContent(fileName)))
+    }
+  }
+
+  //--- support for configurable assets (usually identified by a common path prefix), mapping names into filenames
+
+  def getSymbolicAssetMap(key: String, config: Config, defaults: =>Seq[(String,String)]): Map[String,String] = {
+    Map.from( config.getKeyValuePairsOrElse( key, defaults))
+  }
+
+  def getSymbolicAssetContent(key: String, map: Map[String,String]): Option[HttpEntity.Strict] = {
+    map.get(key).map( fileName => getFileAssetContent(fileName))
+  }
+
+  def completeWithSymbolicAsset(key: String, map: Map[String,String]): Route = {
+    getSymbolicAssetContent(key, map) match {
+      case Some(content) => complete(content)
+      case None => complete(StatusCodes.NotFound, key)
     }
   }
 }

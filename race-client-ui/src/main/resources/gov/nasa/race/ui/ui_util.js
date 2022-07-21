@@ -150,6 +150,7 @@ export const fmax_3 = new Intl.NumberFormat('en-US', { notation: 'compact', maxi
 export const fmax_4 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 4 });
 export const fmax_5 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 5 });
 
+
 //--- position formatting
 
 export function toLatLonString(lat, lon, decimals = 5) {
@@ -176,6 +177,10 @@ export function metersPerSecToKnots(spd) {
 
 export function metersToFlightLevel(alt) {
     return Math.round(alt * 0.00656167979) * 5;
+}
+
+export function squareMetersToAcres(area) {
+    return (area / 4046.8564224);
 }
 
 //--- date utilities
@@ -241,6 +246,12 @@ const defaultLocalTimeFormat = new Intl.DateTimeFormat('default', {
     hour12: false
 });
 
+const defaultLocalHMTimeFormat = new Intl.DateTimeFormat('default', {
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false
+});
+
 export function timeFormat(timeOpts) {
     let to;
     if (!timeOpts) {
@@ -267,6 +278,10 @@ export function toTimeString(d, fmt = defaultTimeFormat) {
 }
 
 export function toLocalTimeString(d, fmt = defaultLocalTimeFormat) {
+    return (d) ? fmt.format(d) : "-";
+}
+
+export function toLocalHMTimeString(d, fmt = defaultLocalHMTimeFormat) {
     return (d) ? fmt.format(d) : "-";
 }
 
@@ -334,4 +349,8 @@ export function deltaDeg(latDeg, length) {
 
 export function roundToNearest(x, d) {
     return Math.round(x / d) * d;
+}
+
+export function countMatching(array, pred) {
+    return array.reduce((acc, e) => pred(e) ? acc + 1 : acc, 0);
 }

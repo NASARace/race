@@ -98,3 +98,18 @@ class DataClientRaceActor(val dataClient: RaceDataClient, val config: Config) ex
   }
 }
 
+/**
+  * a RaceDataClient that gets periodic RaceTick notifications at configured intervals
+  */
+trait PeriodicRaceDataClient extends RaceDataClient {
+  override protected def instantiateActor: DataClientRaceActor = new PeriodicDataClientRaceActor(this,config)
+
+  def onRaceTick(): Unit
+}
+
+class PeriodicDataClientRaceActor(dataClient: PeriodicRaceDataClient, config: Config)
+                                                extends DataClientRaceActor(dataClient,config) with PeriodicRaceActor {
+  override def onRaceTick(): Unit = {
+    dataClient.onRaceTick()
+  }
+}

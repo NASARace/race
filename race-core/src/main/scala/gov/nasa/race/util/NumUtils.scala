@@ -58,4 +58,15 @@ object NumUtils {
 
   def getPositiveIntOrElse (n: Int, f: =>Int): Int = if (n >=0) n else f
 
+  @inline def round (x: Double, decimals: Int): Double = {
+    BigDecimal(x.toString).setScale( decimals, BigDecimal.RoundingMode.HALF_UP).toDouble
+  }
+
+  @inline def hashCode (x: Long): Int = java.lang.Long.hashCode(x)
+
+  @inline def hashCode (x: Double): Int = java.lang.Double.hashCode(x)
+
+  def roundedEquals (a: Double, b: Double, decimals: Int): Boolean = round(a,decimals) == round(b,decimals)
+
+  def roundedHashCode (x: Double, decimals: Int): Int = hashCode( round(x,decimals))
 }

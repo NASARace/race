@@ -96,6 +96,7 @@ ui.registerLoadFunction(function initialize() {
     uiCesium.setEntitySelectionHandler(trackSelection);
     ws.addWsHandler(config.wsUrl, handleWsTrackMessages);
 
+    uiCesium.initLayerPanel("tracks", config.track);
     console.log("ui_cesium_tracks initialized");
 });
 
@@ -103,7 +104,7 @@ function initTrackSourceView() {
     let view = ui.getList("tracks.sources");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit"], [
-            { name: "show", width: "1rem", attrs: [], map: e => e.show ? "●" : "" },
+            { name: "", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSource) },
             { name: "id", width: "5rem", attrs: ["alignLeft"], map: e => e.id },
             { name: "size", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.trackEntries.size.toString() },
             { name: "date", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalTimeString(e.date) }
@@ -899,12 +900,20 @@ ui.exportToMain(function selectSource(event) {
     }
 });
 
-ui.exportToMain(function toggleShowSource(event) {
-    if (selectedTrackSource) {
-        selectedTrackSource.setVisible(ui.toggleMenuItemCheck(event));
+function toggleShowSource(event) {
+    let cb = ui.getCheckBox(event.target);
+    if (cb) {
+        let tse = ui.getListItemOfElement(cb);
+        if (tse) {
+            tse.setVisible(ui.isCheckBoxSelected(cb));
+        }
     }
-});
+}
 
-ui.exportToMain(function showAllSources(event) {
-    console.log("@@ TBD: show all sources");
+ui.exportToMain(function toggleShowTracks(event) {
+    let cb = ui.getCheckBox(event.target);
+    if (cb) {
+        let showIt = ui.isCheckBoxSelected(cb);
+        trackSources.forEach(tse => tse.setVisible(showIt));
+    }
 });

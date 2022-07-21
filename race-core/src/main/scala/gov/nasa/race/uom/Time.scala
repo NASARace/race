@@ -117,9 +117,13 @@ class Time protected[uom] (val millis: Long) extends AnyVal
 
   //--- converters
   def toMillis: Long = millis
+
+  // those are fractional - round if you need integers
   def toSeconds: Double = if (millis != UNDEFINED_TIME) millis / 1000.0 else Double.NaN
+  def toMinutes: Double = if (millis != UNDEFINED_TIME) millis / 60000.0 else Double.NaN
   def toHours: Double = if (millis != UNDEFINED_TIME) millis / MillisInHour.toDouble else Double.NaN
   def toDays: Double = if (millis != UNDEFINED_TIME) millis / MillisInDay.toDouble else Double.NaN
+
   def toHMSms: (Long,Long,Long,Long) = {
     val s = (millis / 1000) % 60
     val m = (millis / 60000) % 60

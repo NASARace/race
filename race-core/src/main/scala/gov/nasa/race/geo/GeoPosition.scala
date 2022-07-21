@@ -23,6 +23,7 @@ import gov.nasa.race.common.{JsonSerializable, JsonWriter}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
+import gov.nasa.race.util.StringUtils
 
 object GeoPosition {
   val zeroPos = new LatLonPos(Angle0, Angle0, Length0)
@@ -31,6 +32,7 @@ object GeoPosition {
   def apply (φ: Angle, λ: Angle, alt: Length = Length0): GeoPosition = new LatLonPos(φ,λ,alt)
 
   def fromDegrees (latDeg: Double, lonDeg: Double): GeoPosition = new LatLonPos( Degrees(latDeg), Degrees(lonDeg), Length0)
+
   def fromDegreesAndMeters (latDeg: Double, lonDeg: Double, altMeters: Double) = {
     new LatLonPos(Degrees(latDeg), Degrees(lonDeg), Meters(altMeters))
   }
@@ -76,16 +78,27 @@ trait GeoPosition extends JsonSerializable {
   def toGenericString3D: String = f"φ=${φ.toDegrees}%+3.6f°,λ=${λ.toDegrees}%+3.6f°,alt=${altitude.toMeters}%.1fm"
   def toGenericString2D: String = f"(φ=${φ.toDegrees}%+3.6f°,λ=${λ.toDegrees}%+3.6f°)"
 
+  // decimals = [0..6]
+  def toLatLonString (decimals: Int): String = {
+    val sb = new StringBuffer(32)
+    val fmt = StringUtils.decimalFormatters(decimals)
+    fmt.format(latDeg,sb)
+    sb.append(',')
+    fmt.format(lonDeg,sb)
+    sb.toString
+  }
+
   def toLatLonPos: LatLonPos = LatLonPos(φ, λ, altitude)
   def toMutLatLonPos: MutLatLonPos = MutLatLonPos( φ, λ, altitude)
   def toDegreesAndMeters: (Double,Double,Double) = (φ.toDegrees, λ.toDegrees, altitude.toMeters)
 
   def serializeMembersTo(w: JsonWriter): Unit = {
-    w.writeDoubleMember(LAT,lat.toDegrees)
-    w.writeDoubleMember(LON,lon.toDegrees)
+    w.writeDoubleMember(LAT, lat.toDegrees)
+    w.writeDoubleMember(LON, lon.toDegrees)
     w.writeDoubleMember(ALT, altitude.toMeters)
   }
 }
+
 
 /**
   * a GeoPosition with a timestamp

@@ -18,12 +18,13 @@
 package gov.nasa.race.util
 
 import java.nio.ByteBuffer
-
 import gov.nasa.race._
 
-import scala.annotation.tailrec
+import java.text.{DecimalFormat, FieldPosition}
+import scala.annotation.{switch, tailrec}
 import scala.collection.Seq
 import scala.collection.immutable.ArraySeq
+import scala.reflect.internal.ClassfileConstants.tableswitch
 import scala.util.matching.Regex
 
 /**
@@ -314,4 +315,24 @@ object StringUtils {
   }
 
   def getNonEmptyOrElse (s: String, f: =>String): String = if (s != null && s.nonEmpty) s else f
+
+  //--- formatting support for floating point values
+
+  abstract class DecimalFormatter (pattern: String) {
+    val fmt = new DecimalFormat(pattern)
+    val pos = new FieldPosition(0) // don't care
+
+    @inline def format (x: Double, buf: StringBuffer): StringBuffer = fmt.format( x, buf, pos)
+    @inline def format (x: Double): String = format(x, new StringBuffer(32)).toString
+  }
+
+  object F_0 extends DecimalFormatter("0")
+  object F_1 extends DecimalFormatter("0.#")
+  object F_2 extends DecimalFormatter("0.##")
+  object F_3 extends DecimalFormatter("0.###")
+  object F_4 extends DecimalFormatter("0.####")
+  object F_5 extends DecimalFormatter("0.#####")
+  object F_6 extends DecimalFormatter("0.######")
+
+  val decimalFormatters = Array(F_0, F_1, F_2, F_3, F_4, F_5, F_6)
 }

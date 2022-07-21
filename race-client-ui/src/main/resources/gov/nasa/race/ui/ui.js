@@ -558,6 +558,33 @@ export function getField(o) {
     throw "not a field";
 }
 
+//--- stand-alone text labels
+
+export function getLabel(o) {
+    let e = _elementOf(o);
+    if (e && e.classList.contains("ui_label")) {
+        return e;
+    }
+    throw "not a label";
+}
+
+export function setLabelText(o, text) {
+    let e = getLabel(o);
+    if (e) {
+        if (!_containsClass(e, "permanent")) {
+            if (text) {
+                let h = _rootVar("--field-height");
+                e.style.height = h;
+                e.style.lineHeight = h;
+            } else {
+                e.style.height = 0;
+                e.style.lineHeight = 0;
+            }
+        }
+        e.innerText = text;
+    }
+}
+
 //--- time & date widgets
 
 var _timer = undefined;
@@ -1392,7 +1419,7 @@ function _initializeLists() {
         e.setAttribute("tabindex", "0");
         if (e.firstElementChild && e.firstElementChild.classList.contains("ui_popup_menu")) _hoistChildElement(e.firstElementChild);
 
-        let selectAction = _dataAttrValue(e, "onselect");
+        let selectAction = _dataAttrValue(e, "onselect"); // single click or programmatic
         if (selectAction) {
             e.addEventListener("selectionChanged", Function("event", selectAction));
             e._uiSelectAction = selectAction;
@@ -1412,6 +1439,7 @@ export function setListItemDisplayColumns(o, listAttrs, colSpecs) {
         let defaultWidth = _rootVar("--list-item-column-width", "5rem");
         let totalWidth = "";
         let re = _createElement("DIV", "ui_list_item");
+        let he = (listAttrs.includes("header")) ? _createElement("DIV", "ui_list_header") : null;
 
         colSpecs.forEach(cs => {
             let ce = _createElement("DIV", "ui_list_subitem");
@@ -1425,17 +1453,42 @@ export function setListItemDisplayColumns(o, listAttrs, colSpecs) {
             if (totalWidth) totalWidth += " + ";
             totalWidth += w;
 
-            if (cs.attrs.includes("alignLeft")) _addClass(ce, "align_left");
-            else if (cs.attrs.includes("alignRight")) _addClass(ce, "align_right");
-
+            _setAlignment(ce, cs.attrs);
             if (cs.attrs.includes("fixed")) _addClass(ce, "fixed");
+
             re.appendChild(ce);
+            if (he) he.appendChild(createSubitemHeader(he, cs, w));
         });
 
-        e.style.width = `calc(${totalWidth})`;
+        e.style.width = `calc(${totalWidth} + var(--scrollbar-track-width) + 2*var(--border-width) + 2*var(--list-item-padding))`;
         if (listAttrs.includes("fit")) _addClass(e, "fit");
         e._uiRowPrototype = re;
+
+        if (he) addListHeader(e, he);
     }
+}
+
+function createSubitemHeader(header, cs, w) {
+    let e = _createElement("DIV", "ui_list_subitem header");
+    e.style.flexBasis = w;
+    e.innerText = cs.name;
+    _setAlignment(e, cs.attrs);
+    return e;
+}
+
+function addListHeader(list, header) {
+    let parent = list.parentElement;
+    let listWrapper = _createElement("DIV", "ui_list_wrapper");
+
+    list._uiHeader = header;
+
+    parent.insertBefore(listWrapper, list);
+    listWrapper.appendChild(header);
+    listWrapper.appendChild(list);
+}
+
+export function listItemSpacerColumn(remWidth = 1) {
+    return { name: "", width: remWidth + "rem", attrs: [], map: e => " " };
 }
 
 // single column item display
@@ -1456,8 +1509,11 @@ function _setSubItemsOf(ie, item) {
         let ce = ie.children[i];
         let v = ce._uiMapFunc(item);
 
+        // remove old content (we don't accumulate)
+        _removeChildrenOf(ce);
+        ce.innerText = "";
+
         if (v instanceof HTMLElement) {
-            _removeChildrenOf(ce); // there can only be one
             ce.appendChild(v);
         } else {
             ce.innerText = v;
@@ -1522,7 +1578,6 @@ function _createListItemElement(e, item, rowProto = undefined) {
     ie._uiItem = item;
     e._uiItemMap.set(item, ie);
     ie.addEventListener("click", _selectListItem);
-
     return ie;
 }
 
@@ -1717,7 +1772,7 @@ function _setSelectedItemElement(listBox, itemElement) {
                 bubbles: true,
                 detail: {
                     curSelection: nextItem,
-                    prevSelection: prevItem
+                    prevSelection: prevItem,
                 }
             });
             listBox.dispatchEvent(event);
@@ -1730,7 +1785,9 @@ function _selectListItem(event) {
     let itemElement = _nearestElementWithClass(tgt, "ui_list_item");
     if (itemElement) {
         let listBox = _nearestParentWithClass(itemElement, "ui_list");
-        if (listBox) _setSelectedItemElement(listBox, itemElement);
+        if (listBox) {
+            _setSelectedItemElement(listBox, itemElement);
+        }
     }
 }
 
@@ -1963,6 +2020,14 @@ function _containsAnyClass(element, ...cls) {
         if (cl.contains(c)) return true;
     }
     return false;
+}
+
+function _setAlignment(e, attrs) {
+    if (attrs.includes("alignLeft")) {
+        _addClass(e, "align_left");
+    } else if (attrs.includes("alignRight")) {
+        _addClass(e, "align_right");
+    }
 }
 
 function _rootVar(varName, defaultValue = undefined) {

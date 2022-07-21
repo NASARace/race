@@ -426,6 +426,17 @@ function updateMouseLocation(e) {
 
 //--- user control 
 
+export function zoomTo(cameraPos) {
+    viewer.camera.flyTo({
+        destination: cameraPos,
+        orientation: {
+            heading: Cesium.Math.toRadians(0.0),
+            pitch: Cesium.Math.toRadians(-90.0),
+            roll: Cesium.Math.toRadians(0.0)
+        }
+    });
+}
+
 export function setHomeView() {
     viewer.selectedEntity = undefined;
     viewer.trackedEntity = undefined;
@@ -467,6 +478,14 @@ ui.exportToMain(function setFrameRate(event) {
     setTargetFrameRate(v);
 });
 
+//--- layer panel init
+
+export function initLayerPanel(wid, conf) {
+    if (conf && conf.layer) {
+        ui.setLabelText(wid + '.layer', conf.layer.name);
+        ui.setLabelText(wid + '.descr', conf.layer.description);
+    }
+}
 
 //--- explicitly set map rendering parameters for selected layer (will be reset when switching themes)
 
