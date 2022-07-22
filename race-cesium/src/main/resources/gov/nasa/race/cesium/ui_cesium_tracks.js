@@ -96,7 +96,7 @@ ui.registerLoadFunction(function initialize() {
     uiCesium.setEntitySelectionHandler(trackSelection);
     ws.addWsHandler(config.wsUrl, handleWsTrackMessages);
 
-    uiCesium.initLayerPanel("tracks", config.track);
+    uiCesium.initLayerPanel("tracks", config.track, showTracks);
     console.log("ui_cesium_tracks initialized");
 });
 
@@ -910,10 +910,9 @@ function toggleShowSource(event) {
     }
 }
 
-ui.exportToMain(function toggleShowTracks(event) {
-    let cb = ui.getCheckBox(event.target);
-    if (cb) {
-        let showIt = ui.isCheckBoxSelected(cb);
-        trackSources.forEach(tse => tse.setVisible(showIt));
-    }
-});
+function showTracks(showIt) {
+    trackSources.forEach(tse => {
+        tse.setVisible(showIt);
+        ui.updateListItem(trackSourceView, tse);
+    });
+}

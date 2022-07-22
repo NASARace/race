@@ -68,7 +68,7 @@ package object ui {
 
   def uiPanel (title: String, show: Boolean=true, eid: UiID=NoId): Text.TypedTag[String] = {
     val uiClasses = if (!show)  "ui_panel collapsed" else "ui_panel expanded"
-    var mods = List(cls:=uiClasses, data("panel"):=title)
+    var mods = List(cls:=uiClasses, data("title"):=title)
     if (eid.nonEmpty) mods = (id:=eid) :: mods
     div(mods: _*)
   }

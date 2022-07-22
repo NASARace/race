@@ -480,12 +480,24 @@ ui.exportToMain(function setFrameRate(event) {
 
 //--- layer panel init
 
-export function initLayerPanel(wid, conf) {
+export function initLayerPanel(wid, conf, showAction) {
     if (conf && conf.layer) {
-        ui.setLabelText(wid + '.layer', conf.layer.name);
-        ui.setLabelText(wid + '.descr', conf.layer.description);
+        let phe = document.getElementById(wid + ".layer-header")
+        if (phe) {
+            phe.innerText = "layer: " + conf.layer.name.replaceAll('/', '╱'); // │
+            let cb = ui.createCheckBox(conf.layer.show, (event) => {
+                event.stopPropagation();
+                showAction(ui.isCheckBoxSelected(cb));
+            });
+            ui.positionRight(cb, 0);
+            phe.appendChild(cb);
+        }
+        ui.setLabelText(wid + '.layer-descr', conf.layer.description);
+
+        // TODO - add to layerView here
     }
 }
+
 
 //--- explicitly set map rendering parameters for selected layer (will be reset when switching themes)
 

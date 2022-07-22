@@ -278,12 +278,8 @@ export const cesium = {
   }
 
   def cesiumLayerPanel (wid: String, showAction: String, showInitial:Boolean = true): Text.TypedTag[String] = {
-    uiPanel("layer", true)(
-      uiRowContainer()(
-        uiCheckBox( "show: ", showAction, NoId, showInitial),
-        uiLabel( wid+".layer")
-      ),
-      uiLabel( wid+".descr")
+    uiPanel("layer", false, s"$wid.layer")(
+      uiLabel( wid+".layer-descr")
     )
   }
 }

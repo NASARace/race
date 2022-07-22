@@ -343,10 +343,11 @@ function _initializePanels() {
     for (let panel of document.getElementsByClassName("ui_panel")) {
         let prev = panel.previousElementSibling;
         if (!prev || !prev.classList.contains("ui_panel_header")) {
-            let panelTitle = panel.dataset.panel;
+            let panelTitle = panel.dataset.title;
             let panelHeader = _createElement("DIV", "ui_panel_header", panelTitle);
             if (panel.classList.contains("expanded")) panelHeader.classList.add("expanded");
             else panelHeader.classList.add("collapsed");
+            if (panel.id) panelHeader.id = panel.id + "-header";
             panel.parentElement.insertBefore(panelHeader, panel);
         }
     }
@@ -389,7 +390,7 @@ export function togglePanelExpansion(event) {
 }
 
 function _resetPanelMaxHeight(ce) {
-    let panel = _nearestParentWithClass(ce, "ui_panel");
+    let panel = nearestParentWithClass(ce, "ui_panel");
     if (panel) {
         panel.style.maxHeight = "";
     }
@@ -1194,7 +1195,7 @@ function _addCheckBoxComponents(e, labelText) {
     }
 }
 
-export function createCheckBox(initState, clickHandler, labelText) {
+export function createCheckBox(initState, clickHandler, labelText = "") {
     let e = _createElement("DIV", "ui_checkbox");
     if (initState) _addClass(e, "checked");
     _addCheckBoxComponents(e, labelText);
@@ -1532,7 +1533,7 @@ function _setListItem(e, ie, item) {
 }
 
 export function getListItemOfElement(e) {
-    let li = _nearestParentWithClass(e, "ui_list_item");
+    let li = nearestParentWithClass(e, "ui_list_item");
     return li ? li._uiItem : null;
 }
 
@@ -1784,7 +1785,7 @@ function _selectListItem(event) {
     let tgt = event.target;
     let itemElement = _nearestElementWithClass(tgt, "ui_list_item");
     if (itemElement) {
-        let listBox = _nearestParentWithClass(itemElement, "ui_list");
+        let listBox = nearestParentWithClass(itemElement, "ui_list");
         if (listBox) {
             _setSelectedItemElement(listBox, itemElement);
         }
@@ -2080,7 +2081,7 @@ function _nearestElementWithClass(e, cls) {
     return undefined;
 }
 
-function _nearestParentWithClass(e, cls) {
+export function nearestParentWithClass(e, cls) {
     return _nearestElementWithClass(e.parentElement, cls);
 }
 
@@ -2270,4 +2271,10 @@ function _formattedNum(v, fmt) {
 function _consumeEvent(event) {
     event.preventDefault();
     event.stopPropagation();
+}
+
+export function positionRight(e, len) {
+    e.style.position = 'absolute';
+    e.style.right = len;
+    e.style.display = 'inline-block';
 }

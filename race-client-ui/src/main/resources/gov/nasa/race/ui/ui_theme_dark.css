@@ -65,7 +65,7 @@
     --panel-padding-top: 6px;
     --panel-padding-bottom: 3px;
     --panel-header-margin-top: 1rem;
-    --panel-header-margin-bottom: 0.2rem;
+    --panel-header-margin-bottom: 0;
     --panel-border-top: 1px solid var(--border-color);
     --panel-background: var(--background);
     /* scrollbars */

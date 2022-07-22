@@ -189,6 +189,7 @@ div.ui_icon.on {
 /* collapsible panels */
 
 div.ui_panel_header {
+    position: relative;
     padding-left: var(--padding);
     padding-right: 0;
     padding-top: var(--panel-padding-top);
@@ -208,7 +209,7 @@ div.ui_panel_header:first-child {
 }
 
 div.ui_panel_header.expanded::before {
-    content: "▼ ";
+    content: "▽ ";
     font-size: smaller;
 }
 
@@ -218,7 +219,7 @@ div.ui_panel_header.collapsed::before {
 }
 
 div.ui_panel_header.collapsed::after {
-    content: "…";
+    content: " …";
 }
 
 div.ui_panel {

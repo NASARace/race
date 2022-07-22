@@ -210,7 +210,7 @@ ui.registerLoadFunction(function initialize() {
     uiCesium.setEntitySelectionHandler(goesrSelection);
     ws.addWsHandler(config.wsUrl, handleWsGoesrMessages);
 
-    uiCesium.initLayerPanel("goesr", config.goesr);
+    uiCesium.initLayerPanel("goesr", config.goesr, showGoesr);
     console.log("ui_cesium_goesr initialized");
 });
 
@@ -438,9 +438,4 @@ ui.exportToMain(function zoomToGoesrHotspot(event) {
             uiCesium.zoomTo(Cesium.Cartesian3.fromDegrees(h.lon, h.lat, config.goesr.zoomHeight));
         }
     }
-});
-
-
-ui.exportToMain(function toggleShowGoesr(event) {
-    showGoesr(ui.isCheckBoxSelected(event));
 });
