@@ -12,13 +12,13 @@
 //--- essential test&build
 
 // application / library packaging: https://github.com/sbt/sbt-native-packager
-addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.2")
+addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.9")
 
 // single executable (uber) jar assembly: https://github.com/sbt/sbt-assembly
-//addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.6")
+//addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "1.2.0")
 
 // document site generation with Laika: https://github.com/planet42/Laika
-addSbtPlugin("org.planet42" % "laika-sbt" % "0.17.1")
+addSbtPlugin("org.planet42" % "laika-sbt" % "0.18.2")
 
 // find latest versions of dependencies
 addSbtPlugin("org.jmotor.sbt" % "sbt-dependency-updates" % "1.2.2")
@@ -26,10 +26,10 @@ addSbtPlugin("org.jmotor.sbt" % "sbt-dependency-updates" % "1.2.2")
 //--- publishing support (needs to be in global on publishing machine)
 
 // jar signing: https://github.com/sbt/sbt-pgp
-//addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0")
+//addSbtPlugin("com.jsuereth" % "sbt-pgp" % "2.1.2")
 
 // publish artifacts to sonatype: https://github.com/xerial/sbt-sonatype
-//addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "2.0")
+//addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "3.9.13")
 
 
 //--- optional documentation (add to global SBT config at will)

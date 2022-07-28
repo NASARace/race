@@ -25,7 +25,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.cesium.CesiumRoute.cesiumJsUrl
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.http._
-import gov.nasa.race.ui.{uiSlider, _}
+import gov.nasa.race.ui.{uiRowContainer, uiSlider, _}
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.util.{FileUtils, StringUtils}
 import scalatags.Text
@@ -117,6 +117,7 @@ trait CesiumRoute
         fileAsset ("ui_cesium.css") ~
         fileAsset ("time-icon.svg") ~
         fileAsset ("view-icon.svg") ~
+        fileAsset ("layer-icon.svg") ~
         fileAsset ("map-cursor.png")
     }
   }
@@ -167,7 +168,7 @@ trait CesiumRoute
   override def getPreambleBodyFragments: Seq[Text.TypedTag[String]] = super.getPreambleBodyFragments :+ fullWindowCesiumContainer
 
   override def getBodyFragments: Seq[Text.TypedTag[String]] = {
-    super.getBodyFragments ++ Seq(uiViewWindow(), uiViewIcon, uiTimeWindow(), uiTimeIcon)
+    super.getBodyFragments ++ Seq(uiViewWindow(), uiViewIcon, uiTimeWindow(), uiTimeIcon, uiModuleLayerWindow(), uiModuleLayerIcon)
   }
 
   override def getConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
@@ -260,6 +261,25 @@ export const cesium = {
 
   def uiTimeIcon: Text.TypedTag[String] = {
     uiIcon("time-icon.svg", "main.toggleWindow(event,'time')", "time_icon")
+  }
+
+  def uiModuleLayerWindow(title: String="Layers"): Text.TypedTag[String] = {
+    uiWindow(title, "layer", "layer-icon.svg")(
+      uiPanel("order", true)(
+        uiList("layer.order", 10),
+        uiRowContainer()(
+          uiButton("↑", "main.raiseModuleLayer()"),
+          uiButton("↓", "main.lowerModuleLayer()")
+        )
+      ),
+      uiPanel("hierarchy", false)(
+        uiList("layer.hierarchy", 15)
+      )
+    )
+  }
+
+  def uiModuleLayerIcon: Text.TypedTag[String] = {
+    uiIcon("layer-icon.svg", "main.toggleWindow(event,'layer')", "layer_icon")
   }
 
   //--- misc

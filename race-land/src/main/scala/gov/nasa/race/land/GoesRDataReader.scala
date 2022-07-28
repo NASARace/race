@@ -78,7 +78,7 @@ class Pix (val x: Int, val y: Int,
   *
   * see https://www.goes-r.gov/products/docs/PUG-L2+-vol5.pdf (pg 472) for details
   */
-class GoesRHotspotReader extends GoesRDataReader {
+class AbiHotspotReader extends GoesRDataReader {
 
   val hs = new Sparse2DGrid[Pix]
 

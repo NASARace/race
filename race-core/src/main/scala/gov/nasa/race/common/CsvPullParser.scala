@@ -187,6 +187,12 @@ trait CsvPullParser {
     while (i < limit && isRecordSeparator(data(i))) i += 1
     i
   }
+
+  //--- debugging
+  def dumpNext(n: Int): String = {
+    val i1 = Math.min( idx+n, limit)
+    new String(data,idx,i1-idx)
+  }
 }
 
 

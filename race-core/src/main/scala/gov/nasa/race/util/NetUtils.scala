@@ -68,6 +68,22 @@ object NetUtils {
 
   def hasScheme(url: String): Boolean = SchemeRE.matches(url)
 
+  /** turn URL into a string that can be used as a filename. This is mostly to avoid Windows problems */
+  def mapToFsPathString (host: String, path: String, query: String): String = {
+    var p = if (host != null) host + '/' else ""
+    if (path != null) p = p + path.replace(':','~') // to make Windows happy
+    if (query != null) p = p + "%26" + URLEncoder.encode(query,Charset.defaultCharset())
+    p
+  }
+
+  /** if rawQuery is defined it includes the leading '?'  */
+  def mapToFsPathString(path: String, rawQuery: Option[String]): String = {
+    // NOTE this should use the same encoding as mapToFsPathString(host,path,query)
+    var p = path.replace(':','~')
+    if (rawQuery.isDefined) p = p + URLEncoder.encode(rawQuery.get, Charset.defaultCharset())
+    p
+  }
+
   def isSameUrlLocation(url1: String, url2: String): Boolean = {
     liftPredicate(parseUrl(url1), parseUrl(url2)) { (u1, u2) => u1.isSameLocationAs(u2) }
   }

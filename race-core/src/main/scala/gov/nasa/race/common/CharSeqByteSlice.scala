@@ -424,8 +424,13 @@ trait CharSeqByteSlice extends ByteSlice with CharSequence {
     DateTimeUtils.parseDuration(this)
   }
 
+  // NOTE - this guesses based on length if epoch is given in seconds or millis. Use explicit DateTime ctors if that is unsafe
   def toDateTime: DateTime = {
-    if (isInteger) DateTime.ofEpochMillis(toLong) else DateTime.parseISO(this)
+    if (isInteger) {
+      if (len <= 10) DateTime.ofEpochSeconds(toLong) else DateTime.ofEpochMillis(toLong)
+    } else {
+      DateTime.parseISO(this)
+    }
   }
 
   def toPath: Path = Path.of(toString)

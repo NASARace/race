@@ -11,11 +11,15 @@ export function exportToMain(func) {
 
 var loadFunctions = [];
 var unloadFunctions = [];
+var postLoadFunctions = [];  // called after all loadFunctions have been executed
 
 window.addEventListener('load', e => {
     console.log("initializing modules..");
     loadFunctions.forEach(f => f());
     console.log("modules initialized.");
+
+    postLoadFunctions.forEach(f => f());
+    console.log("document initialized.");
 });
 
 window.addEventListener('unload', e => {
@@ -29,6 +33,10 @@ export function registerLoadFunction(func) {
 
 export function registerUnloadFunction(func) {
     unloadFunctions.push(func);
+}
+
+export function registerPostLoadFunction(func) {
+    postLoadFunctions.push(func);
 }
 
 // this should be the first moduleInitializer so that all modules can rely on expanded elements

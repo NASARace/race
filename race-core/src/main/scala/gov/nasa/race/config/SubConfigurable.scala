@@ -75,4 +75,8 @@ trait SubConfigurable extends Configurable {
   def getConfigurables[T: ClassTag](key: String): Array[T] = {
     config.getConfigArray(key).map( conf=> newInstance(conf.getString("class"),Array(classOf[Config]),Array(conf)).get)
   }
+
+  //-- for instantiation from sub-configs that are not Configurables themselves (e.g. for embedded objects)
+  def getConfigurable[T: ClassTag](conf: Config): T = configurable(conf).get
+  def getConfigurableOrElse[T: ClassTag](conf: Config)(f: => T): T = configurable(conf).getOrElse(f)
 }

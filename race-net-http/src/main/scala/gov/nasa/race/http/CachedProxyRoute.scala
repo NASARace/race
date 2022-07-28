@@ -23,9 +23,10 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.util.FileUtils
+import gov.nasa.race.util.{FileUtils, NetUtils}
 
 import java.io.{File, IOException}
+import java.net.URLEncoder
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -82,11 +83,8 @@ trait CachedProxyRoute extends RaceRouteInfo {
   }
 
   def getRequestFile (fsRoot: String, unmatchedPath: Uri.Path, rawQuery: Option[String]): File = {
-    val fname = rawQuery match {
-      case Some(params) => unmatchedPath.toString() + params
-      case None => unmatchedPath.toString()
-    }
-    new File(fsRoot, fname)
+    val p = NetUtils.mapToFsPathString( unmatchedPath.toString(), rawQuery)
+    new File(fsRoot, p)
   }
 
   def fetchData (unmatchedPath : Uri.Path, rawQuery: Option[String], serverUrl: String, file: File): Route = {

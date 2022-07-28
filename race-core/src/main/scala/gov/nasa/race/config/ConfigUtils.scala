@@ -197,6 +197,9 @@ object ConfigUtils {
       }
     }
 
+    def getLongOrElse(key: String, fallback: Long) = getWithFallback(key,fallback)(conf.getLong(key))
+    def getOptionalLong(key: String): Option[Long] = getOptional(key)( conf.getLong(key) )
+
     def getStringSeq (key: String): Seq[String] = {
       try {
         Seq.from(conf.getStringList(key).asScala)

@@ -3,6 +3,30 @@ import * as ui from "./ui.js";
 import * as ws from "./ws.js";
 import * as util from "./ui_util.js";
 
+class LayerEntry {
+    constructor (wid,layerConfig,showAction) {
+        this.id = layerConfig.name;    // (unique) full path: /cat/.../name
+
+        let p = util.matchPath(this.id);
+        this.name = p[2];
+        this.category = p[1];
+
+        this.config = layerConfig;     // at minimum {name,description,show}
+        this.show = layerConfig.show;  // the configured initial state
+        this.showAction = showAction   // module provided function to toggle visibility of assets
+
+        this.modulePanelCb = undefined;
+        this.layerOrderCb = undefined;
+    }
+
+    setVisible(showIt) {
+        this.show = showIt;
+        this.showAction(showIt);
+        ui.setCheckBox(this.modulePanelCb,showIt); // in the module window
+        ui.setCheckBox(this.layerOrderCb, showIt);
+    }
+}
+
 export var viewer = undefined;
 export var camera = undefined;
 
@@ -11,13 +35,17 @@ var selectedMapLayer = undefined;
 var activeBaseLayer = undefined;
 
 var requestRenderMode = false;
-var defaultTargetFrameRate = undefined;
 var targetFrameRate = -1;
 
 var imageryLayers = config.cesium.imageryLayers;
 var imageryParams = {...config.cesium.imageryParams }; // we might still adjust them based on theme (hence we have to copy)
 
 var pendingRenderRequest = false;
+
+var layerOrder = []; // populated by initLayerPanel calls from modules
+var layerOrderView = undefined; // showing the registered module layers
+var layerHierarchy = [];
+var layerHierarchyView = undefined;
 
 ui.registerLoadFunction(function initialize() {
     if (config.cesium.accessToken) Cesium.Ion.defaultAccessToken = config.cesium.accessToken;
@@ -57,6 +85,7 @@ ui.registerLoadFunction(function initialize() {
     adjustImageryParams();
     initImageryLayers();
     initViewWindow();
+    initLayerWindow();
 
     ui.registerThemeChangeHandler(themeChanged);
 
@@ -64,6 +93,7 @@ ui.registerLoadFunction(function initialize() {
         pendingRenderRequest = false;
     });
 
+    ui.registerPostLoadFunction(initModuleLayerViewData);
     console.log("ui_cesium initialized");
 });
 
@@ -480,27 +510,84 @@ ui.exportToMain(function setFrameRate(event) {
 
 //--- layer panel init
 
+function initLayerWindow() {
+    layerOrderView = initLayerOrderView();
+    layerHierarchyView = initLayerHierarchyView();
+}
+
+function initLayerOrderView() {
+    let v = ui.getList("layer.order");
+    if (v) {
+        ui.setListItemDisplayColumns(v, ["fit", "header"], [
+            { name: "", width: "2rem", attrs: [], map: e =>  setLayerOrderCb(e) },
+            { name: "name", width: "8rem", attrs: [], map: e => e.name },
+            { name: "cat", width: "10rem", attrs: [], map: e => e.category}
+        ]);
+    }
+    return v;
+}
+
+function setLayerOrderCb(le) {
+    let cb = ui.createCheckBox(le.show, toggleShowLayer);
+    le.layerOrderCb = cb;
+    return cb;
+}
+
+function initLayerHierarchyView() {
+    let v = ui.getList("layer.hierarchy");
+    if (v) {
+
+    }
+    return v;
+}
+
+function toggleShowLayer(event) {
+    let cb = ui.getCheckBox(event.target);
+    if (cb) {
+        let le = ui.getListItemOfElement(cb);
+        if (le) le.setVisible(ui.isCheckBoxSelected(cb));
+    }
+}
+
+// called after all modules have loaded
+function initModuleLayerViewData() {
+    ui.setListItems(layerOrderView, layerOrder);
+}
+
+// called by layer modules during their init - the panel is in the respective module window
 export function initLayerPanel(wid, conf, showAction) {
     if (conf && conf.layer) {
         let phe = document.getElementById(wid + ".layer-header")
         if (phe) {
+            let le = new LayerEntry(wid,conf.layer,showAction);
+
             phe.innerText = "layer: " + conf.layer.name.replaceAll('/', '╱'); // │
             let cb = ui.createCheckBox(conf.layer.show, (event) => {
                 event.stopPropagation();
-                showAction(ui.isCheckBoxSelected(cb));
+                le.setVisible(ui.isCheckBoxSelected(cb));
             });
             ui.positionRight(cb, 0);
             phe.appendChild(cb);
-        }
-        ui.setLabelText(wid + '.layer-descr', conf.layer.description);
+            le.modulePanelCb = cb;
 
-        // TODO - add to layerView here
+            ui.setLabelText(wid + '.layer-descr', conf.layer.description);
+
+            layerOrder.push(le);
+        }
     }
 }
 
+ui.exportToMain(function raiseModuleLayer(event){
+    let le = ui.getSelectedListItem(layerOrderView);
+    console.log("TBD raise layer: " + le);
+});
+
+ui.exportToMain(function lowerModuleLayer(event){
+    let le = ui.getSelectedListItem(layerOrderView);
+    console.log("TBD lower layer: " + le);
+});
 
 //--- explicitly set map rendering parameters for selected layer (will be reset when switching themes)
-
 
 ui.exportToMain(function setMapAlpha(event) {
     if (selectedMapLayer) {

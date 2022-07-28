@@ -132,6 +132,14 @@ export function toUtf8Array(str) {
     return utf8;
 }
 
+//--- string matching
+
+const pathRegex = /^(.+)\/([^\/]+)$/;
+
+export function matchPath(path) {
+    return path.match(pathRegex);
+}
+
 //--- number formatting
 
 export const f_0 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0, minimumFractionDigits: 0 });

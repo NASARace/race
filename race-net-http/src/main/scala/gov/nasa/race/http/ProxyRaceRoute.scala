@@ -215,9 +215,10 @@ trait FSCachedProxyRoute extends ProxyRaceRoute {
 
   def getFileFromRequestUri(reqUri: String): Option[File] = {
     NetUtils.decodeUri(reqUri) match {
-      case NetUtils.PQUrlRE(_,_,host,_,pq) =>
-        val file = new File(cacheDir, host + '/' + pq)
-        Some(file)  // FIXME - URI query part needs to be encoded
+      case NetUtils.UrlRE(_,_,host,_,path,query) =>
+        val p = NetUtils.mapToFsPathString( host, path, query)
+        val file = new File(cacheDir, p)
+        Some(file)
       case _ => None
     }
   }

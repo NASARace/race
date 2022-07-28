@@ -148,38 +148,22 @@ class HotspotEntry {
     show(cond) {
         this.asset.show = cond;
     }
-
-    maskDescription(mask) {
-        switch (mask) {
-            case 10:
-                return "good_fire_pixel";
-            case 11:
-                return "saturated_fire_pixel";
-            case 12:
-                return "cloud_contaminated_fire_pixel";
-            case 13:
-                return "high_probability_fire_pixel";
-            case 14:
-                return "medium_probability_fire_pixel";
-            case 15:
-                return "low_probability_fire_pixel";
-            case 30:
-                return "temporally_filtered_good_fire_pixel";
-            case 31:
-                return "temporally_filtered_saturated_fire_pixel";
-            case 32:
-                return "temporally_filtered_cloud_contaminated_fire_pixel";
-            case 33:
-                return "temporally_filtered_high_probability_fire_pixel";
-            case 34:
-                return "temporally_filtered_medium_probability_fire_pixel";
-            case 35:
-                return "temporally_filtered_low_probability_fire_pixel";
-            default:
-                return "";
-        }
-    }
 }
+
+const maskDesc = new Map();
+maskDesc
+    .set( 10, "good_fire_pixel")
+    .set( 11, "saturated_fire_pixel")
+    .set( 12, "cloud_contaminated_fire_pixel")
+    .set( 13, "high_probability_fire_pixel")
+    .set( 14, "medium_probability_fire_pixel")
+    .set( 15, "low_probability_fire_pixel")
+    .set( 30, "temporally_filtered_good_fire_pixel")
+    .set( 31, "temporally_filtered_saturated_fire_pixel")
+    .set( 32, "temporally_filtered_cloud_contaminated_fire_pixel")
+    .set( 33, "temporally_filtered_high_probability_fire_pixel")
+    .set( 34, "temporally_filtered_medium_probability_fire_pixel")
+    .set( 35, "temporally_filtered_low_probability_fire_pixel");
 
 var satelliteEntries = [];
 var satelliteView = undefined;
@@ -425,9 +409,14 @@ ui.exportToMain(function selectGoesrHotspot(event) {
 ui.exportToMain(function selectGoesrHistory(event) {
     if (selectedHotspot) {
         let h = event.detail.curSelection;
-        ui.setLabelText(maskLabel, h ? selectedHotspot.maskDescription(h.mask) : null);
+        ui.setLabelText(maskLabel, h ? getMaskDescription(h.mask) : null);
     }
 });
+
+function getMaskDescription(mask) {
+    let desc = maskDesc.get(mask);
+    return desc ? desc : "";
+}
 
 ui.exportToMain(function zoomToGoesrHotspot(event) {
     let lv = ui.getList(event);

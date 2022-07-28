@@ -209,4 +209,6 @@ export const track = {
 /**
   * a single page application that processes track channels
   */
-class CesiumTrackApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumTrackRoute
+class CesiumTrackApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumTrackRoute  {
+  addResourceFileAssetResolvers()    // for dev&debugging to enable reloading apps - comment out in production
+}

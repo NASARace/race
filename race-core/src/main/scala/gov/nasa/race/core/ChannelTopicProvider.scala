@@ -227,7 +227,9 @@ trait ChannelTopicProvider extends PublishingRaceActor {
   }
 
   override def onTerminateRaceActor(originator: ActorRef) = {
-    bus.unsubscribe(self, PROVIDER_CHANNEL)
+    if (isLive) {
+      bus.unsubscribe(self, PROVIDER_CHANNEL)
+    }
     super.onTerminateRaceActor(originator)
   }
 

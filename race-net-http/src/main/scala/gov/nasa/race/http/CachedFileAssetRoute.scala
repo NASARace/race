@@ -100,7 +100,7 @@ trait CachedFileAssetRoute extends RaceRouteInfo {
    */
   def addResourceFileAssetResolvers (): Unit = {
     addResourceFileAssetResolvers("race-client-ui/src/main/resources/gov/nasa/race/ui")(
-      "ui.css", "ui_theme_dark.css", "ui.js", "ui_data.js", "ui_utils.js"
+      "ui.css", "ui_theme_dark.css", "ui.js", "ui_data.js", "ui_util.js"
     )
   }
 
