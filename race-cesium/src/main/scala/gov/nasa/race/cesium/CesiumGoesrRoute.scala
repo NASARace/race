@@ -264,5 +264,5 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
 }
 
 class CesiumGoesrApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumGoesrRoute {
-  addResourceFileAssetResolvers()    // for dev&debugging to enable reloading apps - comment out in production
+  //addResourceFileAssetResolvers()    // for dev&debugging to enable reloading apps - comment out in production
 }
