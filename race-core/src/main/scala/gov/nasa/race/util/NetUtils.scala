@@ -41,6 +41,7 @@ object NetUtils {
   val PQUrlRE = """(.+)://(?:(.+)@)?([^:/]+)(?::(\d+))?(?:/(.+))?""".r // scheme,user,host,port,path+query
   val ServerPathRE = """(.+://(?:[\w]+@)?[^:/]+(?::\d+)?)(?:/)(.+)?""".r
   val SchemeRE = """^https?://""".r
+  val PathFnameRE = """(?:.+)://(?:(?:.+)@)?(?:[^:/]+)(?::(?:\d+))?(?:/(?:(.*)/)?([^?]+)?)?(?:\?(?:.+))?""".r
 
   type UrlString = String
 
@@ -63,6 +64,13 @@ object NetUtils {
     url match {
       case UrlRE(_, user, _, _,_,_) => Some(user)
       case other => None
+    }
+  }
+
+  def filenameOfUrl (url: String): Option[String] = {
+    url match {
+      case PathFnameRE(_,fname) => Some(fname)
+      case _ => None
     }
   }
 

@@ -25,10 +25,10 @@ import gov.nasa.race.common.{ActorDataAcquisitionThread, PollingDataAcquisitionT
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.PublishingRaceActor
 import gov.nasa.race.ifSome
-import gov.nasa.race.land.{JpssDataReader, JpssDirReader, JpssProduct}
+import gov.nasa.race.land.{JpssData, JpssDataReader, JpssDirReader, JpssProduct}
 import gov.nasa.race.uom.Time.Milliseconds
 import gov.nasa.race.uom.{DateTime, Time}
-import gov.nasa.race.util.FileUtils
+import gov.nasa.race.util.{FileUtils, NetUtils}
 
 import java.io.File
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -58,23 +58,32 @@ class JpssDataAcquisitionThread ( val actorSystem: ActorSystem,
     products.foreach( pollProduct)
   }
 
+  def sendHttpRequest(url: String): Future[HttpEntity.Strict] = {
+    Http()(actorSystem).singleRequest( HttpRequest( uri = url, headers = hdrs)).flatMap{ resp =>
+      resp.entity.toStrict( maxRequestTimeout, maxRequestSize)
+    }
+  }
+
   def pollProduct (product: JpssProduct): Unit = {
     info(s"send request: ${product.url}")
     val pollTime = DateTime.now
 
-    val req: Future[HttpEntity.Strict] = Http()(actorSystem).singleRequest( HttpRequest( uri = product.url, headers = hdrs)).flatMap{ resp =>
-      resp.entity.toStrict( maxRequestTimeout, maxRequestSize)
-    }
-
-    req.onComplete {
+    sendHttpRequest(product.url).onComplete {
       case Success(strictEntity) =>
-        println(s"@@@ ----------------------------------- ${DateTime.now}")
         product.parseDir( strictEntity.getData().toArray, pollTime, startDate).foreach { dirEntry=>
-          println(dirEntry)
+          ifSome(NetUtils.filenameOfUrl(dirEntry.url)) { fname =>
+            sendHttpRequest(dirEntry.url).onComplete { // TODO - we probably shouldn't do this as Strict because of size
+              case Success(strictEntity) =>
+                val file = new File(dataDir, fname)
+                if (FileUtils.setFileContents( file, strictEntity.getData().toArray)){
+                  actorRef ! JpssData(file,product,pollTime) // we can finally hand it over for parsing with NetCDF (one at a time)
+                }
+              case Failure(x) => warning( s"retrieving JPSS product $fname failed: ${x.getMessage}")
+            }
+          }
         }
 
-      case Failure(x) =>
-        warning( s"retrieving JPSS product directory failed: ${x.getMessage}")
+      case Failure(x) => warning( s"retrieving JPSS product directory failed: ${x.getMessage}")
     }
   }
 }
@@ -117,5 +126,13 @@ class JpssImportActor (val config: Config) extends PublishingRaceActor {
   override def onTerminateRaceActor(originator: ActorRef): Boolean = {
     ifSome(dataAcquisitionThread){ _.terminate() }
     super.onTerminateRaceActor(originator)
+  }
+
+  override def handleMessage: Receive = {
+    case data:JpssData => processData(data)
+  }
+
+  def processData (jpssData: JpssData): Unit = {
+
   }
 }

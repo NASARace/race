@@ -184,7 +184,7 @@ function createPixelAssets(pixels) {
 
             let geom = new Cesium.GeometryInstance({
                 geometry: new Cesium.CircleGeometry({
-                    center: Cesium.Cartesian3.fromDegrees(lon, lat, 0.0),
+                    center: Cesium.Cartesian3.fromDegrees(lon, lat),
                     radius: pix.size / 2,
                     granularity: pixGranularity,
                     vertexFormat: Cesium.VertexFormat.POSITION_ONLY
@@ -210,6 +210,23 @@ function createPixelAssets(pixels) {
         }
     }
 
+    if (geoms.length > 0) {
+        pixelPrimitive = new Cesium.Primitive({
+            geometryInstances: geoms,
+            allowPicking: false,
+            asynchronous: true,
+            releaseGeometryInstances: true,
+            
+            appearance: new Cesium.MaterialAppearance({
+                faceForward: true,
+                flat: true,
+                translucent: false,
+                //renderState: { depthTest: { enabled: false, } }, // this makes it appear always on top but translucent
+            }),
+        });        
+        uiCesium.addPrimitive(pixelPrimitive);
+    }
+
     if (points.length > 0) {
         let positions = points.map(e => e.position);
         uiCesium.withSampledTerrain(positions, 11, (updatedPositions) => {
@@ -220,23 +237,12 @@ function createPixelAssets(pixels) {
             for (var i = 0; i < updatedPositions.length; i++) {
                 let pt = points[i];
                 let pos = updatedPositions[i];
-                pt.position = Cesium.Cartesian3.fromRadians(pos.longitude, pos.latitude, pos.height);
+                pt.position = Cesium.Cartesian3.fromRadians(pos.longitude, pos.latitude, 10);
                 tempPrimitive.add(pt);
             }
 
             uiCesium.addPrimitive(tempPrimitive);
         });
-    }
-
-    if (geoms.length > 0) {
-        pixelPrimitive = new Cesium.GroundPrimitive({
-            geometryInstances: geoms,
-            allowPicking: false,
-            asynchronous: true,
-            releaseGeometryInstances: true,
-            classificationType: Cesium.ClassificationType.TERRAIN,
-        });
-        uiCesium.addPrimitive(pixelPrimitive);
     }
 
     uiCesium.requestRender();

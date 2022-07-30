@@ -38,7 +38,7 @@ case class JpssProduct (name: String, url: String, satellite: String, dirReader:
 /**
  * downloaded file for JPSS data product
  */
-case class JpssData(satellite: String, file: File, product: JpssProduct, date: DateTime)
+case class JpssData(file: File, product: JpssProduct, date: DateTime)
 
 /**
  * some object that can read files that contain JPSS data products
@@ -52,7 +52,7 @@ trait JpssDataReader {
  */
 class ViirsFireReader extends JpssDataReader {
 
-  override def read(data: JpssData): Option[Any] = {
+  override def read (data: JpssData): Option[Any] = {
     None
   }
 }
