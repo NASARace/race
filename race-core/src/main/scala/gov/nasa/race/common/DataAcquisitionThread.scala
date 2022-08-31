@@ -54,7 +54,13 @@ trait PollingDataAcquisitionThread extends DataAcquisitionThread {
     info(s"started polling data acquisition thread $getName")
     while (!isDone.get()) {
       lastPoll = DateTime.now
-      poll()
+
+      // NOTE this is a catch-all - if polling should stop concrete type should do its own handling and use isDone to terminate
+      try {
+        poll()
+      } catch {
+        case x: Throwable => warning(s"data acquisition thread polling cycle failed with: $x")
+      }
       sleepForRemainder()
     }
     info(s"data acquisition thread $getName terminated")

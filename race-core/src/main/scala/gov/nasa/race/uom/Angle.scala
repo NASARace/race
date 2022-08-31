@@ -36,15 +36,23 @@ object Angle {
   final val π_2 = Math.PI/2.0
   final val π = Math.PI
   final val π3_2 = 3 * π_2
-  final val TwoPi = π * 2.0
+  final val π2 = π * 2.0
+
   final val DegreesInRadian = π / 180.0
   final val MinutesInRadian = DegreesInRadian * 60.0
+
   final val Angle0 = new Angle(0)
   final val Angle90 = new Angle(π_2)
+  final val HalfPi = Angle90
   final val AngleNeg90 = new Angle(-π_2)
+  final val NegativeHalfPi = AngleNeg90
   final val Angle180 = new Angle(π)
+  final val Pi = Angle180
   final val AngleNeg180 = new Angle(-π)
+  final val NegativePi = AngleNeg180
   final val Angle270 = new Angle(π3_2)
+  final val TwoPi = new Angle(π2)
+
   final val UndefinedAngle = new Angle(Double.NaN)
   @inline def isDefined(x: Angle): Boolean  = !x.d.isNaN
 
@@ -52,8 +60,8 @@ object Angle {
   def fromVxVy (vx: Speed, vy: Speed) = Radians(normalizeRadians2Pi(Math.atan2(vx.d, vy.d)))
 
   //--- utilities
-  @inline def normalizeRadians (d: Double): Double = d - TwoPi * Math.floor((d + π) / TwoPi) // -π..π
-  @inline def normalizeRadians2Pi (d: Double): Double = if (d<0) d % TwoPi + TwoPi else d % TwoPi  // 0..2π
+  @inline def normalizeRadians (d: Double): Double = d - π2 * Math.floor((d + π) / π2) // -π..π
+  @inline def normalizeRadians2Pi (d: Double): Double = if (d<0) d % π2 + π2 else d % π2  // 0..2π
   @inline def normalizeDegrees (d: Double): Double =  if (d < 0) d % 360 + 360 else d % 360 // 0..360
   @inline def normalizeDegrees180 (d: Double): Double = {
     var nd = d % 360.0
@@ -69,7 +77,7 @@ object Angle {
     val d1 = normalizeRadians2Pi(a1.d)
     val d2 = normalizeRadians2Pi(a2.d)
     val dd = abs(d1 - d2)
-    if (dd > π) Radians(TwoPi - dd) else Radians(dd)
+    if (dd > π) Radians(π2 - dd) else Radians(dd)
   }
 
   //--- trigonometrics functions
@@ -83,6 +91,9 @@ object Angle {
   @inline def Tan(a:Angle): Double = tan(a.d)
   @inline def Tan2(a:Angle): Double = Tan(a)`²`
 
+  @inline def Asin(x: Double): Angle = Radians(asin(x))
+  @inline def Acos(x: Double): Angle = Radians(acos(x))
+  @inline def Atan(x: Double): Angle = Radians(atan(x))
 
   //--- Angle constructors
   @inline def Degrees (d: Double): Angle = new Angle(d * DegreesInRadian)
@@ -103,6 +114,7 @@ object Angle {
 }
 import Angle._
 
+// basis is radians
 class Angle protected[uom] (val d: Double) extends AnyVal with MaybeUndefined {
 
   //---  Double converters
@@ -111,24 +123,44 @@ class Angle protected[uom] (val d: Double) extends AnyVal with MaybeUndefined {
   @inline def toNormalizedDegrees: Double = normalizeDegrees(toDegrees)
   @inline def toNormalizedDegrees180: Double = normalizeDegrees180(toDegrees)
 
+  def toNormalizedHalfPi: Angle = { // -π/2..π/2  - useful for latitude TODO - not very efficient
+    if (d >= -π_2 && d <= π_2)  this  // already normalized
+    else {
+      val nd = normalizeRadians2Pi(d)
+      if (nd > π_2 && nd <= π) new Angle( π_2 - nd)  // S
+      else if (nd > π && nd <= π3_2) new Angle( π - nd)  // S
+      else new Angle( d - π3_2) // N
+    }
+  }
+  def toNormalizedLatitude: Angle = toNormalizedHalfPi
+
+  def toNormalizedPi: Angle = { // -π..π
+    if (d >= -π && d <= π)  this  // already normalized
+    else new Angle( normalizeRadians(d))
+  }
+  def toNormalizedLongitude: Angle = toNormalizedPi
+
   @inline def toRoundedDegrees: Int = toNormalizedDegrees.round.toInt
   @inline def toRoundedDegrees180: Int = toNormalizedDegrees180.round.toInt
 
+  @inline def abs = new Angle(Math.abs(d))
   @inline def negative = new Angle(-d)
 
-  //--- numeric and comparison operators
-  @inline def + (x: Angle): Angle = new Angle(d + x.d)
-  @inline def - (x: Angle): Angle = new Angle(d - x.d)
+  //--- numeric and comparison operators (those normalize to 0..2pi)
+  @inline def + (x: Angle): Angle = new Angle( normalizeRadians2Pi(d + x.d))
+  @inline def - (x: Angle): Angle = new Angle( normalizeRadians2Pi(d - x.d))
 
-  @inline def * (x: Double): Angle = new Angle(d * x)
-  @inline def / (x: Double): Angle = new Angle(d / x)
+  @inline def * (x: Double): Angle = new Angle( normalizeRadians2Pi(d * x))
+  @inline def / (x: Double): Angle = new Angle( normalizeRadians2Pi(d / x))
   @inline def / (x: Angle)(implicit r: AngleDisambiguator.type): Double = d / x.d
 
   @inline def ≈ (x: Angle)(implicit εAngle: Angle) = Math.abs(d - x.d) <= εAngle.d
   @inline def ~= (x: Angle)(implicit εAngle: Angle) = Math.abs(d - x.d) <= εAngle.d
-  @inline def within (x: Angle, tolerance: Angle) = {
-    Math.abs(normalizeRadians(normalizeRadians(d) - normalizeRadians(x.d))) <= tolerance.d
+  @inline def withinTolerance(x: Angle, tolerance: Angle) = {
+    Math.abs( normalizeRadians( normalizeRadians(d) - normalizeRadians(x.d))) <= tolerance.d
   }
+
+  @inline def within(min: Angle, max: Angle): Boolean = (this >= min) && (this <= max)
 
   // use only for sub-range
   @inline def < (x: Angle) = d < x.d

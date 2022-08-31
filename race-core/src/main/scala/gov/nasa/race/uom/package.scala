@@ -16,6 +16,10 @@
  */
 package gov.nasa.race
 
+import gov.nasa.race.uom.Angle.{Degrees, Radians}
+import gov.nasa.race.uom.Length.{Feet, Kilometers, Meters, NauticalMiles, UsMiles}
+import gov.nasa.race.uom.Time.{Days, Hours, Minutes, Seconds}
+
 /**
   * package units of measure provides value class abstractions for double quantities that
   * represent physical units.
@@ -32,6 +36,28 @@ package gov.nasa.race
   */
 package object uom {
 
+  // postfix dimensions
+  implicit class RichUomDouble (val d: Double) extends AnyVal {
+
+    //--- angle
+    @inline def deg: Angle = Degrees(d)
+    @inline def `°`: Angle = Degrees(d)
+    @inline def rad: Angle = Radians(d)
+
+    //--- length
+    @inline def ft: Length = Feet(d)
+    @inline def m: Length = Meters(d)
+    @inline def mi: Length = UsMiles(d)
+    @inline def km: Length = Kilometers(d)
+    @inline def nm: Length = NauticalMiles(d)
+  }
+
+  implicit class RichUomLong (val l: Long) extends AnyVal {
+    @inline def sec: Time = Seconds(l)
+    @inline def _min: Time = Minutes(l)
+    @inline def hrs: Time = Hours(l)
+    @inline def days: Time = Days(l)
+  }
 
   //--- used to avoid disambituities due to type erasure
   implicit object AngleDisambiguator

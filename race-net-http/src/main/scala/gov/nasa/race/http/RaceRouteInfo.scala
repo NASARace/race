@@ -16,20 +16,21 @@
  */
 package gov.nasa.race.http
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, Cancellable}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.SubConfigurable
-import gov.nasa.race.core.{ConfigLoggable, Loggable, ParentActor, RaceActorSystem, RaceDataClient}
+import gov.nasa.race.core.{ConfigLoggable, ParentActor, RaceActorSystem, RaceDataClient}
 import gov.nasa.race.util.StringUtils
 import scalatags.Text
 
-import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+
 
 /**
   * base type for route infos, which consist of an akka.http Route and an optional RaceActor
@@ -86,6 +87,8 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
     val future: Future[ActorRef] = sel.resolveOne(1.second)
     Await.result(future,1.second) // this throws a ActorNotFound or TimedoutException if it does not succeed
   }
+
+  def scheduleOnce (delay: FiniteDuration)(f: =>Unit): Cancellable = system.scheduler.scheduleOnce(delay)(f)
 
   //--- RouteInfo specific init/start/termination hooks
 

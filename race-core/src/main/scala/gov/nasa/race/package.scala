@@ -266,8 +266,11 @@ package object race {
     if (it.hasNext) _nextCycle(0)
   }
 
-  @inline def ifTrue(cond: Boolean)(f: => Any) = if (cond) { f; true } else false
-  @inline def ifFalse(cond: Boolean)(f: => Any) = if (cond) true else { f; false }
+  @inline def ifTrue(cond: Boolean)(f: => Unit): Boolean = if (cond) { f; true } else false
+  @inline def ifFalse(cond: Boolean)(f: => Unit): Boolean = if (cond) true else { f; false }
+
+  @inline def ifTrueCheck(cond: Boolean)(f: => Boolean): Boolean = if (cond) f else false
+  @inline def ifFalseCheck(cond: Boolean)(f: => Boolean): Boolean = if (!cond) f else true
 
   def toIntOrElse(s: String, f: => Int): Int = if (s == null) f else s.toInt // we pass parse errors up
 
@@ -341,6 +344,9 @@ package object race {
 
   def clear(a: Array[Char]) = java.util.Arrays.fill(a, 0.toChar)
 
+  def getNonEmptySeqOrElse[T] (s: Seq[T])(f: => Seq[T]): Seq[T] = if (s.nonEmpty) s else f
+  def nonEmptyArrayOrElse[T] (a: Array[T])(f: => Array[T]): Array[T] = if (a.nonEmpty) a else f
+
   def mapToArray[T,U:ClassTag](s:Seq[T])(f: T=>U): Array[U] = {
     val a = new Array[U](s.size)
     var i=0
@@ -406,8 +412,12 @@ package object race {
   //--- common functional and feature types
 
   // something that has a date
-  trait Dated {
+  trait Dated  {
     def date: DateTime
+  }
+
+  implicit object DatedOrdering extends Ordering[Dated] {
+    def compare (d1: Dated, d2: Dated): Int = d1.date.compare(d2.date)
   }
 
   /**
@@ -554,5 +564,4 @@ package object race {
 
     def asOption: Option[Nothing] = None
   }
-
 }

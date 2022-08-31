@@ -39,11 +39,15 @@ object Time {
 
   //--- unit constructors
   @inline def Milliseconds(l: Long): Time = new Time(l)
-  @inline def Milliseconds(d: Double): Time = new Time(d.round.toInt)
+  @inline def Milliseconds(d: Double): Time = new Time(d.round)
   @inline def Seconds(s: Long): Time = new Time(s*1000)
+  @inline def Seconds(s: Double): Time = new Time((s*1000).round)
   @inline def Minutes(m: Long): Time = new Time(m * MillisInMinute)
+  @inline def Minutes(m: Double): Time = new Time((m * MillisInMinute).round)
   @inline def Hours(h: Long): Time = new Time(h * MillisInHour)
+  @inline def Hours(h: Double): Time = new Time((h * MillisInHour).round)
   @inline def Days(d: Long): Time = new Time(d * MillisInDay)
+  @inline def Days(d: Double): Time = new Time((d * MillisInDay).round)
   @inline def HM(h: Long, m: Long): Time = new Time(h * MillisInHour + m * MillisInMinute)
   @inline def HMS(h: Long, m: Long, s: Long): Time = new Time(h * MillisInHour + m * MillisInMinute + s * 1000)
   @inline def HMSms(h: Long, m: Long, s: Long, ms: Long): Time = {
@@ -124,6 +128,8 @@ class Time protected[uom] (val millis: Long) extends AnyVal
   def toHours: Double = if (millis != UNDEFINED_TIME) millis / MillisInHour.toDouble else Double.NaN
   def toDays: Double = if (millis != UNDEFINED_TIME) millis / MillisInDay.toDouble else Double.NaN
 
+  def toFullDays: Long =  if (millis != UNDEFINED_TIME) millis / MillisInDay else -1  // note this only truncates
+
   def toHMSms: (Long,Long,Long,Long) = {
     val s = (millis / 1000) % 60
     val m = (millis / 60000) % 60
@@ -141,8 +147,8 @@ class Time protected[uom] (val millis: Long) extends AnyVal
   @inline def / (t: Time): Double = millis.toDouble / t.millis
 
   // we can't overload the normal / operator because of type erasure
-  @inline def / (d: Double): Time = new Time((millis / d).round.toInt)
-  @inline def * (d: Double): Time = new Time((millis * d).round.toInt)
+  @inline def / (d: Double): Time = new Time((millis / d).round.toLong)
+  @inline def * (d: Double): Time = new Time((millis * d).round.toLong)
 
   //-- undefined value handling (value based alternative for finite cases that would otherwise require Option)
   @inline override def isUndefined: Boolean = millis == UNDEFINED_TIME
@@ -155,6 +161,9 @@ class Time protected[uom] (val millis: Long) extends AnyVal
   @inline override def >= (o: Time): Boolean = millis >= o.millis
   @inline override def compare (other: Time): Int = if (millis > other.millis) 1 else if (millis < other.millis) -1 else 0
   @inline override def compareTo (other: Time): Int = compare(other)
+
+  @inline def isPositive: Boolean = millis > 0
+  @inline def isNegative: Boolean = millis < 0
 
   override def toString: String = showMillis   // calling this would cause allocation
   def showMillis: String = if (millis != UNDEFINED_TIME) s"${millis}ms" else "<undefined>"

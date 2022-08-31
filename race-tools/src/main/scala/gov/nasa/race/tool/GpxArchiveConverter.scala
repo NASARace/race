@@ -19,7 +19,7 @@ package gov.nasa.race.tool
 import gov.nasa.race.main.CliArgs
 import gov.nasa.race.uom.{DateTime, Time}
 import gov.nasa.race.util.FileUtils
-import gov.nasa.race.land.{GpsPos, GpxParser}
+import gov.nasa.race.earth.{GpsPos, GpxParser}
 import gov.nasa.race.whileSome
 
 import java.io.{File, FileOutputStream, PrintStream}

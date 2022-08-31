@@ -144,7 +144,7 @@ package object ui {
   }
 
   // TODO - suboptimal. In general we want layout&presentation out of the view DSL
-  def uiHorizontalSpacer(minWidthInRem: Int): Text.TypedTag[String] = {
+  def uiHorizontalSpacer(minWidthInRem: Double): Text.TypedTag[String] = {
     val mods = List(cls:="spacer", style:=s"min-width: ${minWidthInRem}rem")
     div(mods: _*)
   }

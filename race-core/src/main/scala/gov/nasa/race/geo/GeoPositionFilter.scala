@@ -57,3 +57,6 @@ class BoundingBoxGeoFilter (val nwBounds: GeoPosition, val seBounds: GeoPosition
     (pos.φ >= seBounds.φ) && (pos.φ <= nwBounds.φ) && (pos.λ >= nwBounds.λ) && (pos.λ <= seBounds.λ)
   }
 }
+
+
+// TODO - we need something efficient for a general convex polygon

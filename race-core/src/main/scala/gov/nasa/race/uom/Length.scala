@@ -140,6 +140,10 @@ class Length protected[uom] (val d: Double) extends AnyVal
   @inline override def > (x: Length) = d > x.d
   @inline override def >= (x: Length) = d >= x.d
 
+  @inline def isPositive: Boolean = (d >= 0)
+  @inline def abs: Length = new Length( Math.abs(d))
+  @inline def neg: Length = new Length(-d)
+
   @inline override def compare (other: Length): Int = if (d > other.d) 1 else if (d < other.d) -1 else 0
   @inline override def compareTo (other: Length): Int = compare(other)
 

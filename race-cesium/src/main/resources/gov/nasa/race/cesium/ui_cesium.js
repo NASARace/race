@@ -28,7 +28,8 @@ class LayerEntry {
 }
 
 export var viewer = undefined;
-export var camera = undefined;
+
+var cameraSpec = undefined;
 
 var mapLayerView = undefined;
 var selectedMapLayer = undefined;
@@ -47,17 +48,20 @@ var layerOrderView = undefined; // showing the registered module layers
 var layerHierarchy = [];
 var layerHierarchyView = undefined;
 
+var mouseMoveHandlers = [];
+var mouseClickHandlers = [];
+
 ui.registerLoadFunction(function initialize() {
     if (config.cesium.accessToken) Cesium.Ion.defaultAccessToken = config.cesium.accessToken;
 
     requestRenderMode = config.cesium.requestRenderMode;
 
     viewer = new Cesium.Viewer('cesiumContainer', {
-        terrainProvider: config.cesium.terrainProvider,
+        //terrainProvider: config.cesium.terrainProvider,
         skyBox: false,
         infoBox: false,
-        baseLayerPicker: false,
-        sceneModePicker: false,
+        baseLayerPicker: false,  // if true primitives don't work anymore ?? 
+        sceneModePicker: true,
         navigationHelpButton: false,
         homeButton: false,
         timeline: false,
@@ -75,10 +79,14 @@ ui.registerLoadFunction(function initialize() {
 
     viewer.resolutionScale = window.devicePixelRatio; // 2.0
     viewer.scene.fxaa = true;
+    //viewer.scene.globe.depthTestAgainstTerrain=true;
 
     // event listeners
     viewer.camera.moveEnd.addEventListener(updateCamera);
-    viewer.scene.canvas.addEventListener('mousemove', updateMouseLocation);
+
+    registerMouseMoveHandler(updateMouseLocation);
+    viewer.scene.canvas.addEventListener('mousemove', handleMouseMove);
+    viewer.scene.canvas.addEventListener('click', handleMouseClick);
 
     ws.addWsHandler(config.wsUrl, handleWsViewMessages);
 
@@ -148,9 +156,12 @@ export function requestRender() {
 
 export function withSampledTerrain(positions, level, action) {
     const promise = Cesium.sampleTerrain(viewer.terrainProvider, level, positions);
-    Promise.resolve(promise).then(function(updatedPositions) {
-        action(updatedPositions);
-    });
+    Promise.resolve(promise).then(action);
+}
+
+export function withDetailedSampledTerrain(positions, action) {
+    const promise = Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, positions);
+    Promise.resolve(promise).then(action);
 }
 
 function themeChanged() {
@@ -250,6 +261,18 @@ function setLayerImageryParams(layer, imageryParams) {
 function initViewWindow() {
     mapLayerView = initMapLayerView();
     initMapSliders();
+}
+
+export function createScreenSpaceEventHandler() {
+    return new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+}
+
+export function setCursor(cssCursorSpec) {
+    viewer.scene.canvas.style.cursor = cssCursorSpec;
+}
+
+export function setDefaultCursor() {
+    viewer.scene.canvas.style.cursor = "default";
 }
 
 function initMapLayerView() {
@@ -406,6 +429,13 @@ export function setSelectedEntity(e) {
     viewer.selectedEntity = e;
 }
 
+export function addEntity(e) {
+    viewer.entities.add(e);
+}
+export function removeEntity(e) {
+    viewer.entities.remove(e);
+}
+
 //--- generic 'view' window of the UI
 
 function handleWsViewMessages(msgType, msg) {
@@ -424,12 +454,12 @@ function handleWsViewMessages(msgType, msg) {
 //--- websock handler funcs
 
 function handleCameraMessage(newCamera) {
-    camera = newCamera;
+    cameraSpec = newCamera;
     setHomeView();
 }
 
 function handleSetClock(setClock) {
-    ui.setClock("time.utc", setClock.time, setClock.timeScale);
+    ui.setClock("time.utc", setClock.time, setClock.timeScale, true);
     ui.setClock("time.loc", setClock.time, setClock.timeScale);
     ui.resetTimer("time.elapsed", setClock.timeScale);
     ui.startTime();
@@ -440,19 +470,54 @@ function updateCamera() {
     ui.setField("view.altitude", Math.round(pos.height).toString());
 }
 
-function updateMouseLocation(e) {
+//--- mouse event handlers
+
+export function registerMouseMoveHandler(handler) {
+    mouseMoveHandlers.push(handler);
+}
+
+export function releaseMouseMoveHandler(handler) {
+    let idx = mouseMoveHandlers.findIndex(h => h === handler);
+    if (idx >= 0) mouseMoveHandlers.splice(idx,1);
+}
+
+export function registerMouseClickHandler(handler) {
+    mouseClickHandlers.push(handler);
+}
+
+export function releaseMouseClickHandler(handler) {
+    let idx = mouseClickHandlers.findIndex(h => h === handler);
+    if (idx >= 0) mouseClickHandlers.splice(idx,1);
+}
+
+function handleMouseMove(e) {
+    mouseMoveHandlers.forEach( handler=> handler(e));
+}
+
+function handleMouseClick(e) {
+    mouseClickHandlers.forEach( handler=> handler(e));
+}
+
+function getCartographicMousePosition(e) {
     var ellipsoid = viewer.scene.globe.ellipsoid;
     var cartesian = viewer.camera.pickEllipsoid(new Cesium.Cartesian3(e.clientX, e.clientY), ellipsoid);
     if (cartesian) {
-        let cartographic = ellipsoid.cartesianToCartographic(cartesian);
-        let longitudeString = Cesium.Math.toDegrees(cartographic.longitude).toFixed(5);
-        let latitudeString = Cesium.Math.toDegrees(cartographic.latitude).toFixed(5);
+        return ellipsoid.cartesianToCartographic(cartesian);
+    } else {
+        return undefined;
+    }
+}
+
+function updateMouseLocation(e) {
+    let pos = getCartographicMousePosition(e)
+    if (pos) {
+        let longitudeString = Cesium.Math.toDegrees(pos.longitude).toFixed(5);
+        let latitudeString = Cesium.Math.toDegrees(pos.latitude).toFixed(5);
 
         ui.setField("view.latitude", latitudeString);
         ui.setField("view.longitude", longitudeString);
     }
 }
-
 
 //--- user control 
 
@@ -471,7 +536,7 @@ export function setHomeView() {
     viewer.selectedEntity = undefined;
     viewer.trackedEntity = undefined;
     viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(camera.lon, camera.lat, camera.alt),
+        destination: Cesium.Cartesian3.fromDegrees(cameraSpec.lon, cameraSpec.lat, cameraSpec.alt),
         orientation: {
             heading: Cesium.Math.toRadians(0.0),
             pitch: Cesium.Math.toRadians(-90.0),
@@ -658,3 +723,94 @@ ui.exportToMain(function setMapGamma(event) {
         requestRender();
     }
 });
+
+//--- interactive geo input
+
+// this should normally use a ScreenSpaceEventHandler but that fails for some reason if
+// sceneModePicker is enabled (positions are off). This one does not correctly handle terrain but is close enough
+export function pickSurfaceRectangle (callback) {
+    var asset = undefined;
+    var p0 = undefined;
+    var rect = undefined;
+    let poly = Cesium.Cartesian3.fromDegreesArray([0,0, 0,0, 0,0, 0,0, 0,0]);
+
+    function onMouseMove(event) {
+        let p = getCartographicMousePosition(event);
+        if (p) {
+            rect.west = Math.min( p0.longitude, p.longitude);
+            rect.south = Math.min( p0.latitude, p.latitude);
+            rect.east = Math.max( p0.longitude, p.longitude);
+            rect.north = Math.max( p0.latitude, p.latitude);
+            // FIXME - we can do better than to convert back to where we came from. just rotate
+            cartesian3ArrayFromRadiansRect(rect, poly);
+        }
+    }
+
+    function onClick(event) {
+        let p = getCartographicMousePosition(event);
+        if (p) { 
+            if (!rect) {
+                p0 = p;
+                rect = new Cesium.Rectangle(p0.longitude, p0.latitude, p0.longitude, p0.latitude);
+
+                asset = new Cesium.Entity({
+                    polyline: {
+                        positions: new Cesium.CallbackProperty( () => poly, false),
+                        clampToGround: true,
+                        width: 2,
+                        material: Cesium.Color.RED
+                    },
+                    selectable: false
+                });
+                viewer.entities.add(asset);
+
+                registerMouseMoveHandler(onMouseMove);
+
+            } else {
+                setDefaultCursor();
+                releaseMouseMoveHandler(onMouseMove);
+                releaseMouseClickHandler(onClick);
+                viewer.entities.remove(asset);
+
+                rect.west = Cesium.Math.toDegrees(rect.west);
+                rect.south = Cesium.Math.toDegrees(rect.south);
+                rect.east = Cesium.Math.toDegrees(rect.east);
+                rect.north = Cesium.Math.toDegrees(rect.north);
+
+                callback(rect);
+            }
+        }
+    }
+
+    setCursor("crosshair");
+    registerMouseClickHandler(onClick);
+}
+
+
+export function cartesian3ArrayFromRadiansRect (rect, arr=null) {
+    let a = arr ? arr : new Array(5);
+
+    a[0] = Cesium.Cartesian3.fromRadians( rect.west, rect.north);
+    a[1] = Cesium.Cartesian3.fromRadians( rect.east, rect.north);
+    a[2] = Cesium.Cartesian3.fromRadians( rect.east, rect.south);
+    a[3] = Cesium.Cartesian3.fromRadians( rect.west, rect.south);
+    a[4] = Cesium.Cartesian3.fromRadians( rect.west, rect.north);
+
+    return a;
+}
+
+export function cartesian3ArrayFromDegreesRect (rect, arr=null) {
+    let a = arr ? arr : new Array(5);
+
+    a[0] = Cesium.Cartesian3.fromDegrees( rect.west, rect.north);
+    a[1] = Cesium.Cartesian3.fromDegrees( rect.east, rect.north);
+    a[2] = Cesium.Cartesian3.fromDegrees( rect.east, rect.south);
+    a[3] = Cesium.Cartesian3.fromDegrees( rect.west, rect.south);
+    a[4] = Cesium.Cartesian3.fromDegrees( rect.west, rect.north);
+
+    return a;
+}
+
+export function withinRect(latDeg, lonDeg, degRect) {
+    return (lonDeg >= degRect.west) && (lonDeg <= degRect.east) && (latDeg >= degRect.south) && (latDeg <= degRect.north);
+}

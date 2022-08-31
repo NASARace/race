@@ -23,6 +23,7 @@ import scala.collection.mutable
   * This can be used to map objects with close positions that are considered to be the same
   *
   * note that LongMap is final so we have to use delegation
+  * note also that GeoMaps are mutable since we can get quite a lot of updates - thread safety has to be provided by owner
   */
 class GeoMap[T]  (val decimals: Int) extends mutable.Map[GeoPosition,T] {
   protected val codec = new WGS84Codec // note that decode is not thread safe

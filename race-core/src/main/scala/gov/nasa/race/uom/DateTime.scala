@@ -38,10 +38,10 @@ class DateException (msg: String) extends RuntimeException(msg)
 object DateTime {
   val UNDEFINED_MILLIS = -9007199254740991L   // we can't use Long.MinValue since it wouldn't map into javascript (Number.MIN_SAFE_INTEGER)
   val NEVER_MILLIS = Long.MaxValue
-  val J2000_MILLIS = 946728000000L // epoch millis since 2000-01-01T12:00:00Z
+  val J2000_MILLIS = 946728000000L // epoch millis of 2000-01-01T12:00:00Z
 
-  final val MsecPerDay = 1000*60*60*24
-  final val MsecPerHour = 1000*60*60
+  final val MsecPerDay: Long = 1000*60*60*24
+  final val MsecPerHour: Long = 1000*60*60
 
   final val utcId = ZoneId.of("UTC")
 
@@ -56,6 +56,12 @@ object DateTime {
 
   @inline def apply(year: Int, month: Int, day: Int, hour: Int, minutes: Int, secs: Int, ms: Int, zoneId: ZoneId): DateTime = {
     val zdt = ZonedDateTime.of(year,month,day, hour,minutes,secs,ms * 1000000, zoneId)
+    new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) * 1000 + ms)
+  }
+
+  def apply(year: Int, dayOfYear: Double): DateTime = {
+    val ms = (dayOfYear * DateTime.MsecPerDay).round - DateTime.MsecPerDay // DOY is 1-based
+    val zdt = ZonedDateTime.of(year,1,1,0,0,0,0, DateTime.utcId)
     new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) * 1000 + ms)
   }
 
@@ -120,6 +126,10 @@ object DateTime {
 
       case _ => throw new RuntimeException(s"invalid date spec: $spec")
     }
+  }
+
+  def parseWithOptionalTime (spec: CharSequence, defaultZone: ZoneId = ZoneId.systemDefault): DateTime = {
+    if (spec.length > 10) parseYMDT(spec,defaultZone) else parseYMD(spec, defaultZone)
   }
 
   val shortZoneIds = Map(
@@ -429,6 +439,8 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
 
   @inline def getDayOfYear: Int = toZonedDateTime.getDayOfYear
 
+  @inline def getJ2000Seconds: Long = (millis - J2000_MILLIS) / 10000
+
   @inline def getYMD: (Int,Int,Int) = {
     val zdt = toZonedDateTime
     (zdt.getYear, zdt.getMonthValue, zdt.getDayOfMonth)
@@ -464,6 +476,7 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
 
   @inline def getSecond: Int = ((millis % Time.MillisInMinute) / 1000).toInt
   @inline def getMillisecond: Int = (millis % 1000).toInt
+  @inline def getFractionalSecond: Double = getSecond.toDouble + (getMillisecond.toDouble / 1000)
 
 
   def getTimeOfDay: Time = new Time((millis % Time.MillisInDay).toInt)
@@ -506,6 +519,26 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
   @inline def isBefore (o: DateTime): Boolean = millis < o.millis
   @inline def == (o: DateTime): Boolean = millis == o.millis
 
+  @inline def isWithin (start: DateTime, end: DateTime): Boolean = (millis >= start.millis) && (millis <= end.millis)
+
+  @inline def absTimeFromNow: Time = timeBetween(this, DateTime.now)
+  @inline def timeFromNow: Time = timeSince(DateTime.now) // can be negative
+
+  @inline def isPast: Boolean = millis < DateTime.now.millis
+  @inline def isFuture: Boolean = millis > DateTime.now.millis
+
+  def toPrecedingSecond: DateTime = new DateTime( (millis /     1000) *     1000 )
+  def toPrecedingMinute: DateTime = new DateTime( (millis /    60000) *    60000 )
+  def toPrecedingHour: DateTime   = new DateTime( (millis /  3600000) *  3600000 )
+  def toBeginOfDay: DateTime      = new DateTime( (millis / 86400000) * 86400000 )
+  def toPreviousDay: DateTime     = new DateTime (millis - 86400000)
+
+  def toFollowingSecond: DateTime = new DateTime( (millis /     1000) *     1000 +    1000)
+  def toFollowingMinute: DateTime = new DateTime( (millis /    60000) *    60000 +   60000)
+  def toFollowingHour: DateTime   = new DateTime( (millis /  3600000) *  3600000 + 3600000)
+  def toFollowingDay: DateTime      = new DateTime( (millis / 86400000) * 86400000 + 86400000)
+
+
   //--- formatting
 
   def format (fmt: DateTimeFormatter): String = toZonedDateTime.format(fmt)
@@ -526,6 +559,11 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
   def format_yMd_Hms_z: String = {
     val (year,month,day) = getYMD
     f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02dZ"
+  }
+  // version for getting filesystem conforming output
+  def format_yMd_Hms_z (timeSep: Char): String = {
+    val (year,month,day) = getYMD
+    f"$year%4d-$month%02d-$day%02dT$getHour%02d$timeSep$getMinute%02d$timeSep$getSecond%02dZ"
   }
   def format_yMd_Hms_z(zoneId: ZoneId): String = {
     val (year,month,day,hour,minute,second,_) = getYMDT(zoneId)
@@ -577,7 +615,7 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
   }
 
   override def toString: String = {
-    if (millis != UNDEFINED_MILLIS) format_yMd_HmsS_z else "undefined"
+    if (millis != UNDEFINED_MILLIS) format_yMd_HmsS_z else "<undefined>"
   }
 
   //.. and possibly more formatters

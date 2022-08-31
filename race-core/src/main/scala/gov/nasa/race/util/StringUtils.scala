@@ -253,6 +253,19 @@ object StringUtils {
     i
   }
 
+  def mkString[T] (a: Seq[T], sep: Char)(f: T=>String): String = {
+    if (a.nonEmpty) {
+      val sb = new StringBuffer
+      val it = a.iterator
+      sb.append(f(it.next()))
+      while (it.hasNext) {
+        sb.append(sep)
+        sb.append(f(it.next()))
+      }
+      sb.toString
+    } else ""
+  }
+
   // to work around the annoying string interpolation restriction
   def mkSepString (a: Array[Any], sep: Char): String = a.mkString(sep.toString)
   def mkSepString (a: Seq[Any], sep: Char): String = a.mkString(sep.toString)

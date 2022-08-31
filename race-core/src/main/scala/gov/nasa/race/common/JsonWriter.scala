@@ -303,6 +303,11 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
     writeDoubleValues(it)
   }
 
+  def writeGeoPositionArrayMember(memberName: CharSequence, it: Iterable[GeoPosition]): JsonWriter = {
+    writeMemberName(memberName)
+    writeGeoPositionValues(it)
+  }
+
   //--- basic writes
 
   @inline final def writeSeparator: JsonWriter = {
@@ -557,6 +562,18 @@ class JsonWriter (jsonType: ElementType = JsonWriter.RawElements, initSize: Int 
       beginArray
       for (v <- it) {
         writeDouble(v)
+      }
+      endArray
+    }
+  }
+
+  def writeGeoPositionValues (it: Iterable[GeoPosition]): JsonWriter = {
+    writeFormatted(false) {
+      beginArray
+      for (pos <- it) {
+        beginArray
+        writeUnQuotedValue(pos.latLon_5)
+        endArray
       }
       endArray
     }

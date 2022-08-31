@@ -157,6 +157,9 @@ trait Trajectory extends TDataSource[N3,TDP3] {
   def apply (i: Int): TrackPoint
   def dataPoint (i: Int): TDP3
 
+  def getFirst: Option[TrackPoint] = if (isEmpty) None else Some(apply(0))
+  def getLast: Option[TrackPoint] = if (isEmpty) None else Some(apply(size-1))
+
   def iterator: Iterator[TrackPoint]
   def iterator (p: MutTrajectoryPoint): Iterator[TrackPoint]
   def iterator (p: TDP3): Iterator[TDP3]
@@ -189,6 +192,15 @@ trait Trajectory extends TDataSource[N3,TDP3] {
   def foreachReverse (p: TDP3)(f: (TDP3)=>Unit): Unit = {
     val it = reverseIterator(p)
     while (it.hasNext) f(it.next())
+  }
+
+  def find (pred: TrackPoint=>Boolean): Option[TrackPoint] = {
+    val tp = new MutTrajectoryPoint()
+    val it = iterator(tp)
+    while (it.hasNext) {
+      if (pred(it.next())) return Some(tp.toTrajectoryPoint)
+    }
+    None
   }
 
   def copyToArrays (t: DateArray, lat: AngleArray, lon: AngleArray, alt: LengthArray): Unit
@@ -265,7 +277,7 @@ trait Trajectory extends TDataSource[N3,TDP3] {
   /**
     * for debugging purposes
     */
-  def dump: Unit = {
+  def dump(): Unit = {
     var i = 0
     println("Trajectory(")
     foreach (new TDP3){ p=>

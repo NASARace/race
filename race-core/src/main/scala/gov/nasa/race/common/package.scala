@@ -17,14 +17,12 @@
 
 package gov.nasa.race
 
-import gov.nasa.race.common.ByteSlice
-
 import java.nio.ByteBuffer
+import java.text.DecimalFormat
 import scala.annotation.tailrec
 import scala.collection.Seq
 import scala.language.implicitConversions
 import scala.math._
-import scala.util.matching.Regex
 
 /**
   * package gov.nasa.race.common holds common RACE specific types that can be instantiated from
@@ -67,6 +65,7 @@ package object common {
     @inline def isDefined = !java.lang.Double.isNaN(d)
     @inline def isUndefined = java.lang.Double.isNaN(d)
 
+    // NOTE - this is not exact (which would require BCD conversion)
     @inline def round_1 = Math.round(d * 10.0) / 10.0
     @inline def round_2 = Math.round(d * 100.0) / 100.0
     @inline def round_3 = Math.round(d * 1000.0) / 1000.0
@@ -80,7 +79,23 @@ package object common {
   @inline def isDefined (d: Double) = d != Double.NaN
 
   def Null[T <: AnyRef]: T = null.asInstanceOf[T]
-  
+
+  //--- various number formatters
+  val FMT_1 = new DecimalFormat("#")
+  val FMT_1_1 = new DecimalFormat("#.#")
+  val FMT_1_2 = new DecimalFormat("#.##")
+  val FMT_1_3 = new DecimalFormat("#.###")
+
+  val FMT_3 = new DecimalFormat("###")
+  val FMT_3_1 = new DecimalFormat("###.#")
+  val FMT_3_2 = new DecimalFormat("###.##")
+  val FMT_3_3 = new DecimalFormat("###.###")
+  val FMT_3_4 = new DecimalFormat("###.####")
+  val FMT_3_5 = new DecimalFormat("###.#####")
+
+  val FMT_6 = new DecimalFormat("######")
+  //... and more to follow
+
   trait Counter {
     val counterThreshold: Int
     protected var count = 0
@@ -97,6 +112,28 @@ package object common {
   def pow10 (e: Int): Long = {
     @tailrec def p (e: Int, acc: Long): Long = if (e == 0) acc else p(e-1, acc*10)
     p(e,1L)
+  }
+
+
+  // we could generify these by means of an implicit num: Numeric[T] but in reality HW support is for double anyways
+
+  @inline def linin (x: Double, x1: Double, x2: Double, v1: Double, v2: Double): Double = {
+    v1 + (x - x1) * (v2 - v1)/(x2 - x1)
+  }
+
+  def bilinin (x: Double, y: Double,
+               x1: Double, x2: Double, y1: Double, y2: Double,
+               v11: Double, v12: Double, v21: Double, v22: Double) : Double = {
+    val dx = x2 - x1
+    val dy = y2 - y1
+
+    val a = (x2 - x)/dx
+    val b = (x - x1)/dx
+
+    val v1 = a * v11 + b * v21
+    val v2 = a * v12 + b * v22
+
+    ((y2-y)/dy) * v1 + ((y - y1)/dy) * v2
   }
 
   @inline def minl(a: Long, b: Long): Long = Math.min(a,b)

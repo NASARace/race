@@ -10,115 +10,113 @@ ThisBuild / shellPrompt := { state => "[" + Project.extract(state).currentRef.pr
 enablePlugins(LaikaPlugin)
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
-  version := "1.8.1"
+version := "1.8.1"
 )
 
 lazy val testSettings = commonSettings ++ noPublishSettings  // test projects don't publish artifacts
 
 //--- root project (only for aggregation)
 lazy val root = createRootProject("race").
-  aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceShare,raceSwing,raceWW,raceAir,raceWWAir,raceLand,raceClientUI,
-    raceCesium,raceSpace,raceLauncher,raceAdapter,
-    raceCL,raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceShareTest,raceNetKafkaTest,raceCLTest,raceAirTest,raceLandTest,raceSpaceTest).
-  dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceLand,raceSpace,raceLauncher,raceShare,raceCesium).
-  enablePlugins(JavaAppPackaging,LauncherJarPlugin,LaikaPlugin).
-  settings(
-    commonSettings,
-    Defaults.itSettings,
-    commands ++= LaikaCommands.commands,
-    Compile / mainClass := Some("gov.nasa.race.main.ConsoleMain"),
-    noPublishSettings // root does not publish any artifacts
-  ).
-  addLibraryDependencies(slf4jSimple,akkaSlf4j)  // in case somebody wants to configure SLF4J logging
+aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceShare,raceSwing,raceWW,raceAir,raceWWAir,raceEarth,raceClientUI,
+raceCesium,raceSpace,raceLauncher,raceAdapter,
+raceCL,raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceShareTest,raceNetKafkaTest,raceCLTest,raceAirTest,raceEarthTest,raceSpaceTest).
+dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceEarth,raceSpace,raceLauncher,raceShare,raceCesium).
+enablePlugins(JavaAppPackaging,LauncherJarPlugin,LaikaPlugin).
+settings(
+commonSettings,
+Defaults.itSettings,
+commands ++= LaikaCommands.commands,
+Compile / mainClass := Some("gov.nasa.race.main.ConsoleMain"),
+noPublishSettings // root does not publish any artifacts
+).
+addLibraryDependencies(slf4jSimple,akkaSlf4j)  // in case somebody wants to configure SLF4J logging
 
 //--- sub projects
 
 //--- those are the projects that produce build artifacts which can be used by 3rd party clients
 
 lazy val raceCore = createProject("race-core", commonSettings).
-  enablePlugins(JavaAppPackaging,LauncherJarPlugin).
-  settings(
-    Compile / mainClass := Some("gov.nasa.race.main.ConsoleMain")
-  ).
-  addLibraryDependencies(akkaActor,akkaRemoting,typesafeConfig,scalaReflect,jsch,avro,jimfs)
+enablePlugins(JavaAppPackaging,LauncherJarPlugin).
+settings(
+Compile / mainClass := Some("gov.nasa.race.main.ConsoleMain")
+).
+addLibraryDependencies(akkaActor,akkaRemoting,typesafeConfig,scalaReflect,jsch,avro,jimfs)
 
 lazy val raceLauncher = createProject("race-launcher", commonSettings).
-  dependsOn(raceCore).
-  enablePlugins(JavaAppPackaging,LauncherJarPlugin).
-  settings(
-    Compile / mainClass := Some("gov.nasa.race.remote.ConsoleRemoteLauncher")
-  ).
-  addLibraryDependencies(typesafeConfig)
+dependsOn(raceCore).
+enablePlugins(JavaAppPackaging,LauncherJarPlugin).
+settings(
+Compile / mainClass := Some("gov.nasa.race.remote.ConsoleRemoteLauncher")
+).
+addLibraryDependencies(typesafeConfig)
 
 lazy val raceNetJMS = createProject("race-net-jms", commonSettings).
-  dependsOn(raceCore).
-  addLibraryDependencies(akkaAll,amqBroker,slf4jSimple,akkaSlf4j)
+dependsOn(raceCore).
+addLibraryDependencies(akkaAll,amqBroker,slf4jSimple,akkaSlf4j)
 
 // unfortunately the 1.0 kafka clients are not source compatible
 lazy val raceNetKafka = createProject("race-net-kafka", commonSettings).
-  dependsOn(raceCore).
-  addLibraryDependencies(kafkaClients) // per default we still build with the 0.9 kafka-client
+dependsOn(raceCore).
+addLibraryDependencies(kafkaClients) // per default we still build with the 0.9 kafka-client
 
 lazy val raceNetDDS = createProject("race-net-dds", commonSettings).
-  dependsOn(raceCore).
-  makeExtensible.
-  addLibraryDependencies(omgDDS)
+dependsOn(raceCore).
+makeExtensible.
+addLibraryDependencies(omgDDS)
 
 lazy val raceNetHttp = createProject("race-net-http", commonSettings).
-  dependsOn(raceCore).
-  addLibraryDependencies(akkaHttp,scalaTags,argon2,jfreeChart,webauthn)
+dependsOn(raceCore).
+addLibraryDependencies(akkaHttp,scalaTags,argon2,jfreeChart,webauthn)
 
 lazy val raceSwing = createProject("race-swing", commonSettings).
-  dependsOn(raceCore).
-  settings(
-    Compile / packageBin / mappings += {
-      // we have to add this classfile explicitly since it has to be pre-compiled on macOS
-      (baseDirectory.value / "lib" / "gov/nasa/race/swing/MacOSHelper.class") -> "gov/nasa/race/swing/MacOSHelper.class"
-    },
-    Compile / unmanagedClasspath += baseDirectory.value / "lib"
-  ).
-  addLibraryDependencies(akkaActor,scalaSwing,rsTextArea)
+dependsOn(raceCore).
+settings(
+Compile / packageBin / mappings += {
+// we have to add this classfile explicitly since it has to be pre-compiled on macOS
+(baseDirectory.value / "lib" / "gov/nasa/race/swing/MacOSHelper.class") -> "gov/nasa/race/swing/MacOSHelper.class"
+},
+Compile / unmanagedClasspath += baseDirectory.value / "lib"
+).
+addLibraryDependencies(akkaActor,scalaSwing,rsTextArea)
 
 lazy val raceAir = createProject("race-air", commonSettings).
-  dependsOn(raceCore,raceNetJMS,raceNetHttp).
-  addLibraryDependencies(akkaActor,typesafeConfig,scalaParser)
+dependsOn(raceCore,raceNetJMS,raceNetHttp).
+addLibraryDependencies(akkaActor,typesafeConfig,scalaParser)
 
-lazy val raceLand = createProject("race-land", commonSettings).
-  dependsOn(raceCore,raceNetHttp).
-  addLibraryDependencies(akkaAll,awsS3,cdmCore)
+lazy val raceEarth = createProject("race-earth", commonSettings).
+dependsOn(raceCore,raceNetHttp,raceSpace).
+addLibraryDependencies(akkaAll,awsS3,cdmCore)
+
+lazy val raceSpace = createProject("race-space", commonSettings).
+dependsOn(raceCore,raceNetHttp).
+addLibraryDependencies(akkaActor,typesafeConfig,akkaHttp,oreKit)
 
 lazy val raceWW = createProject("race-ww", commonSettings).
-  dependsOn(raceCore,raceSwing).
-  addLibraryDependencies(akkaAll,scalaSwing,worldwindPcm)
+dependsOn(raceCore,raceSwing).
+addLibraryDependencies(akkaAll,scalaSwing,worldwindPcm)
 
 lazy val raceWWAir = createProject("race-ww-air", commonSettings).
-  dependsOn(raceWW,raceAir).
-  addLibraryDependencies(typesafeConfig)
+dependsOn(raceWW,raceAir).
+addLibraryDependencies(typesafeConfig)
 
 lazy val raceCL = createProject("race-cl", commonSettings).
-  enablePlugins(JavaAppPackaging,ClasspathJarPlugin).
-  dependsOn(raceCore).
-  addLibraryDependencies(lwjglBase,lwjglOpenCL,lwjglNative)
+enablePlugins(JavaAppPackaging,ClasspathJarPlugin).
+dependsOn(raceCore).
+addLibraryDependencies(lwjglBase,lwjglOpenCL,lwjglNative)
 
 lazy val raceTestKit = createProject("race-testkit", commonSettings).
-  dependsOn(raceCore).
-  addLibraryDependencies(defaultTestLibs,akkaActor,akkaTestkit)
+dependsOn(raceCore).
+addLibraryDependencies(defaultTestLibs,akkaActor,akkaTestkit)
 
 lazy val raceUI = createProject("race-ui", commonSettings).
-  dependsOn(raceCore,raceSwing)
+dependsOn(raceCore,raceSwing)
 
 lazy val raceTools = createProject("race-tools", commonSettings).
-  enablePlugins(JavaAppPackaging,ClasspathJarPlugin).
-  dependsOn(raceCore,raceNetHttp,raceAir,raceLand).
+enablePlugins(JavaAppPackaging,ClasspathJarPlugin).
+dependsOn(raceCore,raceNetHttp,raceAir,raceEarth).
   settings(
     Compile / mainClass := Some("gov.nasa.race.tool.CryptConfig")).
   addLibraryDependencies(logback,avro)
-
-lazy val raceSpace = createProject("race-space", commonSettings).
-  dependsOn(raceCore).
-  settings(
-    noPublishSettings // not yet published
-  )
 
 lazy val raceAdapter = createProject("race-adapter", commonSettings).
   // no dependencies - this is code supposed to be imported into external projects
@@ -131,7 +129,7 @@ lazy val raceClientUI = createProject("race-client-ui", commonSettings).
   addLibraryDependencies(scalaTags)
 
 lazy val raceCesium = createProject("race-cesium", commonSettings).
-  dependsOn(raceNetHttp, raceClientUI, raceLand)
+  dependsOn(raceNetHttp, raceClientUI, raceEarth)
 
 lazy val raceShare = createProject("race-share", commonSettings).
   dependsOn(raceNetHttp)
@@ -185,8 +183,8 @@ lazy val raceAirTest = createTestProject("race-air-test", testSettings).
   dependsOn(raceAir,raceTestKit).
   addLibraryDependencies(circeAll)
 
-lazy val raceLandTest = createTestProject("race-land-test", testSettings).
-  dependsOn(raceLand,raceTestKit)
+lazy val raceEarthTest = createTestProject("race-earth-test", testSettings).
+  dependsOn(raceEarth,raceTestKit)
 
 lazy val raceSpaceTest = createTestProject("race-space-test", testSettings).
   dependsOn(raceSpace,raceTestKit)

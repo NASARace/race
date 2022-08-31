@@ -142,24 +142,33 @@ export function matchPath(path) {
 
 //--- number formatting
 
-export const f_0 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0, minimumFractionDigits: 0 });
-export const f_1 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1, minimumFractionDigits: 1 });
-export const f_2 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2, minimumFractionDigits: 2 });
-export const f_3 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 3, minimumFractionDigits: 3 });
-export const f_4 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 4, minimumFractionDigits: 4 });
-export const f_5 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 5, minimumFractionDigits: 5 });
+export const f_0 = new Intl.NumberFormat('en-US', { notation: 'standard', maximumFractionDigits: 0, minimumFractionDigits: 0 });
+export const f_1 = new Intl.NumberFormat('en-US', { notation: 'standard', maximumFractionDigits: 1, minimumFractionDigits: 1 });
+export const f_2 = new Intl.NumberFormat('en-US', { notation: 'standard', maximumFractionDigits: 2, minimumFractionDigits: 2 });
+export const f_3 = new Intl.NumberFormat('en-US', { notation: 'standard', maximumFractionDigits: 3, minimumFractionDigits: 3 });
+export const f_4 = new Intl.NumberFormat('en-US', { notation: 'standard', maximumFractionDigits: 4, minimumFractionDigits: 4 });
+export const f_5 = new Intl.NumberFormat('en-US', { notation: 'standard', maximumFractionDigits: 5, minimumFractionDigits: 5 });
 
 const f_N = [f_0, f_1, f_2, f_3, f_4, f_5];
 
-export const fmax_0 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 });
-export const fmax_1 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
-export const fmax_2 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 });
-export const fmax_3 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 3 });
-export const fmax_4 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 4 });
-export const fmax_5 = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 5 });
+export const fmax_0 = new Intl.NumberFormat('en-US', { notation: 'standard', maximumFractionDigits: 0 });
+export const fmax_1 = new Intl.NumberFormat('en-US', { notation: 'standard', maximumFractionDigits: 1 });
+export const fmax_2 = new Intl.NumberFormat('en-US', { notation: 'standard', maximumFractionDigits: 2 });
+export const fmax_3 = new Intl.NumberFormat('en-US', { notation: 'standard', maximumFractionDigits: 3 });
+export const fmax_4 = new Intl.NumberFormat('en-US', { notation: 'standard', maximumFractionDigits: 4 });
+export const fmax_5 = new Intl.NumberFormat('en-US', { notation: 'standard', maximumFractionDigits: 5 });
 
 
 //--- position formatting
+
+export function degreesToString(arr, fmt=fmax_5) {
+    let s = "";
+    arr.forEach( v=> {
+        if (s.length > 0) s += ",";
+        s += fmt.format(v);
+    });
+    return s;
+}
 
 export function toLatLonString(lat, lon, decimals = 5) {
     let i = decimals > 5 ? 5 : (decimals < 0) ? 0 : decimals;
@@ -193,6 +202,29 @@ export function squareMetersToAcres(area) {
 
 //--- date utilities
 
+export const MILLIS_IN_DAY = 86400000;
+export const MILLIS_IN_HOUR = 3600000;
+
+export function days(n) {
+    return n * MILLIS_IN_DAY;
+}
+
+export function hours(n) {
+    return n * MILLIS_IN_HOUR;
+}
+
+export function hoursFromMillis (n) {
+    return n / MILLIS_IN_HOUR;
+}
+
+export function minutes(n) {
+    return n * 60000;
+}
+
+export function seconds(n) {
+    return n * 1000;
+}
+
 // [h+]:mm:ss
 export function toHMSTimeString(millis) {
     let s = Math.floor(millis / 1000) % 60;
@@ -216,6 +248,8 @@ export function timeZone(tz) {
     else return tz;
 }
 
+//hour12: false does show 24:xx on Chrome
+
 const defaultDateTimeFormat = new Intl.DateTimeFormat('en-US', {
     timeZone: 'UTC',
     month: '2-digit',
@@ -224,7 +258,18 @@ const defaultDateTimeFormat = new Intl.DateTimeFormat('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false,
+    hourCycle: 'h23',
+    timeZoneName: 'short'
+});
+
+const defaultDateHMTimeFormat = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    month: '2-digit',
+    day: '2-digit',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
     timeZoneName: 'short'
 });
 
@@ -235,7 +280,21 @@ const defaultLocalDateTimeFormat = new Intl.DateTimeFormat('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false,
+    hourCycle: 'h23'
+});
+
+const defaultLocalDateHMTimeFormat = new Intl.DateTimeFormat('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+});
+
+const defaultLocalMDDateFormat = new Intl.DateTimeFormat('en-US', {
+    month: '2-digit',
+    day: '2-digit'
 });
 
 const defaultTimeFormat = new Intl.DateTimeFormat('en-US', {
@@ -243,7 +302,7 @@ const defaultTimeFormat = new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',
     minute: 'numeric',
     second: 'numeric',
-    hour12: false,
+    hourCycle: 'h23',
     timeZoneName: 'short'
 });
 
@@ -251,14 +310,16 @@ const defaultLocalTimeFormat = new Intl.DateTimeFormat('default', {
     hour: 'numeric',
     minute: 'numeric',
     second: 'numeric',
-    hour12: false
+    hourCycle: 'h23'
 });
 
 const defaultLocalHMTimeFormat = new Intl.DateTimeFormat('default', {
     hour: 'numeric',
     minute: 'numeric',
-    hour12: false
+    hourCycle: 'h23'
 });
+
+
 
 export function timeFormat(timeOpts) {
     let to;
@@ -273,24 +334,42 @@ export function timeFormat(timeOpts) {
     return new Intl.DateTimeFormat('en-US', to);
 }
 
-export function toDateTimeString(d, fmt = defaultDateTimeFormat) {
+export function toFormattedDateTimeString (d,fmt) {
     return (d) ? fmt.format(d) : "-";
 }
 
-export function toLocalDateTimeString(d, fmt = defaultLocalDateTimeFormat) {
-    return (d) ? fmt.format(d) : "-";
+export function toDateTimeString(d) {
+    return toFormattedDateTimeString(d, defaultDateTimeFormat);
 }
 
-export function toTimeString(d, fmt = defaultTimeFormat) {
-    return (d) ? fmt.format(d) : "-";
+export function toDateHMTimeString(d) {
+    return toFormattedDateTimeString(d, defaultDateHMTimeFormat);
 }
 
-export function toLocalTimeString(d, fmt = defaultLocalTimeFormat) {
-    return (d) ? fmt.format(d) : "-";
+export function toLocalDateTimeString(d) {
+    return toFormattedDateTimeString(d, defaultLocalDateTimeFormat);
 }
 
-export function toLocalHMTimeString(d, fmt = defaultLocalHMTimeFormat) {
-    return (d) ? fmt.format(d) : "-";
+export function toLocalDateHMTimeString(d) {
+    return toFormattedDateTimeString(d, defaultLocalDateHMTimeFormat);
+}
+
+export function toTimeString(d) {
+    return toFormattedDateTimeString(d, defaultTimeFormat);
+}
+
+export function toLocalTimeString(d) {
+    return toFormattedDateTimeString(d, defaultLocalTimeFormat);
+}
+
+export function toLocalHMTimeString(d) {
+    return toFormattedDateTimeString(d, defaultLocalHMTimeFormat);
+}
+
+export function toLocalMDHMString(d) {
+    if (d) {
+        return defaultLocalMDDateFormat.format(d) + " " + defaultLocalHMTimeFormat.format(d);
+    } else return "-";
 }
 
 export function isUndefinedDateTime(d) {
@@ -298,6 +377,7 @@ export function isUndefinedDateTime(d) {
 }
 
 //--- string interning support
+
 const _uiInterned = new Map();
 
 export function intern(s) {
@@ -357,6 +437,11 @@ export function deltaDeg(latDeg, length) {
 
 export function roundToNearest(x, d) {
     return Math.round(x / d) * d;
+}
+
+export function formatLatLon(latDeg, lonDeg, digits) {
+    let fmt = f_N[digits];
+    return fmt.format(latDeg) + " " + fmt.format(lonDeg);
 }
 
 export function countMatching(array, pred) {

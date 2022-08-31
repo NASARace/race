@@ -17,7 +17,12 @@
 package gov.nasa.race.space
 
 import gov.nasa.race.common._
+import gov.nasa.race.uom.{DateTime, Time}
+import gov.nasa.race.uom.Time.Days
 import gov.nasa.race.util.SubstringParser
+
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoField
 
 /**
   * class that represents Two Line Element (TLE) orbit specifications as defined on
@@ -37,20 +42,19 @@ import gov.nasa.race.util.SubstringParser
   *
   */
 object TLE {
-  @inline def yearOf(yy: Int) = if (yy < 50) 2000 + yy else 1900 + yy
 
-  def apply (line0: String, line1: String, line2: String): TLE = {
-    val name = line0.trim
+  //3LE based based ctor
+  def apply (line0: Option[String], line1: String, line2: String): TLE = {
 
+    val name = line0.map(_.substring(2).trim) // "0 <name>"
     val p = new SubstringParser(line1)
-
     val catNum = p.parseInt(2,7)
     val cls = line1.charAt(7)
-    val launchYr = yearOf(p.parseInt(9,10))
+    val launchYr = p.parseInt(9,10)
     val launchNum = p.parseInt(11,13)
     val piece = line1.substring(14,16).trim
-    val year = yearOf(p.parseInt(18,19))
-    val refEpoch = p.parseDouble(20,31)
+    val epochYear = p.parseInt(18,19)
+    val epochDOY = p.parseDouble(20,31)
     val dtMmo2 = p.parseDouble(33,42)
     val dt2Mmo6 = p.parseDouble(44,51)
     val bstarDrag = p.parseDoubleFraction(53,60)
@@ -65,24 +69,63 @@ object TLE {
     val meanMo = p.parseDouble(52,63)
     val orbitNum = p.parseInt(63,68)
 
-    new TLE(name,
-            catNum,cls,launchYr,launchNum,piece,year,refEpoch,dtMmo2,dt2Mmo6,bstarDrag,setNum,
-            incl,raan,eccn,argPer,meanAn,meanMo,orbitNum)
+    new TLE(
+      catNum, cls, launchYr, launchNum, piece, epochYear, epochDOY, dtMmo2, dt2Mmo6, bstarDrag, setNum,
+      incl, raan, eccn, argPer, meanAn, meanMo, orbitNum,
+      name, line1, line2
+    )
+  }
+
+  def apply (line0: String, line1: String, line2: String): TLE = apply( Some(line0), line1, line2)
+  def apply (line1: String, line2: String): TLE = apply( None, line1, line2)
+
+  // value based ctor
+  def apply (catNum: Int, cls: Char, launchYr: Int, launchNum: Int, piece: String, epochYear: Int, epochDOY: Double,
+             dtMmo2: Double, dt2Mmo6: Double, bstarDrag: Double, setNum: Int,
+             incl: Double, raan: Double, eccn: Double, argPer: Double, meanAn: Double, meanMo: Double, orbitNum: Int,
+             name: Option[String] = None
+            ): TLE = {
+    new TLE(
+      catNum, cls, launchYr, launchNum, piece, epochYear, epochDOY, dtMmo2, dt2Mmo6, bstarDrag, setNum,
+      incl, raan, eccn, argPer, meanAn, meanMo, orbitNum,
+
+      name,
+      line1( catNum, cls, launchYr, launchNum, piece, epochYear, epochDOY, dtMmo2, dt2Mmo6, bstarDrag, setNum),
+      line2( catNum, incl, raan, eccn, argPer, meanAn, meanMo, orbitNum)
+    )
+  }
+
+  def line1 (catNum: Int, cls: Char, launchYr: Int, launchNum: Int, piece: String, epochYear: Int, epochDOY: Double,
+             dtMmo2: Double, dt2Mmo6: Double, bstarDrag: Double, setNum: Int): String = {
+    def fracString6 (d: Double): String = {
+      import Math._
+      val exp: Int = log10(abs(d)).toInt
+      val n = (d * pow10(abs(exp) + 5)).toInt
+      f"$n% 5d$exp%+d"
+    }
+
+    f"1 $catNum%5d$cls ${launchYr%100}%02d${launchNum%1000}%03d$piece%-3.3s ${epochYear%100}%02d$epochDOY%11.8f ${dtMmo2}%10g ${fracString6(dt2Mmo6)} ${fracString6(bstarDrag)} 0 $setNum%4d"
+  }
+
+  def line2 (catNum: Int, incl: Double, raan: Double, eccn: Double, argPer: Double, meanAn: Double, meanMo: Double, orbitNum: Int): String = {
+    def eccnString(e: Double): String = {
+      f"${(e * 10000000).toInt}%07d"
+    }
+
+    f"2 $catNum%5d $incl%8f $raan%8f ${eccnString(eccn)} $argPer%8f $meanAn%8f $meanMo%11f$orbitNum%5d"
   }
 }
 
-case class TLE (    //             description                        line  field   column (0-based)
-  //--- line 0
-  name: String,     // satellite name (e.g. 'ZARYA' for ISS)             0
-  //--- line 1
+case class TLE (
+  //--- line 1                                                        line  field     col
                     // line number                                       1      1   00-00
   catNum: Int,      // NORAD catalog number (e.g. 25544U for ISS)        1      2   02-06
   cls: Char,        // classification (U=unclassified)                   1      3   07-07
   launchYr: Int,    // launch year                                       1      4   09-10
   launchNum: Int,   // launch number of year                             1      5   11-13
   piece: String,    // piece of launch                                   1      6   14-16
-  year: Int,        // epoch year                                        1      7   18-19
-  refEpoch: Double, // epoch (day-of-year incl. fraction)                1      8   20-31
+  epochYr: Int,     // epoch year                                        1      7   18-19
+  epochDOY: Double, // epoch (day-of-year incl. fraction)                1      8   20-31
   dtMmo2: Double,   // 1st deriv of Mean Motion / 2                      1      9   33–42
   dt2Mmo6: Double,  // 2nd deriv of Mean Motion / 6 (fractional part)    1     10   44-51
   bstarDrag: Double,// BSTAR drag term (fractional part)                 1     11   53-60
@@ -98,53 +141,30 @@ case class TLE (    //             description                        line  fiel
   argPer: Double,   // argument of perigee (deg)                         2      6   34-41
   meanAn: Double,   // mean anomaly (deg)                                2      7   43-50
   meanMo: Double,   // mean motion (rev/day)                             2      8   52-62
-  orbitNum: Int     // revolutions at epoch                              2      9   63-67
+  orbitNum: Int,    // revolutions at epoch                              2      9   63-67
                     // checksum % 10                                     2     10   68-68
+
+  //--- (optional) line 0
+  name: Option[String],     // satellite name (e.g. 'ZARYA' for ISS)
+  line1: String,
+  line2: String
 ) {
-  //--- derived terms
-  /**
-  val nddot6: Double = 0
-  val epoch: Double = 0
-  val xndt2o: Double = 0
-  val xincl: Double = 0
-  val xnodeo: Double = 0
-  val eo: Double = 0
-  val omegao: Double = 0
-  val xmo: Double = 0
-  val xno: Double = 0
-  val deepspace: Boolean = false
-  val createddate: DateTime = DateTime.now
-  **/
+  //--- derived fields
 
-  def line0: String = name
-
-  def line1: String = {
-    def fracString6 (d: Double): String = {
-      import Math._
-      val exp: Int = log10(abs(d)).toInt
-      val n = (d * pow10(abs(exp) + 5)).toInt
-      f"$n% 5d$exp%+d"
-    }
-
-    def dtMmo2String (d: Double): String = {
-      f"$d%10g"  // not yet - TLE omits leading "0."
-    }
-
-    val sb = new StringBuffer
-    sb.append(f"1 $catNum%5d$cls ${launchYr%100}%02d${launchNum%1000}%03d$piece%-3.3s ")
-    sb.append(f"${year%100}%02d$refEpoch%11.8f ${dtMmo2String(dtMmo2)} ")
-    sb.append(f"${fracString6(dt2Mmo6)} ${fracString6(bstarDrag)} 0 $setNum%4d")
-    sb.toString
+  val date: DateTime = {  // of TLE
+    val year = if (epochYr >= 57 && epochYr <= 99) 1900 + epochYr else 2000 + epochYr
+    DateTime(year, epochDOY)
   }
 
-  def line2: String = {
-    def eccnString (e: Double): String = {
-      f"${(e * 10000000).toInt}%07d"
-    }
+  // time it takes for 1 revolution
+  val period: Time = Days(1) / meanMo
 
-    val sb = new StringBuffer
-    sb.append(f"2 $catNum%5d $incl%8f $raan%8f ${eccnString(eccn)} $argPer%8f $meanAn%8f ")
-    sb.append(f"$meanMo%11f$orbitNum%5d")
-    sb.toString
+  def line0: Option[String] = name  // actually a 3LE if defined
+
+  override def toString: String = {
+    if (name.isDefined) s"${name.get}\n$line1\n$line2"
+    else s"$line1\n$line2"
   }
+
+  @inline def revPerDay: Double = meanMo
 }

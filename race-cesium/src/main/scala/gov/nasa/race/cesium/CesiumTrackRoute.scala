@@ -32,6 +32,12 @@ import scalatags.Text.all._
 import java.net.InetSocketAddress
 import scala.collection.immutable.{Iterable, ListMap}
 
+object CesiumTrackRoute {
+  val jsModule = "ui_cesium_tracks.js"
+  val icon = "track-icon.svg"
+}
+import CesiumTrackRoute._
+
 /**
   * a RaceRoute that uses Cesium to display tracks transmitted over a websocket
   */
@@ -71,8 +77,8 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute with CachedFileAsse
           }
         }
       } ~
-        fileAsset("ui_cesium_tracks.js") ~
-        fileAsset("track-icon.svg")
+        fileAsset(jsModule) ~
+        fileAsset(icon)
     }
   }
 
@@ -123,7 +129,7 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute with CachedFileAsse
   override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiTrackWindow(), uiTrackIcon)
 
   def uiTrackWindow(title: String="Tracks"): Text.TypedTag[String] = {
-    uiWindow(title,"tracks", "track-icon.svg")(
+    uiWindow(title,"tracks", icon)(
       cesiumLayerPanel("tracks", "main.toggleShowTracks(event)"),
       uiPanel("track sources")(
         uiList("tracks.sources", 5, "main.selectSource(event)", NoAction)
@@ -142,11 +148,11 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute with CachedFileAsse
   }
 
   def uiTrackIcon: Text.TypedTag[String] = {
-    uiIcon("track-icon.svg", "main.toggleWindow(event,'tracks')", "track_icon")
+    uiIcon(icon, "main.toggleWindow(event,'tracks')", "track_icon")
   }
 
   def uiCesiumTrackResources: Seq[Text.TypedTag[String]] = {
-    Seq( extModule("ui_cesium_tracks.js"))
+    Seq( extModule(jsModule))
   }
 
   override def getConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {

@@ -58,6 +58,10 @@ object NumUtils {
 
   def getPositiveIntOrElse (n: Int, f: =>Int): Int = if (n >=0) n else f
 
+  /**
+   * note we have to go through bcd's here to avoid trailing bits that might kill identity of result Doubles
+   * (which we need for keys etc.)
+   */
   @inline def round (x: Double, decimals: Int): Double = {
     BigDecimal(x.toString).setScale( decimals, BigDecimal.RoundingMode.HALF_UP).toDouble
   }

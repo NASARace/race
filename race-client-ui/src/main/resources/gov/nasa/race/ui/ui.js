@@ -802,13 +802,13 @@ export function getClockDate(o) {
 
 export function getClockEpochMillis(o) {
     let e = getClock(o);
-    if (e) {
+    if (e && e._uiDate) {
         return e._uiDate.getTime();
     }
-    return undefined;
+    return 0;
 }
 
-export function setClock(o, dateSpec, timeScale) {
+export function setClock(o, dateSpec, timeScale, notifyClockMonitors=false) {
     let e = getClock(o);
     if (e) {
         let date = new Date(dateSpec);
@@ -823,6 +823,8 @@ export function setClock(o, dateSpec, timeScale) {
             if (timeScale) {
                 e._uiTimeScale = timeScale;
             }
+
+            if (notifyClockMonitors) clockMonitors.forEach( func=> func(e));
         }
     }
 }
@@ -836,6 +838,11 @@ export function getClock(o) {
     throw "not a clock field";
 }
 
+const clockMonitors = [];
+
+export function registerClockMonitor(func) {
+    clockMonitors.push(func);
+}
 
 //--- slider widgets
 
@@ -1000,7 +1007,7 @@ function _positionThumb(e) { // e is ui_slider_track
     let dx = ((e._uiValue - e._uiMinValue) / e._uiScale);
     e._uiThumb.style.left = dx + "px"; // relative pos
 
-    if (e._uiNum) {
+    if (e._uiNum && !isNaN(e._uiValue)) {
         if (e._uiValue > (e._uiMaxValue + e._uiMinValue) / 2) { // place left of thumb
             let w = e._uiNum.getBoundingClientRect().width;
             e._uiNum.style.left = (dx - w) + "px";
@@ -1979,6 +1986,14 @@ export function createImage(src, placeholder, w, h) {
     if (w) e.width = w;
     if (h) e.height = h;
     return e;
+}
+
+//--- general event processing
+
+export function stopAllOtherProcessing(event) {
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+    event.preventDefault();
 }
 
 //--- general utility functions

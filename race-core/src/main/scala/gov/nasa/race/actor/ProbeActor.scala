@@ -18,13 +18,13 @@
 package gov.nasa.race.actor
 
 import java.io.{FileOutputStream, PrintStream}
-
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.ConfigurableTranslator
 import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createOutputStream}
+import gov.nasa.race.common.{JsonSerializable, JsonWriter}
 import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.{ChannelTopicSubscriber, SubscribingRaceActor}
 import gov.nasa.race.util.{ConsoleIO, SoundUtils}
@@ -76,6 +76,21 @@ class ProbeActor (val config: Config) extends ChannelTopicSubscriber {
       ifSome(fos) { _.println(msg)}
 
       if (alert) print(scala.Console.RESET)
+    }
+  }
+}
+
+/**
+ * a probe translator that prefers toJson over toString
+ */
+class MaybeJsonTranslator (val config: Config) extends ConfigurableTranslator {
+  val writer = new JsonWriter()
+  writer.format(config.getBooleanOrElse("pretty", false))
+
+  override def translate(src: Any): Option[Any] = {
+    src match {
+      case js: JsonSerializable => Some(writer.toNewJson(js))
+      case other => Some(other)
     }
   }
 }

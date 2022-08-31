@@ -642,6 +642,10 @@ div.ui_list_subitem {
     background: transparent;
     text-align: left;
     white-space: pre;
+
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
 }
 
 div.ui_list_subitem.align_left {

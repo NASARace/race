@@ -6,8 +6,8 @@ import * as uiCesium from "./ui_cesium.js";
 
 class HotspotEntry {
     constructor(hs) {
-        this.hotspots = hs;
-        this.date = hs[0].date;
+        this.hotspots = hs.hotspots;
+        this.date = hs.hotspots[0].date;
     }
 }
 
@@ -87,12 +87,12 @@ function setPixelGrid(pix) {
     }
 }
 
-function handleHotspotsMessage(hotspots) {
+function handleHotspotsMessage(hs) {
     if (resolution) {
-        hotspots.forEach(pix => setPixelGrid(pix));
+        hs.hotspots.forEach(pix => setPixelGrid(pix));
     }
 
-    let hsEntry = new HotspotEntry(hotspots);
+    let hsEntry = new HotspotEntry(hs);
     addHotspotEntry(hsEntry);
 }
 

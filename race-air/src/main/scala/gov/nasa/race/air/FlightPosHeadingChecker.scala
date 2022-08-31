@@ -61,9 +61,9 @@ class FlightPosHeadingChecker (config: Config) extends FlightPosChecker {
 
       } else {
         // check if time difference is too great or flight is changing course
-        if ((dt < maxTimeDiff) && fpos.heading.within(lastFPos.heading, maxHeadingChange)) {
+        if ((dt < maxTimeDiff) && fpos.heading.withinTolerance(lastFPos.heading, maxHeadingChange)) {
           val compHeading = finalBearing(lastFPos.position, fpos.position)
-          if (!compHeading.within(lastFPos.heading, maxHeadingDiff)) {
+          if (!compHeading.withinTolerance(lastFPos.heading, maxHeadingDiff)) {
             Some(TrackProblem(fpos, lastFPos, s"inconsistent heading for ${fpos.cs} (Ψ=$compHeading)"))
           } else None // checks out
         } else None // should not be checked against lastFpos

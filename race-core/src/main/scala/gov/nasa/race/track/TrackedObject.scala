@@ -18,7 +18,7 @@ package gov.nasa.race.track
 
 import gov.nasa.race.IdentifiableObject
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{AssocSeq, JsonSerializable, JsonWriter}
+import gov.nasa.race.common.{AssocSeq, FMT_3, FMT_3_2, FMT_3_5, FMT_6, JsonSerializable, JsonWriter}
 import gov.nasa.race.uom.{Angle, DateTime, Speed}
 import gov.nasa.race.util.StringUtils
 
@@ -76,11 +76,6 @@ object TrackedObject {
 
   val ROLE = asc("role")
   val ORG = asc("org")
-
-  val FMT_3_2 = new DecimalFormat("###.##")
-  val FMT_3_5 = new DecimalFormat("###.#####")
-  val FMT_3 = new DecimalFormat("###")
-  val FMT_6 = new DecimalFormat("######")
 }
 
 /**

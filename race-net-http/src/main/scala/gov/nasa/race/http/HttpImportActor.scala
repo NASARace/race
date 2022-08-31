@@ -215,7 +215,7 @@ class HttpImportActor (val config: Config) extends PublishingRaceActor
 
   override def onRaceTick(): Unit = sendRequests
 
-  override def handleMessage = {
+  override def handleMessage: Receive = {
     case BusEvent(_,SendHttpRequest,_) => sendRequests
 
     case BusEvent(_,SendNewHttpRequest(request),_) =>

@@ -132,7 +132,7 @@ object Dependencies {
   val akkaCluster = akkaOrg %% "akka-cluster" % akkaVersion // e.g. for multi-jvm testing
   val akkaSlf4j = akkaOrg %% "akka-slf4j" % akkaVersion
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
-  val akkaHttp = akkaOrg %% "akka-http" % "10.2.7"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.2.9"
 
   val akkaAll = Seq(akkaActor)
 
@@ -189,8 +189,11 @@ val kafkaVersion = "3.1.0"
 
   val kafkaAll = Seq(kafka,kafkaRaft,kafkaTools) 
 
+  //--- Apache Commons Net (FTP, NTP etc.)
+  val apacheCommonsNet = "commons-net" % "commons-net" % "3.8.0" 
+
   //--- AWS SDK
-  val awsS3 = "software.amazon.awssdk" % "s3" % "2.17.214"
+  val awsS3 = "software.amazon.awssdk" % "s3" % "2.17.261"
 
   //--- NetCDF
   val cdmCore = "edu.ucar" % "cdm-core" % "5.5.3"
@@ -213,6 +216,8 @@ val kafkaVersion = "3.1.0"
   lazy val lwjglOpenCL = "org.lwjgl" % "lwjgl-opencl" % lwjglVersion
   lazy val lwjglNative = "org.lwjgl" % "lwjgl" % lwjglVersion classifier lwjglNativeClassifier
 
+  //--- oreKit - orbit extrapolation
+  val oreKit = "org.orekit" % "orekit" % "11.2.1"
 
   //--- publishable WorldWindJava version
   val worldwindPcm = "com.github.pcmehlitz" % "worldwind-pcm" % "2.1.0.206"

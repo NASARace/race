@@ -21,7 +21,7 @@ import gov.nasa.race.common._
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom._
-import math.{atan2,asin,acos,sqrt,sin,cos,Pi}
+import math.{atan2,asin,acos,sqrt,sin,cos}
 
 /**
  * object with library functions to compute great circle trajectories
@@ -40,7 +40,7 @@ object GreatCircle {
 
   def initialBearing (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Angle = {
     val Δλ = λ2 - λ1
-    Radians(atan2( Sin(Δλ) * Cos(φ2), Cos(φ1) * Sin(φ2) - Sin(φ1) * Cos(φ2) * Cos(Δλ)) % TwoPi)
+    Radians(atan2( Sin(Δλ) * Cos(φ2), Cos(φ1) * Sin(φ2) - Sin(φ1) * Cos(φ2) * Cos(Δλ)) % π2)
   }
   @inline def initialBearing (startPos: GeoPosition, endPos: GeoPosition): Angle = {
     initialBearing(startPos.φ,startPos.λ,endPos.φ,endPos.λ)
@@ -51,7 +51,7 @@ object GreatCircle {
    * initialBearing of reverse route
    */
   @inline def finalBearing (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Angle = {
-    Radians((initialBearing(φ2,λ2, φ1,λ1).toRadians + Pi) % TwoPi)
+    Radians( (initialBearing(φ2,λ2, φ1,λ1).toRadians + π) % π2)
   }
   @inline def finalBearing(startPos: GeoPosition, endPos: GeoPosition): Angle = {
     finalBearing(startPos.φ,startPos.λ,endPos.φ,endPos.λ)
@@ -117,7 +117,7 @@ object GreatCircle {
     println("val ArcLonDeg = Array[Double](")
     print("  ")
     for (deg <- 0 to 89) {
-      val phi = deg*Pi / 180.0
+      val phi = deg*π / 180.0
       val arc = (Pi * RE_E * cos(phi)) / (180.0 * sqrt(1 - E2*sin2(phi)))
 
       print(arc)
@@ -143,13 +143,13 @@ object GreatCircle {
   def endPos(startPos: GeoPosition, dist: Length, initialBearing: Angle, alt: Length = Length0): GeoPosition = {
     val φ1 = startPos.φ
     val λ1 = startPos.λ
-    val θ = initialBearing
-    val δ = Radians(dist / (MeanEarthRadius + alt))
+    val θ = if (dist.isPositive) initialBearing else initialBearing + Pi
+    val δ = Radians( dist.abs / (MeanEarthRadius + alt))
 
     val φ2 = Radians(asin(Sin(φ1) * Cos(δ) + Cos(φ1) * Sin(δ) * Cos(θ)))
     val λ2 = λ1 + Radians(atan2(Sin(θ) * Sin(δ) * Cos(φ1), Cos(δ) - Sin(φ1) * Sin(φ2)))
 
-    GeoPosition(φ2, λ2, alt)
+    GeoPosition( φ2.toNormalizedLatitude, λ2.toNormalizedLongitude, alt)
   }
 
   def translate (pos: GeoPosition, startPos: GeoPosition, endPos: GeoPosition): GeoPosition = {
@@ -191,5 +191,41 @@ object GreatCircle {
     alongTrackDistance( pos.φ,pos.λ, startPos.φ,startPos.λ,startPos.altitude, endPos.φ,endPos.λ,endPos.altitude)
   }
 
+  /**
+   * ortho projection of p onto GC pStart->pEnd
+   * TODO - improve math
+   */
+  def crossTrackPoint (p: GeoPosition, pStart: GeoPosition, pEnd: GeoPosition): GeoPosition = {
+    val r = MeanEarthRadius
+    val φ = p.φ
+    val λ = p.λ
+    val φ1 = pStart.φ
+    val λ1 = pStart.λ
+    val φ2 = pEnd.φ
+    val λ2 = pEnd.λ
+
+    val h12 = initialBearing(φ1,λ1, φ2,λ2)
+
+    // compute along track distance
+    val h13 = initialBearing(φ1,λ1, φ,λ)
+    val d13 = acos( Sin(φ1)*Sin(φ) + (Cos(φ1)*Cos(φ) * Cos(λ1-λ))) // angular distance between p1,p
+    val dxt = asin( sin(d13) * Sin(h13 - h12)) * r
+    val dist = acos(cos(d13)/cos(dxt/r)) * r
+
+    // compute cross track point p4 (projecting p onto great circle p1-p2)
+    val δ = Radians( dist.abs / r)
+    val φ4 = Radians(asin(Sin(φ1) * Cos(δ) + Cos(φ1) * Sin(δ) * Cos(h12)))
+    val λ4 = λ1 + Radians(atan2(Sin(h12) * Sin(δ) * Cos(φ1), Cos(δ) - Sin(φ1) * Sin(φ2)))
+
+    GeoPosition( φ4, λ4)
+  }
+
+  /**
+   * bearing from crosss track point to p
+   */
+  @inline def crossTrackBearing (p: GeoPosition, pStart: GeoPosition, pEnd: GeoPosition): Angle = {
+    val p4 = crossTrackPoint(p, pStart, pEnd)
+    initialBearing(p4, p)
+  }
 }
 

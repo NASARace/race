@@ -24,7 +24,8 @@ export function initialize() {
 
             ws.onmessage = function(evt) {
                 try {
-                    let msg = JSON.parse(evt.data.toString());
+                    let data = evt.data.toString();
+                    let msg = JSON.parse(data);
                     handleServerMessage(msg);
                 } catch (error) {
                     console.log(error);

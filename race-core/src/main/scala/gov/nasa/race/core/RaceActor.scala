@@ -464,6 +464,7 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
 
   def delay (d: FiniteDuration, action: ()=>Unit): Option[Cancellable] = Some(scheduler.scheduleOnce(d,self,DelayedAction(self,action)))
 
+  def sendOn (channel: String, msg: Any): Unit = busFor(channel).publish( BusEvent(channel, msg, self))
 
   //--- timeout values we might need during actor initialization in order to clean up
   protected def _getTimeout(key: String) = config.getFiniteDurationOrElse(key,raceActorSystem.defaultActorTimeout)

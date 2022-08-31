@@ -22,19 +22,13 @@ import gov.nasa.race.uom.Angle._
 import scala.collection.mutable.ArrayBuffer
 
 object LatLon {
-  //--- redundant to Angle but we want to inline
-  @inline val Pi = Math.PI
-  @inline val TwoPi = Math.PI * 2
-  @inline val HalfPi = Math.PI / 2
-  @inline val DegreesInRadian = Pi / 180.0
-
   @inline def degreesToRadians (deg: Double): Double = deg * DegreesInRadian
   @inline def radiansToDegrees (rad: Double): Double = rad / DegreesInRadian
-  @inline def normalizeRadians2Pi (d: Double): Double = if (d<0) d % TwoPi + TwoPi else d % TwoPi  // 0..2π
+  @inline def normalizeRadians2Pi (d: Double): Double = if (d<0) d % π2 + π2 else d % π2  // 0..2π
 
 
-  @inline final val LAT_RES: Double = 0xffffffffL.toDouble / Pi      // [0,pi] => [0,0xffffffff]
-  @inline final val LON_RES: Double = 0xffffffffL.toDouble / TwoPi  // [0,2pi] => [0,0xffffffff]
+  @inline final val LAT_RES: Double = 0xffffffffL.toDouble / π      // [0,pi] => [0,0xffffffff]
+  @inline final val LON_RES: Double = 0xffffffffL.toDouble / π2  // [0,2pi] => [0,0xffffffff]
 
   @inline def apply (lat: Angle, lon: Angle): LatLon = {
     new LatLon(encodeRadians(lat.toRadians,lon.toRadians))
@@ -65,14 +59,14 @@ class LatLon protected[geo] (val l: Long) extends AnyVal {
 
   @inline def lat: Angle = {
     val r = (l>>32)/LAT_RES
-    Radians(if (r > Pi) r - Pi else r)
+    Radians(if (r > π) r - π else r)
   }
   @inline def latDeg: Double = lat.toDegrees
   @inline def latDeg7: Double = Math.round(lat.toDegrees * 10000000.0) / 10000000.0
 
   @inline def lon: Angle = {
     val r = (l & 0xffffffffL)/LON_RES
-    Radians(if (r > Pi) r - LatLon.TwoPi else r)
+    Radians(if (r > π) r - π2 else r)
   }
   @inline def lonDeg: Double = lon.toDegrees
   @inline def lonDeg7: Double = Math.round(lon.toDegrees * 10000000.0) / 10000000.0

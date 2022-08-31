@@ -42,7 +42,7 @@ object CesiumRoute {
 
   val imageryPrefixMatcher = PathMatcher(imageryPrefix / "[^/]+".r ~ Slash)
 
-  val defaultCesiumJsVersion = "1.95"
+  val defaultCesiumJsVersion = "1.96"
 
   val cesiumPathMatcher = PathMatchers.separateOnSlashes("Build/Cesium/")
   def cesiumJsUrl (version: String): String = {

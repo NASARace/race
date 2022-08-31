@@ -28,7 +28,7 @@ import gov.nasa.race.common.{JsonSerializable, JsonWriter}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{BusEvent, ParentActor}
 import gov.nasa.race.http.{ContinuousTimeRaceRoute, DocumentRoute, PushWSRaceRoute, WSContext}
-import gov.nasa.race.land.{Hotspot, Hotspots}
+import gov.nasa.race.earth.{Hotspot, Hotspots}
 import gov.nasa.race.ui.{NoAction, NoId, extModule, uiButton, uiCheckBox, uiColumnContainer, uiIcon, uiList, uiMenuItem, uiPanel, uiPopupMenu, uiRadio, uiRowContainer, uiSlider, uiTextInput, uiWindow}
 import gov.nasa.race.util.StringUtils
 import scalatags.Text
@@ -55,14 +55,6 @@ object CesiumHotspotRoute {
 }
 import CesiumHotspotRoute._
 
-abstract class ColorThreshold (val valueUnit: String, val v: Int, color: String) {
-  def toConfigString(): String = s"{$valueUnit: $v, color: Cesium.Color.fromCssColorString('$color')}"
-}
-
-case class HotspotTimeStep (h: Int, clr: String) extends ColorThreshold("hours", h, clr)
-case class TempThreshold(k: Int, clr: String) extends ColorThreshold("kelvin", k, clr)
-case class FrpThreshold (mw: Int, clr: String) extends ColorThreshold("megawatts", mw, clr)
-
 /**
   * a RaceRouteInfo that shows satellite hotspots
   */
@@ -86,6 +78,12 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
   private val frpThreshold = config.getOptionalConfig("hotspot.frp").map { c=>
     FrpThreshold( c.getInt("threshold"), c.getString("color"))
   }.getOrElse(defaultFrpThreshold)
+
+  // dev & debugging
+  override def addResourceFileAssetResolvers(): Unit = {
+    super.addResourceFileAssetResolvers()
+    addResourceFileAssetResolvers("race-cesium/src/main/resources/gov/nasa/race/cesium")("ui_cesium_hotspot.js")
+  }
 
   def getHotspotTimeSteps(): Seq[HotspotTimeStep] = {
     val cfgs = config.getConfigSeq("hotspot.time-steps")
@@ -191,14 +189,7 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
   }
 
   def serializeHotspots( hs: Hotspots[_]): String = {
-    writer.clear()
-
-    writer.beginObject
-    writer.writeMemberName(HOTSPOTS)
-    hs.serializeMembersTo(writer)
-    writer.endObject
-
-    writer.toJson
+    writer.clear().writeObject(w=> w.writeObjectMember(HOTSPOTS)( hs.serializeMembersTo)).toJson
   }
 
   def dropOldHotspots(): Unit = {
@@ -218,4 +209,6 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
 /**
   * simple service to show hotspots
   */
-class CesiumHotspotApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumHotspotRoute
+class CesiumHotspotApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumHotspotRoute  {
+  addResourceFileAssetResolvers()    // for dev&debugging to enable reloading apps - comment out in production
+}

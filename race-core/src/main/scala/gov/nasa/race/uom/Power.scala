@@ -67,7 +67,12 @@ class Power protected[uom] (val d: Double) extends AnyVal with Ordered[Power] wi
   @inline def =:= (x: Power): Boolean = d == x.d  // use this if you really mean equality
   @inline def ≡ (x: Power): Boolean = d == x.d
 
-  override def toString = show   // calling this would cause allocation
-  def show = s"${d}W"
+  override def toString: String = show
+
+  def show = {
+    if (d > 1e6) f"$toMegaWatt%.2fMW"
+    else if (d > 1000) f"$toKiloWatt%.2fkW"
+    else f"$toWatt%.2fW"
+  }
 
 }

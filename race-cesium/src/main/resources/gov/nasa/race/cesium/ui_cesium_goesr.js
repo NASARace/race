@@ -25,11 +25,12 @@ class SatelliteEntry {
 }
 
 class HotspotEntry {
-    constructor(sat, lastSatDate, h) {
+    constructor(satId, satName, lastSatDate, h) {
         this.hotspot = h;
 
         this.id = `${h.lat},${h.lon}`;
-        this.sat = sat;
+        this.satId = satId;
+        this.satName = satName;
         this.lastSatDate = lastSatDate;
         this.date = h.history[0].date;
         this.mask = h.history[0].mask;
@@ -219,7 +220,7 @@ function initHotspotView() {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
             { name: "class", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.classifier() },
             ui.listItemSpacerColumn(),
-            { name: "sat", width: "4rem", attrs: [], map: e => e.sat },
+            { name: "sat", width: "4rem", attrs: [], map: e => e.satName },
             { name: "good", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.nGood },
             { name: "all", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.nTotal },
             { name: "lat", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.f_4.format(e.hotspot.lat) },
@@ -234,9 +235,9 @@ function initHistoryView() {
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
             { name: "mask", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.mask },
-            { name: "temp", width: "3rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.temp) ? "-" : util.f_0.format(e.temp) },
-            { name: "frp", width: "3rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.frp) ? "-" : util.f_0.format(e.frp) },
-            { name: "area", width: "3rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.area) ? "-" : util.f_0.format(util.squareMetersToAcres(e.area)) },
+            { name: "temp", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.temp) ? "-" : util.f_0.format(e.temp) },
+            { name: "frp", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.frp) ? "-" : util.f_0.format(e.frp) },
+            { name: "area", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.area) ? "-" : util.f_0.format(util.squareMetersToAcres(e.area)) },
             { name: "time", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalHMTimeString(e.date) },
         ]);
     }
@@ -295,10 +296,10 @@ function handleGoesrSatellites(goesrSatellites) {
 
 function handleGoesrHotspots(goesrHotspots) {
     goesrHotspots.forEach(hs => {
-        let e = satelliteEntries.find(se => hs.src === se.sat.name);
+        let e = satelliteEntries.find(se => hs.satId === se.sat.satId);
         if (e) { // a satellite we know about
             e.setStats(hs);
-            e.hotspotEntries = hs.hotspots.map(h => new HotspotEntry(hs.src, hs.date, h));
+            e.hotspotEntries = hs.hotspots.map(h => new HotspotEntry(hs.satId, e.sat.name, hs.date, h));
             ui.updateListItem(satelliteView, e);
         }
     });

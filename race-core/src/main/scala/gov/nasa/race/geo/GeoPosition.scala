@@ -43,6 +43,7 @@ object GeoPosition {
   val LAT = asc("lat")
   val LON = asc("lon")
   val ALT = asc("alt")
+
 }
 import GeoPosition._
 
@@ -58,6 +59,11 @@ trait GeoPosition extends JsonSerializable {
 
   def altitude: Length
   def hasDefinedAltitude: Boolean = altitude.isDefined
+
+  def normalized: GeoPosition = {
+    if (lat.within( AngleNeg90, Angle90) && lon.within( AngleNeg180, Angle180)) this
+    else GeoPosition( lat.toNormalizedLatitude, lon.toNormalizedLongitude, altitude)
+  }
 
   @inline def =:= (other: GeoPosition): Boolean = (φ =:= other.φ) && (λ =:= other.λ) && (altitude =:= other.altitude)
 
@@ -77,6 +83,8 @@ trait GeoPosition extends JsonSerializable {
   override def toString: String = f"${getClass.getSimpleName}(φ=${φ.toDegrees}%+3.6f°,λ=${λ.toDegrees}%+3.6f°,alt=${altitude.toMeters}%.1fm)"
   def toGenericString3D: String = f"φ=${φ.toDegrees}%+3.6f°,λ=${λ.toDegrees}%+3.6f°,alt=${altitude.toMeters}%.1fm"
   def toGenericString2D: String = f"(φ=${φ.toDegrees}%+3.6f°,λ=${λ.toDegrees}%+3.6f°)"
+
+  def latLon_5: String = f"${φ.toDegrees}%.5f,${λ.toDegrees}%.5f"
 
   // decimals = [0..6]
   def toLatLonString (decimals: Int): String = {

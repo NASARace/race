@@ -17,41 +17,33 @@
 package gov.nasa.race.cesium
 
 import akka.actor.Actor.Receive
-import akka.http.scaladsl.model.{HttpEntity, StatusCodes, Uri}
+import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
-import gov.nasa.race.common.{JsonSerializable, JsonWriter}
+import gov.nasa.race.common.JsonWriter
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{BusEvent, ParentActor, PeriodicRaceDataClient}
-import gov.nasa.race.geo.GeoMap
 import gov.nasa.race.http.{DocumentRoute, PushWSRaceRoute, WSContext}
-import gov.nasa.race.land.GoesRHotspot.{N_GOOD, N_PROBABLE, N_TOTAL}
-import gov.nasa.race.land.Hotspot.{DATE, HISTORY, HOTSPOTS, LAT, LON, SOURCE}
-import gov.nasa.race.land.{GoesRHotspot, GoesRHotspots, GoesrHotspotMap}
+import gov.nasa.race.earth.GoesRHotspot.{N_GOOD, N_PROBABLE, N_TOTAL}
+import gov.nasa.race.earth.Hotspot._
+import gov.nasa.race.earth.{GoesRHotspot, GoesRHotspots, HotspotMap}
+import gov.nasa.race.space.SatelliteInfo
 import gov.nasa.race.ui._
-import gov.nasa.race.uom.{DateTime, Time}
 import gov.nasa.race.uom.Time._
 import scalatags.Text
-import scalatags.Text.all._
 
 import java.net.InetSocketAddress
 import scala.collection.mutable
 import scala.concurrent.duration.DurationInt
 
-class GoesSatellite (val name: String, val description: String, val show: Boolean=true) extends JsonSerializable {
-  def this (conf: Config) = this(conf.getString("name"), conf.getString("description"), conf.getBooleanOrElse("show", true))
-
-  override def serializeMembersTo(writer: JsonWriter): Unit = {
-    writer
-      .writeStringMember("name", name)
-      .writeStringMember("description", description)
-      .writeBooleanMember("show", show)
-  }
+object CesiumGoesrRoute {
+  val jsModule = "ui_cesium_goesr.js"
+  val icon = "geo-sat-icon.svg"
 }
-
+import CesiumGoesrRoute._
 
 /**
   * a Cesium RaceRouteInfo that uses a collection of geostationary and polar-orbiter satellites to detect
@@ -60,7 +52,7 @@ class GoesSatellite (val name: String, val description: String, val show: Boolea
 trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRaceDataClient {
   private val writer = new JsonWriter()
 
-  val goesrSatellites = config.getConfigArray("goes-r.satellites").map(c=> new GoesSatellite(c))
+  val goesrSatellites = config.getConfigArray("goes-r.satellites").map(c=> new SatelliteInfo(c))
   val goesrAssets = getSymbolicAssetMap("goesr.assets", config, Seq(("fire","fire.png")))
 
   // dev & debugging
@@ -71,9 +63,9 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
 
   //--- the (gridded) data we send
 
-  val goesrHotspots = mutable.Map.empty[String, GoesrHotspotMap] // source -> HotspotMap
+  val goesrHotspots = mutable.Map.empty[Int, HotspotMap[GoesRHotspot]] // satId -> HotspotMap
 
-  def createHotspotMap = new GoesrHotspotMap(
+  def createHotspotMap = new HotspotMap[GoesRHotspot](
     config.getIntOrElse("goes-r.decimals", 4),   // 4 decimals are <10m apart
     config.getIntOrElse("goes-r.max-history", 20),
     Milliseconds( config.getFiniteDurationOrElse("goes-r.max-age", 3.hours).toMillis),
@@ -91,8 +83,8 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
           completeWithSymbolicAsset(p.toString, goesrAssets)
         }
       } ~
-      fileAsset("ui_cesium_goesr.js") ~
-      fileAsset("satellite-icon.svg")
+      fileAsset(jsModule) ~
+      fileAsset(icon)
     }
   }
 
@@ -105,20 +97,18 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
 
   def initializeGoesrConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
     synchronized {
-      pushTo( ctx.remoteAddress, queue, TextMessage.Strict( serializeSatellites))
+      pushTo( ctx.remoteAddress, queue, TextMessage.Strict( serializeGoesrSatellites))
       pushTo( ctx.remoteAddress, queue, TextMessage.Strict( serializeHotspots(true)))
     }
   }
 
-  def serializeSatellites: String = {
+  def serializeGoesrSatellites: String = {
     writer.clear()
-
     writer.writeObject { w=>
       w.writeArrayMember("goesrSatellites") { w=>
         goesrSatellites.foreach( _.serializeTo(w))
       }
     }
-
     writer.toJson
   }
 
@@ -137,7 +127,7 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
       if (hs.nonEmpty) {
         synchronized {
           purgeOldHotspots() // do this on the fly to minimize number of pushed messages
-          hs.foreach( h => goesrHotspots.getOrElseUpdate(h.source,createHotspotMap).updateWith(h))
+          hs.foreach( h => goesrHotspots.getOrElseUpdate(h.satId,createHotspotMap).updateWith(h))
           pushChangedHotspots()
         }
       }
@@ -165,12 +155,12 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
     writer.writeObject { w=>
       w.writeArrayMember("goesrHotspots") { w=>
         goesrHotspots.foreach { e=>
-          val src = e._1
+          val satId = e._1
           val hs = e._2
 
           if (serializeAll || hs.hasChanged) {
             w.writeObject { w => // per satellite
-              w.writeStringMember(SOURCE, src) // the reporting satellite
+              w.writeIntMember(SAT_ID, satId)
               w.writeDateTimeMember(DATE, hs.getLastDate)
               w.writeIntMember(N_TOTAL, hs.getLastUpdateCount)
               w.writeIntMember(N_GOOD, hs.getLastGoodCount)
@@ -206,11 +196,11 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
   }
 
   def uiCesiumGoesrResources: Seq[Text.TypedTag[String]] = {
-    Seq( extModule("ui_cesium_goesr.js"))
+    Seq( extModule(jsModule))
   }
 
   def uiGoesrWindow(title: String="GOES-R Satellites"): Text.TypedTag[String] = {
-    uiWindow(title,"goesr", "satellite-icon.svg")(
+    uiWindow(title,"goesr", icon)(
       cesiumLayerPanel("goesr", "main.toggleShowGoesr(event)"),
       uiPanel("satellites", true)(
         uiList("goesr.satellites", 3, "main.selectGoesrSatellite(event)")
@@ -233,7 +223,7 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
   }
 
   def uiGoesrIcon: Text.TypedTag[String] = {
-    uiIcon("satellite-icon.svg", "main.toggleWindow(event,'goesr')", "goesr_icon")
+    uiIcon(icon, "main.toggleWindow(event,'goesr')", "goesr_icon")
   }
 
   def uiGoesrConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {

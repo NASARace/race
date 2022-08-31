@@ -174,6 +174,8 @@ object FileUtils {
     None
   }
 
+  def existingDir(dir: File): Option[File] = if (dir.isDirectory) Some(dir) else None
+
   def isExistingNonEmptyFile(pathName: String) = existingNonEmptyFile(pathName).isDefined
 
   def existingNonEmptyFile(file: File, ext: String = null): Option[File] = {
@@ -203,6 +205,8 @@ object FileUtils {
     if (i < 0) "" else fn.substring(i+1).toLowerCase
   }
   def getExtension (file: File): String = getExtension(file.getName)
+
+  def hasAnyExtension( f: File, exts: String*): Boolean = exts.contains(getExtension(f))
 
   def hasExtension (fn: String): Boolean = fn.lastIndexOf('.') >= 0
   def hasExtension (file: File): Boolean = hasExtension(file.getName)

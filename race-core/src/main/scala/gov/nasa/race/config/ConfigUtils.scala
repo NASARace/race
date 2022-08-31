@@ -19,16 +19,17 @@ package gov.nasa.race.config
 
 import java.awt.{Color, Font}
 import java.io.File
-
 import com.typesafe.config._
 import gov.nasa.race.core.RaceException
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.uom.{Angle, DateTime, Length, Speed}
+import gov.nasa.race.uom.{Angle, DateTime, Length, Speed, Time}
 import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Length._
 import gov.nasa.race.uom.Speed._
+import gov.nasa.race.uom.Time.{Milliseconds, UndefinedTime}
 import gov.nasa.race.util._
 
+import java.util
 import scala.jdk.CollectionConverters._
 import scala.concurrent.duration._
 
@@ -163,15 +164,48 @@ object ConfigUtils {
     def getDoubleOrElse(key: String, fallback: Double) = getWithFallback(key,fallback)( conf.getDouble(key) )
     def getOptionalDouble(key: String): Option[Double] = getOptional(key)( conf.getDouble(key) )
 
-    def getDateTimeOrElse(key: String, fallback: DateTime) = getWithFallback(key,fallback)( DateTime.parseYMDT(conf.getString(key)) )
+    def getDoubleSeq (key: String): Seq[Double] = {
+      try {
+        Seq.from(conf.getDoubleList(key).asScala).map(_.doubleValue)
+      } catch {
+        case _: ConfigException.Missing => Seq.empty[Double]
+      }
+    }
+    def getDoubleArray (key: String): Array[Double] = getDoubleSeq(key).toArray[Double]
+
+    def getGeoPositionSeq (key: String): Seq[GeoPosition] = {
+      try {
+        Seq.from(conf.getList(key).asScala).map { cv =>
+          val ds = cv.unwrapped().asInstanceOf[util.ArrayList[Number]]
+          val lat = ds.get(0).doubleValue()
+          val lon = ds.get(1).doubleValue()
+          val alt = if (ds.size() > 2) ds.get(2).doubleValue() else 0.0
+          GeoPosition.fromDegreesAndMeters(lat,lon,alt)
+        }
+      } catch {
+        case _: ConfigException.Missing => Seq.empty[GeoPosition]
+      }
+    }
+    def getGeoPositionArray (key: String): Array[GeoPosition] = getGeoPositionSeq(key).toArray
+
+    def getDateTimeOrElse(key: String, fallback: DateTime) = getWithFallback(key,fallback)( DateTime.parseWithOptionalTime(conf.getString(key)) )
     def getOptionalDateTime(key: String): DateTime = {
       try {
         val s = conf.getString(key)
-        DateTime.parseYMDT(s)
+        DateTime.parseWithOptionalTime(s)
       } catch {
         case _: ConfigException.Missing => DateTime.UndefinedDateTime
       }
     }
+
+    def getDurationTimeOrElse (key: String, fallback: Time): Time = {
+      getOptionalFiniteDuration(key) match {
+        case Some(dur) => Milliseconds(dur.toMillis)
+        case None => fallback
+      }
+    }
+    def getOptionalDurationTime (key: String): Time = getDurationTimeOrElse(key, UndefinedTime)
+
 
     def getBooleanOrElse(key: String, fallback: Boolean) = getWithFallback(key,fallback)(conf.getBoolean(key))
     def getOptionalBoolean(key: String): Option[Boolean] = getOptional(key)( conf.getBoolean(key) )
@@ -188,6 +222,15 @@ object ConfigUtils {
     def getIntOrElse(key: String, fallback: Int) = getWithFallback(key,fallback)(conf.getInt(key))
     def getOptionalInt(key: String): Option[Int] = getOptional(key)( conf.getInt(key) )
 
+    def getIntSeq (key: String): Seq[Int] = {
+      try {
+        Seq.from(conf.getIntList(key).asScala).map(_.intValue)
+      } catch {
+        case _: ConfigException.Missing => Seq.empty[Int]
+      }
+    }
+    def getIntArray (key: String): Array[Int] = getIntSeq(key).toArray[Int]
+
     def getOverridableIntOrElse (key: String, fallback: Int): Int = {
       val sysProp = System.getProperty(key.replace('-', '.'))
       if (sysProp != null) {
@@ -199,6 +242,15 @@ object ConfigUtils {
 
     def getLongOrElse(key: String, fallback: Long) = getWithFallback(key,fallback)(conf.getLong(key))
     def getOptionalLong(key: String): Option[Long] = getOptional(key)( conf.getLong(key) )
+
+    def getLongSeq (key: String): Seq[Long] = {
+      try {
+        Seq.from(conf.getLongList(key).asScala).map(_.longValue)
+      } catch {
+        case _: ConfigException.Missing => Seq.empty[Long]
+      }
+    }
+    def getLongArray (key: String): Array[Long] = getLongSeq(key).toArray[Long]
 
     def getStringSeq (key: String): Seq[String] = {
       try {
@@ -389,6 +441,22 @@ object ConfigUtils {
     def getFiniteDuration (key: String): FiniteDuration = conf.getDuration(key).toMillis.milliseconds
     def getFiniteDurationOrElse (key: String, fallback: FiniteDuration): FiniteDuration = getWithFallback(key,fallback)(getFiniteDuration(key))
     def getOptionalFiniteDuration (key: String): Option[FiniteDuration] = getOptional(key)( getFiniteDuration(key) )
+
+    def getFiniteDurationSeq (key: String): Seq[FiniteDuration] = {
+      try {
+        conf.getDurationList(key).asScala.map( _.toMillis.milliseconds).toSeq
+      } catch {
+        case _: ConfigException.Missing => Seq.empty[FiniteDuration]
+      }
+    }
+
+    def getTimeSeq (key: String): Seq[Time] = {
+      try {
+        conf.getDurationList(key).asScala.map( d=> Milliseconds(d.toMillis)).toSeq
+      } catch {
+        case _: ConfigException.Missing => Seq.empty[Time]
+      }
+    }
 
     def getOverridableDurationOrElse (key: String, fallback: FiniteDuration): FiniteDuration = {
       val sysProp = System.getProperty(key.replace('-', '.'))

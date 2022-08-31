@@ -19,6 +19,7 @@ package gov.nasa.race.geo
 
 import gov.nasa.race.test.RaceSpec
 import gov.nasa.race.uom.Angle._
+import gov.nasa.race.uom.Length.Meters
 import org.scalacheck._
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -66,6 +67,32 @@ class GreatCircleSpec extends AnyFlatSpec with RaceSpec {
       //println(s"p1=$p1, p2=$p2")
       (GreatCircle.finalBearing(p1, p2) - (GreatCircle.initialBearing(p2, p1) - Degrees(180))).toNormalizedDegrees should be(0.0 +- 0.5)
     }
+  }
+
+  "along track distances" should "add up" in {
+    val p1 = GeoPosition.fromDegrees(50,-120)
+    val p2 = GeoPosition.fromDegrees(30, -120)
+    val p = GeoPosition.fromDegrees(38,-110)
+
+    val d = GreatCircle.distance2D(p1,p2)
+    val d1 = GreatCircle.alongTrackDistance(p, p1, p2)
+    val d2 = GreatCircle.alongTrackDistance(p, p2, p1)
+
+    val dsum = d1 + d2
+    val e = (d - dsum).abs
+    println(s"adding along-track distances: ${d1.toRoundedMeters} + ${d2.toRoundedMeters} = ${d.toRoundedMeters} ? ${dsum.toRoundedMeters} -> error = $e")
+    assert( e < Meters(1))
+  }
+
+  "cross track bearing" should "match known value" in {
+    val p1 = GeoPosition.fromDegrees(10,-120)
+    val p2 = GeoPosition.fromDegrees(-10, -120)
+    val p = GeoPosition.fromDegrees(0,-110)
+
+    val b = GreatCircle.crossTrackBearing(p, p1, p2)
+    val errDeg = Math.abs(b.toDegrees - 90.0)
+    println(s"cross track bearing from GC $p1->$p2 to $p = ${b.toDegrees} -> error = $errDeg")
+    assert( errDeg < 0.00001)
   }
 }
 
