@@ -68,6 +68,9 @@ trait CachedFileAssetRoute extends RaceRouteInfo {
   protected var cachedFiles: Map[String, (CachedByteFile,CfaResolver)] = Map.empty
   protected var cachedResources: Map[String,(Array[Byte],CfaResolver)] = Map.empty
 
+  //--- initialization
+  config.getOptionalString("resource-map").foreach( addResourceFileAssetResolverMap(_,false))
+
   // default is a catch-all resolver that only looks at resources for all our RaceRouteInfo mixins
 
   protected def getThisResolver: CfaResolver = new CfaResolver(StringUtils.AnyRE,true, selfResolveDirs, selfResolveResources)
@@ -91,18 +94,26 @@ trait CachedFileAssetRoute extends RaceRouteInfo {
     }
   }
 
-  def addResourceFileAssetResolvers (dir: String)(fnames: String*): Unit = {
-    fnames.foreach( fn=>addFileAssetResolver(new Regex(fn), this.getClass, false, Some(dir)))
+  /**
+   * support for loading CfaResolvers from external file list
+   * this is for debugging/development purposes in external apps that don't know if/where RACE files are
+   */
+  def addResourceFileAssetResolverMap (pathName: String, isStatic: Boolean): Unit = {
+    val mapFile = new File(pathName)
+    if (mapFile.isFile) {
+      FileUtils.fileContentsAsLineArray(mapFile).foreach { pn=>
+        val f = new File(pn)
+        if (f.isFile) {
+          val dirName = f.getParent
+          val fName = f.getName
+          addFileAssetResolver(new Regex(fName), this.getClass, isStatic, Some(dirName))
+        }
+      }
+    }
   }
 
-  /**
-   * resolve file assets from the src/main/resources/... dir instead of jars, which is useful for development
-   */
-  def addResourceFileAssetResolvers (): Unit = {
-    addResourceFileAssetResolvers("race-client-ui/src/main/resources/gov/nasa/race/ui")(
-      "ui.css", "ui_theme_dark.css", "ui.js", "ui_data.js", "ui_util.js"
-    )
-  }
+  def loadFromFileList(pathName: String): Unit = {}
+
 
   def clearCachedFileAsset (fileName: String): Unit = {
     cachedFiles = cachedFiles - fileName
@@ -169,4 +180,7 @@ trait CachedFileAssetRoute extends RaceRouteInfo {
       case None => complete(StatusCodes.NotFound, key)
     }
   }
+
+
+
 }

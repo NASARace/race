@@ -244,10 +244,14 @@ function updateNow() {
 
     while (upcoming.length > 0 && upcoming[0].lastDate < now) {
         let past = upcoming.shift();
-        let se = satelliteEntries.find( e=> e.satId == past.satId);
+        let se = satEntry(past.satId);
         if (se) {
-            se.next = upcoming.find( ops=> se.satId == ops.satId);
-            ui.updateListItem(satelliteView, se);
+            se.prev = past;
+            let nextUpcoming = upcoming.find( ops=> se.satId == ops.satId);
+            if (nextUpcoming) {
+                se.next = nextUpcoming.lastDate;
+                ui.updateListItem(satelliteView, se);
+            }
         }
     }
 }
@@ -522,11 +526,15 @@ function getPixelColor(pixel, refDate) {
 }
 
 function clearPrimitives() {
-    if (pixelPrimitive) uiCesium.removePrimitive(pixelPrimitive);
-    pixelPrimitive = undefined;
+    if  (pixelPrimitive || tempPrimitive){
+        if (pixelPrimitive) uiCesium.removePrimitive(pixelPrimitive);
+        pixelPrimitive = undefined;
+    
+        if (tempPrimitive) uiCesium.removePrimitive(tempPrimitive);
+        tempPrimitive = undefined;
 
-    if (tempPrimitive) uiCesium.removePrimitive(tempPrimitive);
-    tempPrimitive = undefined;
+        uiCesium.requestRender();
+    }
 }
 
 function showPrimitives(isVisible) {

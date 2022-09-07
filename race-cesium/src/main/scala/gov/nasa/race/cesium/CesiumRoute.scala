@@ -85,12 +85,6 @@ trait CesiumRoute
   // (if the layer has a spec that prevents anything but manual modification on the client side)
   val imageryParams = ImageryLayer.getDefaultImageryParams(config.getOptionalConfig("imagery-params"))
 
-  //--- dev & debugging
-  override def addResourceFileAssetResolvers(): Unit = {
-    super.addResourceFileAssetResolvers()
-    addResourceFileAssetResolvers("race-cesium/src/main/resources/gov/nasa/race/cesium")("ui_cesium.js")
-  }
-
   //--- cesium related routes
 
   override def route: Route = uiCesiumRoute ~ super.route
@@ -179,6 +173,7 @@ trait CesiumRoute
   def basicCesiumConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
     val wsToken = registerTokenForClient(remoteAddr)
     val terrain = if (proxyTerrain) CesiumRoute.terrainPrefix else terrainProvider
+    // new Cesium.CesiumTerrainProvider({ url: Cesium.IonResource.fromAssetId(1),}),
 
     s"""
 export const wsUrl = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';

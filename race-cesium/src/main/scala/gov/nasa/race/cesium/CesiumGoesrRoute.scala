@@ -55,12 +55,6 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
   val goesrSatellites = config.getConfigArray("goes-r.satellites").map(c=> new SatelliteInfo(c))
   val goesrAssets = getSymbolicAssetMap("goesr.assets", config, Seq(("fire","fire.png")))
 
-  // dev & debugging
-  override def addResourceFileAssetResolvers(): Unit = {
-    super.addResourceFileAssetResolvers()
-    addResourceFileAssetResolvers("race-cesium/src/main/resources/gov/nasa/race/cesium")("ui_cesium_goesr.js")
-  }
-
   //--- the (gridded) data we send
 
   val goesrHotspots = mutable.Map.empty[Int, HotspotMap[GoesRHotspot]] // satId -> HotspotMap
@@ -253,6 +247,4 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
   }
 }
 
-class CesiumGoesrApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumGoesrRoute {
-  //addResourceFileAssetResolvers()    // for dev&debugging to enable reloading apps - comment out in production
-}
+class CesiumGoesrApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumGoesrRoute

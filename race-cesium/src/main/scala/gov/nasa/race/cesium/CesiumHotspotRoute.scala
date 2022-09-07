@@ -79,11 +79,6 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
     FrpThreshold( c.getInt("threshold"), c.getString("color"))
   }.getOrElse(defaultFrpThreshold)
 
-  // dev & debugging
-  override def addResourceFileAssetResolvers(): Unit = {
-    super.addResourceFileAssetResolvers()
-    addResourceFileAssetResolvers("race-cesium/src/main/resources/gov/nasa/race/cesium")("ui_cesium_hotspot.js")
-  }
 
   def getHotspotTimeSteps(): Seq[HotspotTimeStep] = {
     val cfgs = config.getConfigSeq("hotspot.time-steps")
@@ -209,6 +204,4 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
 /**
   * simple service to show hotspots
   */
-class CesiumHotspotApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumHotspotRoute  {
-  addResourceFileAssetResolvers()    // for dev&debugging to enable reloading apps - comment out in production
-}
+class CesiumHotspotApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumHotspotRoute

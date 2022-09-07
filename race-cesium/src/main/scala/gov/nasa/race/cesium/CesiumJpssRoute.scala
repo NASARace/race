@@ -69,13 +69,6 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
 
   val jpssAssets = getSymbolicAssetMap("jpss.assets", config, Seq(("fire","fire.png")))
 
-  // dev & debugging
-  override def addResourceFileAssetResolvers(): Unit = {
-    super.addResourceFileAssetResolvers()
-    addResourceFileAssetResolvers("race-cesium/src/main/resources/gov/nasa/race/cesium")(jsModule)
-    addResourceFileAssetResolvers("race-cesium/src/main/resources/gov/nasa/race/cesium")(icon)
-  }
-
   private val writer = new JsonWriter()
 
   //--- the satellites we expect (from config)
@@ -302,6 +295,4 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
 /**
   * simple service to show JPSS hotspots
   */
-class CesiumJpssApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumJpssRoute {
-  addResourceFileAssetResolvers()    // for dev&debugging to enable reloading apps - comment out in production
-}
+class CesiumJpssApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumJpssRoute
