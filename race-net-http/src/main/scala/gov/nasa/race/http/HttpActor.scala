@@ -33,7 +33,7 @@ import scala.concurrent.duration.DurationInt
  */
 trait HttpActor extends RaceActor {
 
-  val maxRequestSize = config.getIntOrElse("max-request-size", 1024*1000)
+  val maxRequestSize = config.getIntOrElse("max-request-size", 5*1024*1000)
   val maxRequestTimeout = config.getFiniteDurationOrElse("max-request-timeout", 15.seconds)
 
   val maxConnectingTimeout = config.getFiniteDurationOrElse("max-connecting-timeout", 15.seconds)

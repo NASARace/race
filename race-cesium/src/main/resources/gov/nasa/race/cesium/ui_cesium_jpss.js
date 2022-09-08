@@ -246,7 +246,7 @@ function updateNow() {
         let past = upcoming.shift();
         let se = satEntry(past.satId);
         if (se) {
-            se.prev = past;
+            se.prev = past.lastDate;
             let nextUpcoming = upcoming.find( ops=> se.satId == ops.satId);
             if (nextUpcoming) {
                 se.next = nextUpcoming.lastDate;
