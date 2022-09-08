@@ -79,7 +79,7 @@ class PastEntry {
         
                 let s = util.fmax_4.format(glat) + ',' + util.fmax_4.format(glon);
                 let id = util.intern(s); // we don't want gazillions of duplicate strings
-        
+
                 pix.glat = glat;
                 pix.glon = glon;
                 pix.id = id;
@@ -195,7 +195,7 @@ function initSliders() {
     ui.setSliderValue(e, history);
 
     e = ui.getSlider('jpss.resolution');
-    ui.setSliderRange(e, 0.0000, 0.003, 0.0001, util.fmax_4);
+    ui.setSliderRange(e, 0.0000, 0.01, 0.0005, util.fmax_4);
     ui.setSliderValue(e, resolution);
 
     e = ui.getSlider('jpss.pixsize');
@@ -691,7 +691,7 @@ ui.exportToMain(function clearJpssArea(event) {
 ui.exportToMain(function setJpssResolution(event) {
     let v = ui.getSliderValue(event.target);
     resolution = v;
-    pastEntries.forEach(e => e.setResulotion(resolution));
+    pastEntries.forEach(e => e.setPixelGrid(resolution));
 
     if (pixelPrimitive) {
         showPixels(ui.getSelectedListItemIndex(pastView));
@@ -699,9 +699,17 @@ ui.exportToMain(function setJpssResolution(event) {
 });
 
 ui.exportToMain(function setJpssTempThreshold(event) {
+    tempThreshold = ui.getSliderValue(event.target);
+    if (pixelPrimitive) {
+        showPixels(ui.getSelectedListItemIndex(pastView));
+    }
 });
 
 ui.exportToMain(function setJpssFrpThreshold(event) {
+    frpThreshold = ui.getSliderValue(event.target);
+    if (pixelPrimitive) {
+        showPixels(ui.getSelectedListItemIndex(pastView));
+    }
 });
 
 ui.exportToMain(function setJpssPixelSize(event) {

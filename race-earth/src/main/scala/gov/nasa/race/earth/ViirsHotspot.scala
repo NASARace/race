@@ -137,7 +137,7 @@ object ViirsHotspots {
 
   def getOverpass (d: DateTime, start: DateTime, end: DateTime, overpasses: Seq[DateTime]): DateTime = {
     if (d >= start && d <= end) {
-      overpasses.foreach { od => if (od > d) return od }
+      overpasses.foreach { od => if (od >= d) return od }
     }
     d
   }

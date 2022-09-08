@@ -202,6 +202,10 @@ object ConfigVault {
     }
   }
 
+  def getInt(key: String): Int = getString(key).toInt
+  def getLong(key: String): Long = getString(key).toLong
+  def getDouble(key: String): Double = getString(key).toDouble
+
   @inline private def _getValue (cnf: Config, k: String): String = {
     cipher match {
       case Some(c) => CryptUtils.decrypt64(cnf.getString(Root + k), c)

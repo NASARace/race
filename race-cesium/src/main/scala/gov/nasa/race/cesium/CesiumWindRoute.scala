@@ -45,7 +45,7 @@ import scala.collection.mutable.SeqMap
   * Ultimately, this structure will be computed by this route and transmitted as a JSON object in order to remove
   * client side netcdfjs dependencies and offload client computation
   */
-trait CesiumWindRoute extends QueryProxyRoute with FSCachedProxyRoute with CesiumRoute with PushWSRaceRoute with CachedFileAssetRoute {
+trait CesiumWindRoute extends CesiumRoute with QueryProxyRoute with FSCachedProxyRoute with PushWSRaceRoute with CachedFileAssetRoute {
 
   //--- init wind fields
 
@@ -105,9 +105,9 @@ trait CesiumWindRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesiu
             }
           }
         } ~
-        pathPrefix("wind" ~ Slash) { // this is the client side shader code, not the dynamic wind data
+        pathPrefix("wind-particles" ~ Slash) { // this is the client side shader code, not the dynamic wind data
           extractUnmatchedPath { p =>
-            val pathName = s"wind/$p"
+            val pathName = s"wind-particles/$p"
             if (pathName.endsWith(".js")) {
               complete( ResponseData.js( getFileAssetContent(pathName)))
             } else if (pathName.endsWith(".frag") || pathName.endsWith(".vert")) {
@@ -158,11 +158,11 @@ trait CesiumWindRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesiu
   )
 
   override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ Seq(
-    extModule("wind/windUtils.js"),
-    extModule("wind/particleSystem.js"),
-    extModule("wind/particlesComputing.js"),
-    extModule("wind/particlesRendering.js"),
-    extModule("wind/customPrimitive.js"),
+    extModule("wind-particles/windUtils.js"),
+    extModule("wind-particles/particleSystem.js"),
+    extModule("wind-particles/particlesComputing.js"),
+    extModule("wind-particles/particlesRendering.js"),
+    extModule("wind-particles/customPrimitive.js"),
     extModule("ui_cesium_wind.js")
   )
 

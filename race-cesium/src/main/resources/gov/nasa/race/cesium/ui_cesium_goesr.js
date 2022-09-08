@@ -118,6 +118,7 @@ class HotspotEntry {
 
         this.asset = new Cesium.Entity({
             id: this.id,
+            show: this.show,
             position: pos,
             point: {
                 pixelSize: config.goesr.pointSize,
@@ -147,6 +148,7 @@ class HotspotEntry {
     }
 
     show(cond) {
+        this.show = cond;
         this.asset.show = cond;
     }
 }

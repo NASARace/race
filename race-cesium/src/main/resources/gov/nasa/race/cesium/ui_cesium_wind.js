@@ -4,8 +4,8 @@ import * as util from "./ui_util.js";
 import { SkipList } from "./ui_data.js";
 import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
-import * as windUtils from "./wind/windUtils.js";
-import { ParticleSystem } from "./wind/particleSystem.js"
+import * as windUtils from "./wind-particles/windUtils.js";
+import { ParticleSystem } from "./wind-particles/particleSystem.js"
 
 var viewerParameters = {
     lonRange: new Cesium.Cartesian2(),

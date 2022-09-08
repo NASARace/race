@@ -195,13 +195,13 @@ function createPixelAssets(pixels) {
             })
             geoms.push(geom);
 
-            if (clr === timeSteps[0].color && pix.temp > tempThreshold.kelvin) {
+            if (clr === timeSteps[0].color && pix.temp > tempThreshold.value) {
                 let point = {
                     position: Cesium.Cartographic.fromDegrees(lon, lat),
                     pixelSize: 3,
                     color: tempThreshold.color
                 };
-                if (pix.frp > frpThreshold.megawatts) {
+                if (pix.frp > frpThreshold.value) {
                     point.outlineWidth = 1.0;
                     point.outlineColor = frpThreshold.color;
                 }
@@ -251,12 +251,15 @@ function createPixelAssets(pixels) {
 const pixGranularity = Cesium.Math.toRadians(5);
 
 function getPixelColor(pixel, refDate) {
-    let dt = (refDate - pixel.date) / 3600000; // in hours
+    let dt = util.hoursFromMillis(refDate - pixel.date);
     for (var i = 0; i < timeSteps.length; i++) {
         let ts = timeSteps[i];
-        if (dt < ts.hours) return ts.color;
+        if (dt < ts.value) {
+            return ts.color;
+        }
     }
-    return timeSteps[timeSteps.length - 1].color; // TODO - shall we use the last as the catch-all?
+
+    return timeSteps[timeSteps.length - 1].color;
 }
 
 function clearPrimitives() {

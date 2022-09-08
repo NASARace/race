@@ -1,3 +1,4 @@
+
 export function loadText(filePath) {
     var request = new XMLHttpRequest();
     request.open('GET', filePath, false);

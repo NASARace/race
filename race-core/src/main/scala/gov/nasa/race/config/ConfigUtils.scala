@@ -96,6 +96,10 @@ object ConfigUtils {
     def getVaultStringOrElse (key: String, defaultValue: String): String = ConfigVault.getStringOrElse(key,defaultValue)
     def getOptionalVaultString (key: String): Option[String] = ConfigVault.getOptionalString(key)
 
+    def getVaultInt (key: String): Int = ConfigVault.getInt(key)
+    def getVaultLong (key: String): Long = ConfigVault.getLong(key)
+    def getVaultDouble (key: String): Double = ConfigVault.getDouble(key)
+
     // getVaultableX are used to access config options that can have values referring to
     // vault entries (the values are strings consisting of a '??' marker followed by the
     // respective vault key name)
