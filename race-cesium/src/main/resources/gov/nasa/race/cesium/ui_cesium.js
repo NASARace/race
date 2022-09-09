@@ -642,6 +642,11 @@ export function initLayerPanel(wid, conf, showAction) {
     }
 }
 
+export function isLayerShowing(layerPath) {
+    let le = layerOrder.find( le=> le.id == layerPath)
+    return (le && le.show);
+}
+
 ui.exportToMain(function raiseModuleLayer(event){
     let le = ui.getSelectedListItem(layerOrderView);
     console.log("TBD raise layer: " + le);
@@ -744,6 +749,7 @@ export function pickSurfaceRectangle (callback) {
             // FIXME - we can do better than to convert back to where we came from. just rotate
             cartesian3ArrayFromRadiansRect(rect, poly);
         }
+        requestRender();
     }
 
     function onClick(event) {
@@ -763,6 +769,7 @@ export function pickSurfaceRectangle (callback) {
                     selectable: false
                 });
                 viewer.entities.add(asset);
+                requestRender();
 
                 registerMouseMoveHandler(onMouseMove);
 
@@ -778,6 +785,7 @@ export function pickSurfaceRectangle (callback) {
                 rect.north = Cesium.Math.toDegrees(rect.north);
 
                 callback(rect);
+                requestRender();
             }
         }
     }

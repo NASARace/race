@@ -115,10 +115,11 @@ class HotspotEntry {
         let lon = this.hotspot.history[0].lon;
         let pos = Cesium.Cartesian3.fromDegrees(lon, lat);
         let clr = this.color();
+        let isShowing = this.show && uiCesium.isLayerShowing(config.goesr.layer.name);
 
         this.asset = new Cesium.Entity({
             id: this.id,
-            show: this.show,
+            show: isShowing,
             position: pos,
             point: {
                 pixelSize: config.goesr.pointSize,
@@ -370,7 +371,9 @@ function toggleShowSatellite(event) {
 }
 
 function showGoesr(cond) {
+    // we don't want to change the hotspotEntry show, just make the assets disappear
     hotspots.forEach(he => he.asset.show = cond);
+    uiCesium.requestRender();
 }
 
 ui.exportToMain(function selectGoesrSatellite(event) {});

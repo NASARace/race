@@ -35,8 +35,8 @@ var frpThresholdColor = Cesium.Color.BLACK;
 var zoomHeight = 20000;
 
 // the Cesium assets to display fire pixels
-var pixelPrimitive = undefined;
-var tempPrimitive = undefined;
+var pixelPrimitive = undefined;  // the surface footprint of fire pixels
+var tempPrimitive = undefined;   // the temp/frp points
 
 var utcClock = undefined;
 var now = 0;
@@ -678,7 +678,9 @@ ui.exportToMain(function pickJpssArea(event) {
             selectable: false
         });
         uiCesium.addEntity(areaAsset);
-        // TODO - filter overpasses, set area hotspots
+
+        // TODO - filter overpasses
+        updateHotspots();
     });
 });
 
@@ -700,14 +702,14 @@ ui.exportToMain(function setJpssResolution(event) {
 
 ui.exportToMain(function setJpssTempThreshold(event) {
     tempThreshold = ui.getSliderValue(event.target);
-    if (pixelPrimitive) {
+    if (tempPrimitive) {
         showPixels(ui.getSelectedListItemIndex(pastView));
     }
 });
 
 ui.exportToMain(function setJpssFrpThreshold(event) {
     frpThreshold = ui.getSliderValue(event.target);
-    if (pixelPrimitive) {
+    if (tempPrimitive) {
         showPixels(ui.getSelectedListItemIndex(pastView));
     }
 });
@@ -724,4 +726,8 @@ ui.exportToMain(function setJpssPixelSize(event) {
 });
 
 ui.exportToMain(function setJpssHistory(event) {
+    history = ui.getSliderValue(event.target);
+    if (pixelPrimitive && showPastHistory) {
+        showPixels(ui.getSelectedListItemIndex(pastView));
+    }
 });
