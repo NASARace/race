@@ -255,13 +255,13 @@ function updateNow() {
             let nextUpcoming = upcoming.find( ops=> se.satId == ops.satId);
             if (nextUpcoming) {
                 se.next = nextUpcoming.lastDate;
+                ui.updateListItem(satelliteView, se);
             }
         }
         nShift ++;
     }
 
     if (nShift > 0) {
-        ui.updateListItem(satelliteView, se);
         updateUpcoming();
     }
 }

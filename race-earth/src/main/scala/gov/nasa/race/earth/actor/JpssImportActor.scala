@@ -228,8 +228,8 @@ class JpssImportActor(val config: Config) extends PublishingRaceActor with HttpA
 
   def scheduleNextUpdateRequest(): Unit = {
     if (requestSchedule.nonEmpty) {
-      val url = if (lastRequest.isDefined) updateUrl else firstUrl
       val nextRequestDate = requestSchedule.dequeue()
+      val url = if (lastRequest.isDefined) updateUrl else firstUrl
       val t = nextRequestDate.timeFromNow
 
       if (t > Seconds(60)) {
