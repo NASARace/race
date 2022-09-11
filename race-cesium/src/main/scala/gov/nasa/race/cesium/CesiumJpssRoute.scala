@@ -173,7 +173,7 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
   def jpssConfig(requestUri: Uri, remoteAddr: InetSocketAddress): String = {
     val cfg = config.getConfig("jpss")
     val latLonResolution = cfg.getDoubleOrElse("grid-resolution", 0.0) // 0.0001 is about 10m in conus
-    val pixelSize = cfg.getIntOrElse("pixel-size", 5)
+    val pixelSize = cfg.getIntOrElse("pixel-size", 3)
     val timeSteps = getHotspotTimeSteps(cfg)
     val tempThreshold = getTempThreshold(cfg)
     val frpThreshold = getFrpThreshold(cfg)

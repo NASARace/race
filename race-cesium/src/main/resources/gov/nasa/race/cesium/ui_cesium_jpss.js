@@ -244,6 +244,7 @@ function satName(satId) {
 }
 
 function updateNow() {
+    let nShift = 0;
     now = ui.getClockEpochMillis(utcClock);
 
     while (upcoming.length > 0 && upcoming[0].lastDate < now) {
@@ -254,9 +255,14 @@ function updateNow() {
             let nextUpcoming = upcoming.find( ops=> se.satId == ops.satId);
             if (nextUpcoming) {
                 se.next = nextUpcoming.lastDate;
-                ui.updateListItem(satelliteView, se);
             }
         }
+        nShift ++;
+    }
+
+    if (nShift > 0) {
+        ui.updateListItem(satelliteView, se);
+        updateUpcoming();
     }
 }
 
@@ -387,6 +393,7 @@ function handleHotspotMessage(hs) {
             ui.updateListItem(satelliteView, se);
         }
     }
+    // upcoming is updated by timer
     updatePast();
     updateHotspots();
 
