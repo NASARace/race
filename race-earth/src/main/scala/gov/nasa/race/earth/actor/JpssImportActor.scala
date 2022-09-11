@@ -282,11 +282,6 @@ class JpssImportActor(val config: Config) extends PublishingRaceActor with HttpA
       p0 <- trj.getFirst;
       p1 <- trj.getLast
     ) yield GreatCircle.crossTrackPoint(p, p0.position, p1.position)
-
-//    for (
-//      trj <- trajectories.find( t=> d.isWithin(t.getFirstDate, t.getLastDate));
-//      tp <- trj.find( p=> p.date == d)
-//    ) yield tp.position
   }
 
   def requestDataSet(uri: String, requestDate: DateTime): Unit = {

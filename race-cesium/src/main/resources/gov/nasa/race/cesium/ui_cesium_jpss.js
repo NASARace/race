@@ -22,6 +22,7 @@ var hotspotView = undefined;
 
 var areaAsset = undefined;
 var area = undefined;  // bounds as Rectangle
+var areaInfoLabel = undefined;
 
 // those will be initialized by config and can be changed interactively
 var history = 7; // in days
@@ -109,6 +110,9 @@ ui.registerLoadFunction(function initialize() {
     upcomingView = initUpcomingView();
     pastView = initPastView();
     hotspotView = initHotspotView();
+
+    areaInfoLabel = ui.getLabel("jpss.bounds-info");
+    areaInfoLabel.classList.add( "align_right");
 
     ws.addWsHandler(config.wsUrl, handleWsJpssMessages);
 
@@ -203,11 +207,11 @@ function initSliders() {
     ui.setSliderValue(e, pixelSize);
 
     e = ui.getSlider('jpss.temp');
-    ui.setSliderRange(e, 150, 400, 10, util.fmax_0);
+    ui.setSliderRange(e, 100, 400, 10, util.fmax_0);
     ui.setSliderValue(e, tempThreshold);
 
     e = ui.getSlider('jpss.frp');
-    ui.setSliderRange(e, 5, 50, 5, util.fmax_0);
+    ui.setSliderRange(e, 5, 200, 5, util.fmax_0);
     ui.setSliderValue(e, frpThreshold);
 }
 
@@ -269,6 +273,10 @@ function hotspotClassifier (he) {
     else return "";
 }
 
+function isInArea (lat,lon) {
+    return !area || uiCesium.withinRect(lat, lon, area);
+}
+
 function updateUpcoming() {
     let candidates = upcoming;
     candidates = candidates.filter( op=> isSatShowing(op.satId));
@@ -299,7 +307,7 @@ function updateHotspots() {
             let hs = e.hotspots;
             for (var j = 0; j < hs.length; j++) {
                 let h = hs[j];
-                if (!area || uiCesium.withinRect(h.lat, h.lon, area)){
+                if (isInArea(h.lat, h.lon)){
                     candidates.push(h);
                 }
             }
@@ -443,20 +451,25 @@ function createPixelAssets(pixels) {
         }
 
         if (clr) {
-            let geom = new Cesium.GeometryInstance({
-                geometry: new Cesium.PolygonGeometry({
-                    polygonHierarchy: new Cesium.PolygonHierarchy(pix.xyzBounds),
-                    //vertexFormat: Cesium.VertexFormat.POSITION_ONLY,
-                    vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT
-                    //perPositionHeight: true
-                }),
-                attributes: {
-                    color: clrAttr
-                }
-            })
-            geoms.push(geom);
+            let isLastOverpass = (clr === timeSteps[0].color);
 
-            if (clr === timeSteps[0].color && pix.temp >= tempThreshold) {
+            // only show footprints for last hotspots or selected area
+            if (isLastOverpass || isInArea(pix.lat, pix.lon)) {
+                let geom = new Cesium.GeometryInstance({
+                    geometry: new Cesium.PolygonGeometry({
+                        polygonHierarchy: new Cesium.PolygonHierarchy(pix.xyzBounds),
+                        //vertexFormat: Cesium.VertexFormat.POSITION_ONLY,
+                        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT
+                        //perPositionHeight: true
+                    }),
+                    attributes: {
+                        color: clrAttr
+                    }
+                })
+                geoms.push(geom);
+            }
+
+            if (isLastOverpass && pix.temp >= tempThreshold) {
                 let point = {
                     position: pix.xyzPos,
                     pixelSize: pixelSize,
@@ -668,6 +681,14 @@ ui.exportToMain(function pickJpssArea(event) {
     uiCesium.pickSurfaceRectangle( rect => {
         area = rect;
         ui.setField("jpss.bounds", util.degreesToString([rect.west, rect.south, rect.east, rect.north], util.fmax_3));
+
+        let du = util.distanceBetweenGeoPos( rect.north,rect.west, rect.north,rect.east);
+        let dv = util.distanceBetweenGeoPos( rect.north,rect.west, rect.south,rect.west);
+        let sqAcres = util.fmax_0.format(util.squareMetersToAcres( du * dv));
+        let duMi = util.fmax_1.format(util.metersToUsMiles(du));
+        let dvMi = util.fmax_1.format(util.metersToUsMiles(dv));
+        ui.setLabelText(areaInfoLabel, `${duMi} × ${dvMi} miles, ${sqAcres} acres`);
+
         areaAsset = new Cesium.Entity({
             polyline: {
                 positions: uiCesium.cartesian3ArrayFromDegreesRect(rect),

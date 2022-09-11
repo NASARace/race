@@ -200,6 +200,14 @@ export function squareMetersToAcres(area) {
     return (area / 4046.8564224);
 }
 
+export function metersToUsMiles (len) {
+    return len / 1609.344;
+}
+
+export function metersToNauticalMiles (len) {
+    return len / 1852;
+}
+
 //--- date utilities
 
 export const MILLIS_IN_DAY = 86400000;
@@ -408,6 +416,7 @@ export function isString(v) {
 
 //--- geo & math
 
+const meanEarthRadius = 6371000.0; // in meters
 const e2_wgs84 = 0.00669437999014;
 const a_wgs84 = 6378137.0;
 const mrcNom_wgs84 = a_wgs84 * (1.0 - e2_wgs84);
@@ -422,10 +431,26 @@ export function toDegrees(rad) {
     return rad * rad2deg;
 }
 
+const sin = Math.sin;
+const cos = Math.cos;
+const tan = Math.tan;
+const sqrt = Math.sqrt;
+const atan2 = Math.atan2;
+
 export function sin2(rad) {
     let x = Math.sin(rad);
     return x * x;
 }
+export function cos2(rad) {
+    let x = Math.cos(rad);
+    return x * x;
+}
+export function tan2(rad) {
+    let x = Math.tan(rad);
+    return x * x;
+}
+
+
 
 export function meanRadiusOfCurvature(latDeg) {
     return mrcNom_wgs84 / Math.pow(1.0 - e2_wgs84 * sin2(toRadians(latDeg)), 1.5);
@@ -443,6 +468,23 @@ export function formatLatLon(latDeg, lonDeg, digits) {
     let fmt = f_N[digits];
     return fmt.format(latDeg) + " " + fmt.format(lonDeg);
 }
+
+// along great circle, in meters
+export function distanceBetweenGeoPos(lat1Deg,lon1Deg, lat2Deg,lon2Deg) {
+    let lat1 = toRadians(lat1Deg);
+    let lon1 = toRadians(lon1Deg);
+    let lat2 = toRadians(lat2Deg);
+    let lon2 = toRadians(lon2Deg);
+
+    let dLat = lat2 - lat1;
+    let dLon = lon2 - lon1;
+    let a = sin2(dLat/2.0) + cos(lat1) * cos(lat2) * sin2(dLon/2.0);
+    let c = 2.0 * atan2( sqrt(a), sqrt(1.0 - a));
+    return meanEarthRadius * c;
+}
+
+
+//--- misc
 
 export function countMatching(array, pred) {
     return array.reduce((acc, e) => pred(e) ? acc + 1 : acc, 0);

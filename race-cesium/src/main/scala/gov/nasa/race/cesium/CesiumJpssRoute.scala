@@ -123,7 +123,10 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
       ),
       uiPanel( "area")(
         uiRowContainer()(
-          uiTextInput("bounds","jpss.bounds", "main.setJpssArea(event)", "enter lat,lon bounds (WSEN order)", width="20rem"),
+          uiColumnContainer()(
+            uiTextInput("bounds","jpss.bounds", "main.setJpssArea(event)", "enter lat,lon bounds (WSEN order)", width="20rem"),
+            uiLabel("jpss.bounds-info")
+          ),
           uiButton("pick", "main.pickJpssArea()"),
           uiButton("clear", "main.clearJpssArea()")
         )
@@ -148,12 +151,16 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
         uiList("jpss.hotspots", 10, dblClickAction = "main.zoomToJpssPixel(event)")
       ),
       uiPanel("layer parameters", false)(
-        uiColumnContainer("align_right")(
-          uiSlider("history [d]", "jpss.history", "main.setJpssHistory(event)"),
-          uiSlider("temp threshold [K]", "jpss.temp", "main.setJpssTempThreshold(event)"),
-          uiSlider("FRP threshold [MW]", "jpss.frp", "main.setJpssFrpThreshold(event)"),
-          uiSlider("hotspot size [pix]", "jpss.pixsize", "main.setJpssPixelSize(event)"),
-          uiSlider("grid resolution [°]", "jpss.resolution", "main.setJpssResolution(event)")
+        uiRowContainer()(
+          uiColumnContainer("align_right")(
+            uiSlider("history [d]", "jpss.history", "main.setJpssHistory(event)"),
+            uiSlider("temp [K]", "jpss.temp", "main.setJpssTempThreshold(event)"),
+            uiSlider("FRP [MW]", "jpss.frp", "main.setJpssFrpThreshold(event)")
+          ),
+          uiColumnContainer("align_right")(
+            uiSlider("size [pix]", "jpss.pixsize", "main.setJpssPixelSize(event)"),
+            uiSlider("grid [°]", "jpss.resolution", "main.setJpssResolution(event)")
+          )
         )
       )
     )
