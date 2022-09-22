@@ -30,7 +30,6 @@ import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.SubscribingRaceActor
 
-import java.lang.Thread.sleep
 import scala.collection.mutable.{Map => MutMap}
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -93,11 +92,13 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
   case class WsConnectFailure (uri: String, cause: String)
   case class WsClosed (uri: String)
   case class WsCheckConnection (uri: String, dur: FiniteDuration)
+  case class WsProcessIncoming(msg: Message)
+  case class WsProcessIncomingData(data: Array[Byte], f: (Array[Byte])=>Unit)
 
   implicit val materializer: Materializer = Materializer.matFromSystem(context.system) // ?? do we want a shared materializer
-  implicit val ec = scala.concurrent.ExecutionContext.global
-
-  val http = Http(context.system)
+  private implicit val executionContext = scala.concurrent.ExecutionContext.global
+  protected val maxIncomingTimeout: FiniteDuration = config.getFiniteDurationOrElse("max-incoming-timeout", 5.seconds)
+  private val http = Http(context.system)
 
   // watch out - these are NOT thread safe
   protected var reader: WsMessageReader = createReader
@@ -135,8 +136,22 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
     }
   }
 
+  protected def withMessageData(msg: Message, timeout: FiniteDuration=maxIncomingTimeout)(f: Array[Byte]=>Unit): Unit = {
+        msg match {
+          case tm: TextMessage.Strict => f(tm.text.getBytes)
+          case bm: BinaryMessage.Strict => f(bm.data.toArray[Byte])
+          case sm: TextMessage.Streamed =>
+            sm.toStrict(maxIncomingTimeout)(materializer).onComplete {
+              case Success(strictMsg) => self ! WsProcessIncomingData(strictMsg.text.getBytes, f)
+              case Failure(x) => error(s"failed to retrieve incoming message: $x")
+            }
+          case m => warning(s"unsupported message type: $m")
+        }
+  }
+
   /**
     * override if messages should be filtered or translated
+    * NOTE - this is not executed in the actor thread, beware of race conditions. Use SyncWSAdapterActor if there might be contention
     */
   protected def processIncomingMessage (msg: Message): Unit = {
     info(s"received incoming message: $msg")
@@ -164,10 +179,10 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
   }
 
   //--- connection/disconnection notifications - override in subclasses
-  def onConnect(): Unit = {}
-  def onDisconnect(): Unit = {}
-  def onConnectFailed (uri: String, cause: String): Unit = {}
-  def onConnectTimeout(uri: String, dur: FiniteDuration): Unit = {}
+  protected def onConnect(): Unit = {}
+  protected def onDisconnect(): Unit = {}
+  protected def onConnectFailed (uri: String, cause: String): Unit = {}
+  protected def onConnectTimeout(uri: String, dur: FiniteDuration): Unit = {}
 
 
   override def onTerminateRaceActor(originator: ActorRef): Boolean = {
@@ -188,6 +203,8 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
     case m:WsClosed => handleWsClosed(m)
     case WsConnectRequest(uri) => connect(uri)
     case m:WsCheckConnection => handleWsCheckConnection(m)
+    case WsProcessIncoming(msg) => processIncomingMessage(msg)
+    case WsProcessIncomingData(data, f) => f(data)
   }
 
   def handleWsConnectSuccess(msg: WsConnectSuccess): Unit = {
@@ -251,6 +268,9 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
     connectionChecks += (uri -> scheduler.scheduleOnce(dur,self,WsCheckConnection(uri,dur)))
   }
 
+  // override if we need to re-route this into the actor thread
+  protected def createInboundSink(): Sink[Message,Future[Done]] = Sink.foreach( processIncomingMessage)
+
   /**
     * this is the main method of WsAdapterActor that sends the WebSocketRequest
     *
@@ -262,7 +282,7 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
       return
     }
 
-    val inbound: Sink[Message,Future[Done]] = Sink.foreach( processIncomingMessage)
+    val inbound: Sink[Message,Future[Done]] = createInboundSink()
     val outbound: Source[Message, SourceQueueWithComplete[Message]] = createSourceQueue
     val flow: Flow[Message,Message,(Future[Done],SourceQueueWithComplete[Message])] = Flow.fromSinkAndSourceCoupledMat(inbound,outbound)(Keep.both)
 
@@ -292,7 +312,8 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
     }
   }
 
-  def getWebSocketRequest (wsUri: String) : WebSocketRequest = {
+  // override if the websocket request needs auth (other than basic uid/pw credentials)
+  protected def getWebSocketRequestHeaders(): Seq[HttpHeader] = {
     var xhdrs = Seq.empty[HttpHeader]
     for (
       uid <- config.getOptionalVaultableString("uid");
@@ -300,8 +321,11 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
     ) {
       xhdrs = Seq(Authorization(BasicHttpCredentials(uid,pw)))
     }
+    xhdrs
+  }
 
-    WebSocketRequest(wsUri,extraHeaders=xhdrs)
+  def getWebSocketRequest (wsUri: String) : WebSocketRequest = {
+    WebSocketRequest(wsUri,getWebSocketRequestHeaders())
   }
 
   def getConnectionContext (wsUri: String): ConnectionContext = {
@@ -329,7 +353,16 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
 }
 
 /**
-  * a WSAdapterActor that indiscriminantly sends out everything it gets from the bus
+ * a WSAdapterActor that processes incoming websocket messages in the actor thread and therefor does not need
+ * additional synchronization
+ */
+trait SyncWSAdapterActor extends WSAdapterActor {
+  // wrap incoming message and send to self so that it gets processed in the actor thread
+  override def createInboundSink(): Sink[Message,Future[Done]] = Sink.foreach( self ! WsProcessIncoming(_))
+}
+
+/**
+  * a WSAdapterActor that sends out everything it gets from the bus
   * note that this can still be configured with a reader/writer to deserialize/serialize incoming/outgoing messages
   */
 class PassThroughWSAdapterActor (val config: Config) extends WSAdapterActor {

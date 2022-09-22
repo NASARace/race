@@ -17,6 +17,7 @@
 package gov.nasa.race.earth.actor
 
 import akka.actor.{ActorRef, Cancellable}
+import akka.http.scaladsl.model.HttpMethods
 import com.typesafe.config.Config
 import gov.nasa.race.common.Utf8CsvPullParser
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
@@ -288,7 +289,7 @@ class JpssImportActor(val config: Config) extends PublishingRaceActor with HttpA
     lastRequest = requestDate
 
     info(s"requesting data at $requestDate from $uri")
-    httpGetRequestStrict(uri).onComplete { // NOTE - this is executed in a non-actor thread
+    httpRequestStrict( uri, HttpMethods.GET) { // NOTE - this is executed in a non-actor thread
       case Success(strictEntity) =>
         val data = strictEntity.getData().toArray
         storeData(requestDate, data) // do IO here since it might externally block

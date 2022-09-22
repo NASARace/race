@@ -124,8 +124,9 @@ case class ImageryLayer(
                        )  {
 
   def toJs: String = {
-    val prov = provider.replace("$URL", url)
+    val u = if (proxy) s"${CesiumRoute.imageryPrefix}/$name" else url
+    val prov = provider.replace("$URL", u)
     val ip = imageryParams.map(p=> s"imageryParams:${p.toJs}").getOrElse("")
-    s"""{name:'$name',description:'$description',url:'$url',provider:$prov,isBase:$isBase,proxy:$proxy,show:$show,$ip}"""
+    s"""{name:'$name',description:'$description',url:'$u',provider:$prov,isBase:$isBase,proxy:$proxy,show:$show,$ip}"""
   }
 }

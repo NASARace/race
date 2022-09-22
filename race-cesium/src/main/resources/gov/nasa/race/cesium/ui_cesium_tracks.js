@@ -189,6 +189,7 @@ function trackSelection() {
         ui.setSelectedListItem(trackEntryView, te);
     } else {
         ui.clearSelectedListItem(trackEntryView);
+        uiCesium.clearSelectedEntity(); // this takes care of the selIndicator re-flicker when showing paths
     }
 }
 

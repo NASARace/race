@@ -195,7 +195,7 @@ function initHotspotView() {
 
 function initSliders() {
     let e = ui.getSlider('jpss.history');
-    ui.setSliderRange(e, 0, 7, 1, util.f_0);
+    ui.setSliderRange(e, 0, 20, 1, util.f_0);
     ui.setSliderValue(e, history);
 
     e = ui.getSlider('jpss.resolution');
@@ -211,7 +211,7 @@ function initSliders() {
     ui.setSliderValue(e, tempThreshold);
 
     e = ui.getSlider('jpss.frp');
-    ui.setSliderRange(e, 5, 200, 5, util.fmax_0);
+    ui.setSliderRange(e, 0, 200, 5, util.fmax_0);
     ui.setSliderValue(e, frpThreshold);
 }
 
@@ -679,6 +679,7 @@ function clearArea() {
         uiCesium.removeEntity(areaAsset);
         areaAsset = undefined;
     }
+    ui.setLabelText(areaInfoLabel, null);
     uiCesium.requestRender();
 }
 

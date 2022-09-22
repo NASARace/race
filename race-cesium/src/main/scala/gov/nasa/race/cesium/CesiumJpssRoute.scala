@@ -79,7 +79,7 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
   val jpssOverpasses = mutable.SortedMap.empty[DateTime,OverpassSeq]
   val jpssHotspots = mutable.SortedMap.empty[DateTime,ViirsHotspots]
 
-  private val hotspotMaxAge = config.getFiniteDurationOrElse("history", 7.days) // how long until we purge hotspots
+  private val hotspotMaxAge = config.getFiniteDurationOrElse("history", 14.days) // how long until we purge hotspots
 
 
   //--- route
@@ -186,7 +186,8 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
   frp: ${frpThreshold.toConfigString()},
   pixelSize: $pixelSize,
   resolution: $latLonResolution
-};"""
+};
+"""
   }
 
   def getTempThreshold (conf: Config): TempThreshold = {

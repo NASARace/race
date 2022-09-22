@@ -384,14 +384,17 @@ export function togglePanelExpansion(event) {
             _swapClass(panelHeader, "expanded", "collapsed");
             _swapClass(panel, "expanded", "collapsed");
             panel.style.maxHeight = 0;
+            panel.style.visibility = "none";
         }
 
     } else { // expand
-        let expandHeight = panel._uiCurrentHeight ? panel._uiCurrentHeight : panel.scrollHeight;
+        //let expandHeight = panel._uiCurrentHeight ? panel._uiCurrentHeight : panel.scrollHeight;
+        let expandHeight = panel.scrollHeight;
 
         _swapClass(panelHeader, "collapsed", "expanded");
         _swapClass(panel, "collapsed", "expanded");
         panel.style.maxHeight = expandHeight + "px";
+        panel.style.visibility = "visible";
     }
 
     // should we force a reflow on the parent here?
@@ -399,7 +402,7 @@ export function togglePanelExpansion(event) {
 
 function _resetPanelMaxHeight(ce) {
     let panel = nearestParentWithClass(ce, "ui_panel");
-    if (panel) {
+    if (panel && !panel.classList.contains("collapsed")) {
         panel.style.maxHeight = "";
     }
 }
@@ -1019,13 +1022,16 @@ function _positionThumb(e) { // e is ui_slider_track
 
 function _computeSliderValue(e, v) {
     let minValue = e._uiMinValue;
+    let maxValue = e._uiMaxValue;
+
+    if (v <= minValue) return minValue;
+    if (v >= maxValue) return maxValue;
+
     let inc = e._uiStep;
     if (inc) {
         if (inc == 1) return Math.round(v);
         else return minValue + Math.round((v - minValue) / inc) * inc;
     } else {
-        if (v < minValue) return minValue;
-        else if (v > e._uiMaxValue) return e._uiMaxValue;
         return v;
     }
 }

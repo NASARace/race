@@ -123,7 +123,7 @@ object Dependencies {
   val jimfs = "com.google.jimfs" % "jimfs" % "1.2"
 
   //--- Akka
-  val akkaVersion = "2.6.19"
+  val akkaVersion = "2.6.20"
   val akkaOrg = "com.typesafe.akka"
 
   val akkaActor = akkaOrg %% "akka-actor" % akkaVersion
@@ -132,7 +132,7 @@ object Dependencies {
   val akkaCluster = akkaOrg %% "akka-cluster" % akkaVersion // e.g. for multi-jvm testing
   val akkaSlf4j = akkaOrg %% "akka-slf4j" % akkaVersion
   val akkaTestkit = akkaOrg %% "akka-testkit" % akkaVersion
-  val akkaHttp = akkaOrg %% "akka-http" % "10.2.9"
+  val akkaHttp = akkaOrg %% "akka-http" % "10.2.10"
 
   val akkaAll = Seq(akkaActor)
 

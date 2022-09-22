@@ -243,7 +243,8 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
   pointDC: new Cesium.DistanceDisplayCondition( ${cfg.getIntOrElse("point-dist", 0)}, Number.MAX_VALUE),
   boundsDC: new Cesium.DistanceDisplayCondition( 0, ${cfg.getIntOrElse( "bounds-dist", 800000)}),
   zoomHeight: ${cfg.getIntOrElse("zoom-height", 100000)},
- };"""
+ };
+ """
   }
 }
 

@@ -94,7 +94,10 @@ class TleImportActor (val config: Config) extends SubscribingRaceActor with Http
   override def onTerminateRaceActor(originator: ActorRef): Boolean = {
     try {
       saveTLEs()
-      Await.ready(startLogout(), maxRequestTimeout) // give akka-http some time to complete
+      awaitHttpRequest(getLogoutRequest) {
+        case Success(_) => // nothing
+        case Failure(x) => warning(s"failed to logout on space-track.org: $x")
+      }
       info("logout on space-track.org complete")
     } catch {
       case x: TimeoutException => warning("logout request on space-track.org timed out")
@@ -112,7 +115,7 @@ class TleImportActor (val config: Config) extends SubscribingRaceActor with Http
 
   def startLogin(): Unit = {
     info("starting login to space-track.org")
-    http.singleRequest(loginRequest, settings = clientSettings).onComplete { // WATCH OUT - executed async (not in actor thread)
+    httpRequest(loginRequest) { // WATCH OUT - executed async (not in actor thread)
       case Success(resp: HttpResponse) =>
         self ! LoginResponse(resp) // get back into actor thread to process response
 
@@ -179,9 +182,9 @@ class TleImportActor (val config: Config) extends SubscribingRaceActor with Http
   // we don't store these so there is no need to loop back into the actor thread
   // Unfortunately we can only request ranges, not a specific date - reply with the last TLE
   def processHistoryRequest(req: TleRequest): Unit = {
-    http.singleRequest( getHistoryDataRequest(req)).onComplete {
+    httpRequest( getHistoryDataRequest(req)) {
       case Success(resp: HttpResponse) =>
-        resp.entity.toStrict( maxRequestTimeout, maxRequestSize).onComplete {
+        toStrictEntity(resp) {
           case Success(httpEntity) =>
             val lines = Source.fromBytes(httpEntity.data.toArray[Byte]).getLines().toArray
             // this is most likely a list of TLEs - take the last 3 lines
@@ -201,9 +204,9 @@ class TleImportActor (val config: Config) extends SubscribingRaceActor with Http
 
   def startDataRequest (req: TleRequest): Unit = {
     info(s"sending data request to space-track.org: $req")
-    http.singleRequest(getDataRequest(req)).onComplete {  // WATCH OUT - executed async (not in actor thread)
+    httpRequest(getDataRequest(req)) {  // WATCH OUT - executed async (not in actor thread)
       case Success(resp: HttpResponse) =>
-        resp.entity.toStrict( maxRequestTimeout, maxRequestSize).onComplete {
+        toStrictEntity( resp) {
           case Success(httpEntity) =>
             val lines = Source.fromBytes(httpEntity.data.toArray[Byte]).getLines().toArray
             if (lines.length == 3) {
@@ -284,16 +287,6 @@ class TleImportActor (val config: Config) extends SubscribingRaceActor with Http
         debug(s"ignored http header: $other")
     }
     None
-  }
-
-  def startLogout(): Future[HttpResponse] = {
-    info("starting logout on space-track.org")
-    yieldInitialized( http.singleRequest(getLogoutRequest)) { future=>
-      future.onComplete {
-        case Success(_) => // nothing
-        case Failure(x) => warning(s"failed to logout on space-track.org: $x")
-      }
-    }
   }
 
   def saveTLEs(): Unit = {

@@ -17,14 +17,14 @@ var globeBoundingSphere = new Cesium.BoundingSphere(Cesium.Cartesian3.ZERO, 0.99
 
 // those are just initial values (should come from config)
 const userInputDefaults = {
-    particlesTextureSize: 64,
-    maxParticles: 64 * 64,
+    particlesTextureSize: 32,
+    maxParticles: 32 * 32,
     particleHeight: 2000,
-    fadeOpacity: 0.98,
+    fadeOpacity: 0.99,
     dropRate: 0.002,
     dropRateBump: 0.01,
-    speedFactor: 0.1,
-    lineWidth: 2.5
+    speedFactor: 0.2,
+    lineWidth: 1.5
 };
 
 var windView = undefined; // set during init
