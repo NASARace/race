@@ -143,6 +143,21 @@ package object ui {
     div(mods: _*)
   }
 
+  def uiTabbedContainer (eid: UiID=NoId, width: String=NoWidth): Text.TypedTag[String] = {
+    var mods = List(cls:="ui_tab_container_wrapper")
+    if (width.nonEmpty) mods = (style:=s"min-width: $width") :: mods
+    if (eid.nonEmpty) mods = (id:=eid) :: mods
+    div(mods: _*)
+  }
+
+  def uiTab (label: String, show: Boolean = false, eid:UiID=NoId): Text.TypedTag[String] = {
+    var classes = "ui_tab_container"
+    if (show) classes += " show"
+    var mods = List(cls:=classes, data("label"):=label)
+    if (eid.nonEmpty) mods = (id:=eid) :: mods
+    div(mods: _*)
+  }
+
   // TODO - suboptimal. In general we want layout&presentation out of the view DSL
   def uiHorizontalSpacer(minWidthInRem: Double): Text.TypedTag[String] = {
     val mods = List(cls:="spacer", style:=s"min-width: ${minWidthInRem}rem")

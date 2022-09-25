@@ -6,6 +6,7 @@
 :root {
     --theme: "night";
     --color: rgb(222, 141, 141);
+    --darker-color: rgb(200,120,120);
     --data-color: #fdb724;
     --selected-data-color: yellow;
     --input-data-color: yellow;
@@ -28,9 +29,10 @@
     --border-width: 2px;
     --border: var(--border-width) solid var(--border-color);
     --box-shadow: 5px 5px 8px rgb(79, 1, 1);
-    --padding: 3px;
+    --padding: 5px;
     --margin: 3px;
     --gap: 3px;
+    --focus-outline: 1px dashed orange;
     --icon-size: 32px;
     --icon-border: 1px solid var(--border-color);
     --icon-background: var(--background);

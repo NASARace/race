@@ -19,7 +19,7 @@ lazy val testSettings = commonSettings ++ noPublishSettings  // test projects do
 lazy val root = createRootProject("race").
 aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceShare,raceSwing,raceWW,raceAir,raceWWAir,raceEarth,raceClientUI,
 raceCesium,raceSpace,raceLauncher,raceAdapter,
-raceCL,raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceShareTest,raceNetKafkaTest,raceCLTest,raceAirTest,raceEarthTest,raceSpaceTest).
+raceCL,raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceShareTest,raceNetKafkaTest,raceCLTest,raceAirTest,raceEarthTest,raceSpaceTest,raceClientUiTest).
 dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceEarth,raceSpace,raceLauncher,raceShare,raceCesium).
 enablePlugins(JavaAppPackaging,LauncherJarPlugin,LaikaPlugin).
 settings(
@@ -188,3 +188,7 @@ lazy val raceEarthTest = createTestProject("race-earth-test", testSettings).
 
 lazy val raceSpaceTest = createTestProject("race-space-test", testSettings).
   dependsOn(raceSpace,raceTestKit)
+
+lazy val raceClientUiTest = createTestProject("race-client-ui-test", testSettings).
+  dependsOn(raceClientUI,raceNetHttp,raceTestKit)
+

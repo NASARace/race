@@ -147,7 +147,7 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
           uiButton("clear", "main.clearJpssHotspots()")
         )
       ),
-      uiPanel("hotspots")(
+      uiPanel("hotspots", false)(
         uiList("jpss.hotspots", 10, dblClickAction = "main.zoomToJpssPixel(event)")
       ),
       uiPanel("layer parameters", false)(

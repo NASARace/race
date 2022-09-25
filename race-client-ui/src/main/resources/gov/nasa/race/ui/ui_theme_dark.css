@@ -7,6 +7,7 @@
     --theme: "dark";
     /* basic values */
     --color: rgb(200, 200, 200);
+    --darker-color: rgb(170,170,170);
     --data-color: #01ff01;
     /* rgb(0,255,0); */
     --selected-data-color: yellow;
@@ -31,9 +32,11 @@
     --border-width: 2px;
     --border: var(--border-width) inset var(--border-color);
     --box-shadow: 5px 5px 8px rgb(136, 136, 136);
-    --padding: 3px;
+    --padding: 5px;
     --margin: 3px;
     --gap: 3px;
+    --focus-color: rgb(130, 130, 0);
+    --focus-outline: 1px solid var(--focus-color);
     /* icons (toplevel buttons with variable stroke/fill color SVGs and explicit 'on' state) */
     /*   background used for transparent image parts, color for image stroke and fill-color for image fill */
     --icon-size: 32px;

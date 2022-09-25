@@ -16,7 +16,7 @@ object CommonRaceSettings {
       Seq(
         scalaVersion := scalaVer,
         scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature"
-          , "-target:9"
+          // , "-target:9"
           //, "-opt-warnings"
 /*
           , "-opt:l:method"               // enables all intra-method optimizations

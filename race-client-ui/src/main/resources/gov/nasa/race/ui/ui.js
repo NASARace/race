@@ -44,6 +44,7 @@ registerLoadFunction(function initialize() {
     _initializeIcons();
     _initializeWindows();
     _initializePanels();
+    _initializeTabbedContainers();
     _initializeFields();
     _initializeChoices();
     _initializeCheckboxes();
@@ -342,6 +343,59 @@ export function getWindow(o) {
         return _nearestElementWithClass(e, "ui_window");
     } else {
         return undefined;
+    }
+}
+
+//--- tabbed containers
+
+function _initializeTabbedContainers() {
+    for (let tcw of document.getElementsByClassName("ui_tab_container_wrapper")) {
+        let thdr = undefined;
+        let showTab = undefined;
+        let showTc = undefined;
+        let fit = tcw.classList.contains("fit");
+
+        for (let tc of tcw.children) { // those are the tab_containers
+            let show = tc.classList.contains("show");
+            if (fit) tc.classList.add("fit");
+
+            let tab = _createElement("DIV","ui_tab");
+            tab._uiContainer = tc;
+            tab.innerText = tc.dataset.label;
+            tc._uiTab = tab;
+            tab.addEventListener("click", clickTab);
+
+            if (show) { // last one wins
+                if (showTab) showTab.classList.remove("show");
+                if (showTc) showTc.classList.remove("show");
+                showTab = tab;
+                showTc = tc;
+                tab.classList.add("show");
+                tcw._uiShowing = tc;
+            }
+
+            if (!thdr) thdr = _createElement("DIV", "ui_tab_header");
+            thdr.appendChild(tab);
+        }
+
+        if (thdr) tcw.insertBefore(thdr, tcw.firstChild);
+    }
+}
+
+function clickTab(event) {
+    let tab = event.target;
+    let tc = tab._uiContainer;
+    if (tc) {
+        let tcw = tc.parentElement;
+        if (tcw._uiShowing !== tc) {
+            let prevTc = tcw._uiShowing;
+            prevTc.classList.remove("show");
+            prevTc._uiTab.classList.remove("show");
+
+            tc.classList.add("show");
+            tc._uiTab.classList.add("show");
+            tcw._uiShowing = tc;
+        }
     }
 }
 
@@ -1447,10 +1501,38 @@ function _initializeLists() {
             e._uiSelectAction = selectAction;
         }
 
+        e.addEventListener("keydown", listKeyDownHandler);
+
         // element state
         e._uiSelectedItemElement = null; // we add a property to keep track of selections
         e._uiMapFunc = item => item.toString(); // item => itemElement text
         e._uiItemMap = new Map(); // item -> itemElement
+
+        // re-parent if not yet in a ui_list_wrapper - we need a parent if there are column headers but also to ensure layout if the content is changed
+        addListWrapper(e);
+    }
+}
+
+function listKeyDownHandler(event) {
+    let list = getList(event.target);
+    if (event.key === 'Escape') { 
+        clearSelectedListItem(list);
+        stopAllOtherProcessing(event);
+    } else if (event.key === 'ArrowDown') {
+        if (list._uiSelectedItemElement) selectNextListItem(list); else selectFirstListItem(list);
+        stopAllOtherProcessing(event);
+    } else if (event.key === 'ArrowUp') {
+        if (list._uiSelectedItemElement) selectPrevListItem(list); else selectLastListItem(list);
+        stopAllOtherProcessing(event);
+    }
+}
+
+function addListWrapper(list) {
+    let parent = list.parentElement;
+    if (!parent.classList.contains("ui_list_wrapper")){
+        let listWrapper = _createElement("DIV", "ui_list_wrapper");
+        parent.insertBefore(listWrapper, list);
+        listWrapper.appendChild(list); // reparent
     }
 }
 
@@ -1486,7 +1568,7 @@ export function setListItemDisplayColumns(o, listAttrs, colSpecs) {
         if (listAttrs.includes("fit")) _addClass(e, "fit");
         e._uiRowPrototype = re;
 
-        if (he) addListHeader(e, he);
+        if (he) addListHeader(e,he);
     }
 }
 
@@ -1499,14 +1581,8 @@ function createSubitemHeader(header, cs, w) {
 }
 
 function addListHeader(list, header) {
-    let parent = list.parentElement;
-    let listWrapper = _createElement("DIV", "ui_list_wrapper");
-
+    list.parentElement.insertBefore(header,list);
     list._uiHeader = header;
-
-    parent.insertBefore(listWrapper, list);
-    listWrapper.appendChild(header);
-    listWrapper.appendChild(list);
 }
 
 export function listItemSpacerColumn(remWidth = 1) {

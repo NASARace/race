@@ -233,6 +233,49 @@ div.ui_panel {
     gap: var(--gap);
 }
 
+/* tabbed containers */
+
+div.ui_tab_container_wrapper {
+}
+
+div.ui_tab_header {
+    display: flex;
+    flex-direction: row;
+    gap: var(--gap);
+}
+
+div.ui_tab {
+    display: inline-block;
+    margin: 0 0 -1px 0.8rem;
+    padding: var(--padding);
+	border: 1px solid var(--border-color);
+	border-radius: 8px 8px 0 0;
+	overflow: hidden;
+    color: var(--darker-color);
+    background: var(--background);
+}
+
+div.ui_tab:hover {
+    background: var(--button-hover-background);
+}
+
+div.ui_tab.show {
+    border-bottom: none;
+    color: var(--color);
+    overflow: visible;
+}
+
+div.ui_tab_container {
+    display: none;
+    visibility: hidden;
+    padding: var(--padding);
+    border: 1px solid var(--border-color);
+}
+
+div.ui_tab_container.show {
+    display: block;
+    visibility: visible;
+}
 
 /* stand-alone text element */
 
@@ -340,6 +383,7 @@ input.ui_field.input {
 input.ui_field.input:focus {
     color: var(--input-active-color);
     background: var(--input-active-background);
+    outline: var(--focus-outline);
 }
 
 input.ui_field.input:hover {
@@ -355,6 +399,10 @@ div.ui_slider {
     flex-direction: row;
     align-items: center;
     padding: 3px;
+}
+
+div.ui_slider:focus {
+    outline: var(--focus-outline);
 }
 
 div.ui_slider_track {
@@ -419,6 +467,10 @@ div.ui_slider_limit {
 
 /* choice fields */
 
+div.ui_choice:focus {
+    outline: var(--focus-outline);
+}
+
 div.ui_choice {}
 
 div.ui_choice_value {
@@ -468,6 +520,14 @@ div.ui_checkbox {
     padding: 3px;
 }
 
+div.ui_checkbox:focus {
+    outline: none;
+}
+
+div.ui_checkbox_button:focus {
+    outline: var(--focus-outline);
+}
+
 div.ui_checkbox:active {
     color: var(--button-color-pressed);
 }
@@ -500,7 +560,6 @@ div.ui_checkbox_label {
     padding-left: 3px;
 }
 
-
 /* radio buttons */
 
 div.ui_radio {
@@ -510,6 +569,10 @@ div.ui_radio {
     align-items: center;
     background: transparent;
     padding: 3px;
+}
+
+div.ui_radio:focus {
+    outline: var(--focus-outline);
 }
 
 div.ui_radio:active {
@@ -558,6 +621,10 @@ div.ui_radio_label {
     border-radius: var(--button-border-radius);
     margin: var(--margin);
     padding: 3px 5px 3x 5px;
+}
+
+.ui_button:focus {
+    outline: var(--focus-outline);
 }
 
 .ui_button:hover {
@@ -610,6 +677,10 @@ div.ui_list {
     box-sizing: border-box;
     overflow-y: scroll;
     overflow-x: auto;
+}
+
+div.ui_list:focus {
+    outline: var(--focus-outline);
 }
 
 div.ui_list_item {

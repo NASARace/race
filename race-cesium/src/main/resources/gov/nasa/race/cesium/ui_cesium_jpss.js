@@ -181,7 +181,7 @@ function initPastView() {
 function initHotspotView() {
     let view = ui.getList("jpss.hotspots");
     if (view) {
-        ui.setListItemDisplayColumns(view, ["fit", "header"], [
+        ui.setListItemDisplayColumns(view, ["fit"], [
             { name: "sat", width: "3rem", attrs: [], map: e => satName(e.satId) },
             { name: "conf", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.conf },
             { name: "temp", width: "4rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.temp) },
