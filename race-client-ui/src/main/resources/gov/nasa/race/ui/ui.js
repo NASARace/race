@@ -1685,12 +1685,12 @@ export function setListItems(o, items) {
         // TODO - do we have to store/restore scrollLeft/scrollTop ?
         _setSelectedItemElement(e, null);
 
-        let i = 0;
-        let ies = e.children; // the ui_list_item children
-        let i1 = ies.length;
-        let proto = e._uiRowPrototype;
+        if (items && items.length > 0) {
+            let i = 0;
+            let ies = e.children; // the ui_list_item children
+            let i1 = ies.length;
+            let proto = e._uiRowPrototype;
 
-        if (items) {
             items.forEach(item => {
                 if (i < i1) { // replace existing element
                     _setListItem(e, ies[i], item);
@@ -1700,10 +1700,11 @@ export function setListItems(o, items) {
                 }
                 i++;
             });
+
+            if (e.childElementCount > i) _removeLastNchildrenOf(e, e.childElementCount - i);
+        } else {
+            clearList(e);
         }
-
-        if (e.childElementCount > i) _removeLastNchildrenOf(e, e.childElementCount - i);
-
         _resetPanelMaxHeight(e);
     }
 }

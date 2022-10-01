@@ -19,13 +19,13 @@ package gov.nasa.race.http
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpEntity, HttpHeader, HttpMethod, HttpMethods, HttpRequest, HttpResponse, RequestEntity}
 import akka.http.scaladsl.settings.{ClientConnectionSettings, ConnectionPoolSettings}
-import akka.stream.Materializer
+import akka.stream.{BufferOverflowException, Materializer}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.RaceActor
 
 import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.DurationInt
-import scala.util.Try
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.util.{Failure, Success, Try}
 
 /**
  * an actor that uses Akka-http
@@ -36,8 +36,10 @@ trait HttpActor extends RaceActor {
 
   val maxRequestSize = config.getIntOrElse("max-request-size", 5*1024*1000)
   val maxRequestTimeout = config.getFiniteDurationOrElse("max-request-timeout", 15.seconds)
-
   val maxConnectingTimeout = config.getFiniteDurationOrElse("max-connecting-timeout", 15.seconds)
+
+  val retryDelay = config.getFiniteDurationOrElse("retry-delay", 2.seconds)
+  val maxRetry = config.getIntOrElse("max-retry", 3)
 
   val clientSettings = {
     val origSettings = ClientConnectionSettings(system.settings.config)
@@ -50,19 +52,66 @@ trait HttpActor extends RaceActor {
   private val http = Http(context.system)
 
   def httpRequest [U] (req: HttpRequest)(f: Try[HttpResponse]=>U): Unit = {
-    http.singleRequest(req, settings = clientSettings).onComplete(f)
+    http.singleRequest(req, settings = clientSettings).onComplete {
+      case v@Success(resp) =>
+        f(v)
+        resp.discardEntityBytes()
+      case x@Failure(_) => f(x)
+    }
+
+    //http.singleRequest(req, settings = clientSettings).onComplete(f)
+    //http.singleRequest(req, settings = clientSettings).andThen { case res => f(res) }.andThen { case res => res.get.discardEntityBytes() }
   }
 
-  def httpRequest [U] (uri: String, method: HttpMethod = HttpMethods.GET, headers: Seq[HttpHeader] = Nil, entity: RequestEntity = HttpEntity.Empty)(f: Try[HttpResponse]=>U): Unit = {
-    httpRequest(HttpRequest( method, uri, headers, entity))(f)
+  def httpRequestWithRetry [U] (req: HttpRequest, retries: Int)(f: Try[HttpResponse]=>U): Unit = {
+    httpRequest(req){
+      case Failure(box: BufferOverflowException) =>
+        if (retries <= 0) throw box // rethrow, let caller handle it
+        warning(s"request overload of ${req.uri}, remaining retries: $retries")
+        scheduleOnce(retryDelay)(httpRequestWithRetry(req, retries-1)(f))
+      case v => f(v)
+    }
+  }
+
+  def httpRequest [U] (uri: String,
+                       method: HttpMethod = HttpMethods.GET, headers: Seq[HttpHeader] = Nil, entity: RequestEntity = HttpEntity.Empty
+                      )(f: Try[HttpResponse]=>U): Unit = {
+    httpRequest( HttpRequest( method, uri, headers, entity))(f)
+  }
+
+  def httpRequestWithRetry [U] (uri: String,
+                                method: HttpMethod = HttpMethods.GET, headers: Seq[HttpHeader] = Nil, entity: RequestEntity = HttpEntity.Empty,
+                                retries: Int = maxRetry
+                               )(f: Try[HttpResponse]=>U): Unit = {
+    httpRequestWithRetry( HttpRequest( method, uri, headers, entity), retries)(f)
   }
 
   def httpRequestStrict [U] (req: HttpRequest)(f: Try[HttpEntity.Strict]=>U): Unit = {
     http.singleRequest(req).flatMap(_.entity.toStrict(maxRequestTimeout, maxRequestSize)).onComplete(f)
   }
 
-  def httpRequestStrict [U] (uri: String, method: HttpMethod = HttpMethods.GET, headers: Seq[HttpHeader] = Nil, entity: RequestEntity = HttpEntity.Empty)(f: Try[HttpEntity.Strict]=>U): Unit = {
+  // retry after delay if we get a pending request buffer overflow
+  def httpRequestStrictWithRetry [U](req: HttpRequest, retries: Int)(f: Try[HttpEntity.Strict]=>U): Unit = {
+    httpRequestStrict(req){
+      case Failure(box: BufferOverflowException) =>
+        if (retries <= 0) throw box // rethrow, let caller handle it
+        warning(s"request overload of ${req.uri}, remaining retries: $retries")
+        scheduleOnce(retryDelay)(httpRequestStrictWithRetry(req, retries-1)(f))
+      case v => f(v)
+    }
+  }
+
+  def httpRequestStrict [U] (uri: String,
+                             method: HttpMethod = HttpMethods.GET, headers: Seq[HttpHeader] = Nil, entity: RequestEntity = HttpEntity.Empty
+                            )(f: Try[HttpEntity.Strict]=>U): Unit = {
     httpRequestStrict( HttpRequest( method, uri, headers, entity))(f)
+  }
+
+  def httpRequestStrictWithRetry [U] (uri: String,
+                                      method: HttpMethod = HttpMethods.GET, headers: Seq[HttpHeader] = Nil, entity: RequestEntity = HttpEntity.Empty,
+                                      retries: Int=maxRetry
+                                     )(f: Try[HttpEntity.Strict]=>U): Unit = {
+    httpRequestStrictWithRetry( HttpRequest( method, uri, headers, entity), retries)(f)
   }
 
   def toStrictEntity [U] (resp: HttpResponse)(f: Try[HttpEntity.Strict]=>U): Unit = {

@@ -261,7 +261,8 @@ div.ui_tab:hover {
 
 div.ui_tab.show {
     border-bottom: none;
-    color: var(--color);
+    color: var(--selected-data-color);
+    background: var(--selection-background);
     overflow: visible;
 }
 
@@ -273,7 +274,9 @@ div.ui_tab_container {
 }
 
 div.ui_tab_container.show {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
     visibility: visible;
 }
 

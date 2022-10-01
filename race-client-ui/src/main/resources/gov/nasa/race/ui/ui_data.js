@@ -57,6 +57,95 @@ class LinkedList {
     }
 }
 
+class TreeNode {
+    constructor(oldData) {
+        this.data = data;
+
+        this.parentNode = undefined;
+        this.firstChild = undefined;
+        this.nextSibling = undefined;
+    }
+
+    level() { // 0-based
+        let lvl = 0;
+        for (let n = this.parent; n; n = n.parent) lvl++;
+        return lvl;
+    }
+
+    //--- set accessors
+
+    parents (){
+        let a = [];
+        for (let n = this.parent; n; n = n.parent) a.push(n);
+        return a.reverse();
+    }
+
+    siblings () {
+        let a = [];
+        for (let n = this.nextSibling; n; n = n.nextSibling) a.push(n);
+        return a;
+    }
+
+    children () {
+        let a = [];
+        for (let n = this.firstChild; n; n = n.nextSibling) a.push(n);
+        return a;
+    }
+
+    //--- modifiers
+
+    addChild (newNode) {
+        if (this.firstChild) {
+            let n = this.firstChild;
+            while (n.nextSibling) n = n.nextSibling;
+            n.nextSibling = newNode;
+        } else {
+            this.firstChild = newNode;
+        }
+        newNode.parent = this;
+    }
+
+    addSibling (newNode) {
+        if (this.nextSibling) {
+            let n = this.nextSibling;
+            while (n.nextSibling) n = n.nextSibling;
+            n.nextSibling = newNode;
+        } else {
+            this.nextSibling = newNode;
+        }
+        newNode.parent = this.parent;
+    }
+
+    // TODO - add insert and remove functions
+
+    //--- traversal functions
+
+    depthFirst(f) {
+        f(this);
+        if (this.firstChild) this.firstChild.depthFirst(f);
+        if (this.nextSibling) this.nextSibling.depthFirst(f);
+    }
+
+    breadthFirst(f) {
+        f(this);
+        let level = children();
+
+        while (level.length > 0) {
+            let nextLevel = [];
+            level.forEach( n=> {
+                f(n);
+                let ncs = n.children();
+                if (ncs.length > 0) nextLevel = nextLevel.concat( ncs);
+            });
+            level = nextLevel;
+        }
+    }
+
+    forEach(f) {
+        this.depthFirst(f);
+    }
+}
+
 class SkipListNode {
     constructor(data, next) {
         this.data = data;
@@ -79,6 +168,10 @@ class SkipList {
         this.head = new SkipListNode(null, new Array(depth));
         this.size = 0;
         this.maxLevel = 0; // index - there always is at least one level
+    }
+
+    get length() {
+        return this.size;
     }
 
     indexOf(data) {
@@ -423,7 +516,7 @@ class CircularBuffer {
     }
 }
 
-export { LinkedList, SkipList, CircularBuffer };
+export { LinkedList, SkipList, CircularBuffer, TreeNode };
 
 //--- simple seeded PRNG to support reproducible values for testing (lifted from http://pracrand.sourceforge.net/)
 

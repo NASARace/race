@@ -483,6 +483,9 @@ export function distanceBetweenGeoPos(lat1Deg,lon1Deg, lat2Deg,lon2Deg) {
     return meanEarthRadius * c;
 }
 
+//--- expandable tree
+
+
 
 //--- misc
 

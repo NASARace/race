@@ -179,7 +179,7 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
     val frpThreshold = getFrpThreshold(cfg)
 
     s"""export const jpss = {
-  ${cesiumLayerConfig(cfg, "/fire/tracking/JPSS", "JPSS active fire detection")},
+  ${cesiumLayerConfig(cfg, "/fire/tracking/JPSS", "active fire detection using polar orbiting satellites")},
   history: ${hotspotMaxAge.toHours/24},
   timeSteps: ${StringUtils.mkString(timeSteps,"[\n    ", ",\n    ", "  ]")(_.toConfigString())},
   temp: ${tempThreshold.toConfigString()},
