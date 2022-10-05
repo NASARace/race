@@ -30,6 +30,7 @@ object ResponseData {
     "xml" -> xml,
     "txt" -> txt,
     "json" -> json,
+    "geojson" -> json,
     "csv" -> csv,
     "js" -> js,
     "css" -> css,
@@ -43,6 +44,7 @@ object ResponseData {
     "vert" -> glsl,
     "nc" -> bytes,
     "webp" -> webp
+
     //... and many more
   )
 
