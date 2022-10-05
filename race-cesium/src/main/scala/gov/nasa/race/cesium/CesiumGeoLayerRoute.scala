@@ -116,7 +116,7 @@ trait GeoLayerRoute extends CesiumRoute {
   val defaultRendering = new DefaultGeoJsonRendering(config)
   val sources = mutable.LinkedHashMap.from( config.getConfigSeq("geolayer.sources").map(GeoLayer(_)).map(l=> l.pathName -> l))
 
-  val writer: JsonWriter = new JsonWriter()
+  private val writer: JsonWriter = new JsonWriter() // there are too many of them
 
   //--- route
   override def route: Route = uiCesiumGeoLayerRoute ~ super.route
