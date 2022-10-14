@@ -34,8 +34,8 @@ trait UiSettingsRoute extends UiRoute with ConfigScriptRoute with CachedFileAsse
 
   def uiSettingsRoute: Route = {
     get {
-      fileAsset ("settings-icon.svg") ~
-        fileAsset ("ui_settings.js")
+      fileAssetPath ("settings-icon.svg") ~
+        fileAssetPath ("ui_settings.js")
     }
   }
 

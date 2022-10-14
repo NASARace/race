@@ -21,6 +21,7 @@ import akka.actor._
 import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race._
 import gov.nasa.race.common
+import gov.nasa.race.common.Runner
 import gov.nasa.race.common.Status._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{NamedConfigurable, SubConfigurable}
@@ -176,6 +177,8 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
     case RaceLogInfo(msg) => info(msg)
     case RaceLogWarning(msg) => warning(msg)
     case RaceLogError(msg) => error(msg)
+
+    case RaceExecRunnable(r) => r.run() // execute Runnable within actor thread
 
     case other => warning(s"unhandled system message $other")
   }
@@ -458,10 +461,23 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
     scheduler.scheduleWithFixedDelay(0.seconds, interval, self, msg)
   }
 
-  def scheduleOnceIn (delay: FiniteDuration, msg: Any): Cancellable = scheduler.scheduleOnce(delay,self,msg)
+  def scheduleOnce(delay: FiniteDuration, msg: Any): Cancellable = scheduler.scheduleOnce(delay,self,msg)
 
-  def scheduleOnce (delay: FiniteDuration)(f: =>Unit): Cancellable = scheduler.scheduleOnce(delay)(f)
+  /**
+   * wrap function in Runnable and send to ourself at scheduled time
+   * Note that Runnable will be executed within actor thread
+   * Note also this is guaranteed to be handled (transparently using a RaceSystemMessage)
+   */
+  def scheduleOnce (delay: FiniteDuration)(f: =>Unit): Cancellable = scheduler.scheduleOnce(delay,self,RaceExecRunnable(new Runner(f)))
 
+  /**
+   * transfer execution of f into actor thread by wrapping it into a RaceExecRunnable message
+   */
+  def executeInActorThread (f: => Unit): Unit = self ! RaceExecRunnable(new Runner(f))
+
+  /**
+   * note that action() is executed in actor thread (if handled)
+   */
   def delay (d: FiniteDuration, action: ()=>Unit): Option[Cancellable] = Some(scheduler.scheduleOnce(d,self,DelayedAction(self,action)))
 
   def sendOn (channel: String, msg: Any): Unit = busFor(channel).publish( BusEvent(channel, msg, self))

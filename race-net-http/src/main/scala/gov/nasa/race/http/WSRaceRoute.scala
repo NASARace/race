@@ -62,7 +62,7 @@ trait WSRaceRoute extends RaceRouteInfo with CachedFileAssetRoute {
   // optional route/content fragment if concrete type wants to use the ws.js handlers
   def wsAssetRoute: Route = {
     get {
-      fileAsset("ws.js")
+      fileAssetPath("ws.js")
     }
   }
 

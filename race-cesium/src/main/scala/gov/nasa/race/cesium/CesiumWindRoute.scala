@@ -120,8 +120,8 @@ trait CesiumWindRoute extends CesiumRoute with QueryProxyRoute with FSCachedProx
         path("proxy") {  // TODO this is going away
           completeProxied
         } ~
-        fileAsset("ui_cesium_wind.js") ~
-        fileAsset("wind-icon.svg")
+        fileAssetPath("ui_cesium_wind.js") ~
+        fileAssetPath("wind-icon.svg")
     }
   }
 

@@ -19,7 +19,7 @@ package gov.nasa.race.http
 import akka.actor.Actor.Receive
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.JsonWriter
+import gov.nasa.race.common.{JsonProducer, JsonWriter}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.BusEvent
 import gov.nasa.race.track.{TrackDropped, TrackedObject, TrackedObjects}
@@ -45,10 +45,10 @@ import TrackWSRoute._
   * Note that we don't imply the client processing here (e.g. Cesium visualization) - this only handles the track data update
   * No assets are associated with this route fragment
   */
-trait TrackWSRoute extends PushWSRaceRoute {
+trait TrackWSRoute extends PushWSRaceRoute with JsonProducer {
   val flatten = config.getBooleanOrElse("flatten", false)
-  val writer = new JsonWriter()
 
+  // map from bus channels (which are RACE-internal) to symbolic names (that can be used by clients etc.)
   val channelMap: Map[String,String] = TreeSeqMap.from(config.getKeyValuePairsOrElse("channel-map", Seq.empty)) // preserve order
 
   // TBD - this will eventually handle client selections

@@ -54,7 +54,7 @@ class TestTabsRoute (val parent: ParentActor, val config: Config) extends Docume
 
   def uiTestTabsRoute: Route = {
     get {
-      fileAsset(jsModule) ~ fileAsset(icon)
+      fileAssetPath(jsModule) ~ fileAssetPath(icon)
     }
   }
 

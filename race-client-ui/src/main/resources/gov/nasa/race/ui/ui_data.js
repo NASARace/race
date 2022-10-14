@@ -5,7 +5,7 @@ class LinkedListNode {
     }
 }
 
-class LinkedList {
+export class LinkedList {
     constructor() {
         this.head = null;
         this.size = 0;
@@ -57,11 +57,11 @@ class LinkedList {
     }
 }
 
-class TreeNode {
-    constructor(oldData) {
+export class TreeNode {
+    constructor(data) {
         this.data = data;
 
-        this.parentNode = undefined;
+        this.parent = undefined;
         this.firstChild = undefined;
         this.nextSibling = undefined;
     }
@@ -70,6 +70,12 @@ class TreeNode {
         let lvl = 0;
         for (let n = this.parent; n; n = n.parent) lvl++;
         return lvl;
+    }
+
+    numberOfChildren() {
+        let size = 0;
+        this.depthFirstChildren( n=> size++);
+        return size;
     }
 
     //--- set accessors
@@ -90,6 +96,10 @@ class TreeNode {
         let a = [];
         for (let n = this.firstChild; n; n = n.nextSibling) a.push(n);
         return a;
+    }
+
+    hasChildren() {
+        return this.firstChild ? true : false;
     }
 
     //--- modifiers
@@ -120,10 +130,39 @@ class TreeNode {
 
     //--- traversal functions
 
+    prevSibling() {
+        if (parent) {
+            let prev = null;
+            for (var n = parent.firstChild; n; n = n.nextSibling) {
+                if (n == this) return prev;
+                prev = n;
+            }
+        } else {
+            return null;
+        }
+    }
+
     depthFirst(f) {
         f(this);
         if (this.firstChild) this.firstChild.depthFirst(f);
         if (this.nextSibling) this.nextSibling.depthFirst(f);
+    }
+
+    depthFirstChildren(f) {
+        if (this.firstChild) this.firstChild.depthFirst(f);
+    }
+
+    depthFirstCond(pred,f) {
+        f(this);
+
+        if (pred(this) && this.firstChild) this.firstChild.depthFirstCond(pred,f);
+        if (this.nextSibling) this.nextSibling.depthFirstCond(pred,f);
+    }
+
+    depthFirstDescendants(pred) {
+        let list = [];
+        if (pred(this) && this.firstChild) this.firstChild.depthFirstCond( pred, n=> list.push(n));
+        return list;
     }
 
     breadthFirst(f) {
@@ -144,7 +183,137 @@ class TreeNode {
     forEach(f) {
         this.depthFirst(f);
     }
+
+    findFirst(pred) {
+        if (pred(this)) return this;
+
+        let match = undefined;
+        if (this.firstChild) match = this.firstChild.findFirst(pred);
+        if (!match && this.nextSibling) match = this.nextSibling.findFirst(pred);
+
+        return match;
+    }
 }
+
+//--- interactive tree lists
+
+export class ExpandableTreeNode extends TreeNode {
+    constructor(name,data,isExpanded) {
+        super(data);
+        this.isExpanded = isExpanded;
+        this.name = name;
+    }
+
+    static newRoot() {
+        return new ExpandableTreeNode("<root>", null, true);
+    }
+
+    static from (items, pathExtractor = o=>o.pathName, expansionLevel=1) {
+        let root = ExpandableTreeNode.newRoot();
+        items.forEach( data=> {
+            let pathName = pathExtractor(data);
+            if (pathName) {
+                root.sortInPathName(pathName, data)
+            }
+        });
+        root.expandToLevel(expansionLevel);
+
+        return root;
+    }
+
+    sortInPathName(pathName, newData=null, expand=false) {
+        let path = pathName.split('/');
+        let newNode = new ExpandableTreeNode( path[path.length-1], newData, expand);
+        this.#insert(0,path,newNode);
+    }
+
+    expandToLevel (l) {
+        let lmax = this.level() + l;
+
+        this.depthFirstChildren( n=> {
+            n.isExpanded = n.level() <= lmax;
+        })
+    }
+
+    nodePrefix() {
+        let lvl = this.level() -1;
+        //let endChar = this.firstChild ? (this.isExpaned ? '▽ '  : '▷ ') : '· ';
+        let endChar = this.firstChild ? (this.isExpanded ? '▼ '  : '▶︎ ') : '· ';
+
+        if (lvl < 1) return endChar;
+        else if (lvl == 1) return '· ' + endChar;
+        else return '· '.repeat(lvl) + endChar;
+    }
+
+    #insert(lvl, path, newNode) {
+        if (lvl == path.length-1) {
+            this.sortInChild(newNode);
+
+        } else {
+            let head = path[lvl];
+            for (var c = this.firstChild; c; c = c.nextSibling) {
+                if (c.name == head) {
+                    c.#insert(lvl+1, path, newNode);
+                    return;
+                }
+            }
+            // head does not match any of our children, sort in remaining chain
+            let pn = new ExpandableTreeNode(head, null, this.isExpaned);
+            this.sortInChild(pn);
+            for (let i = lvl+1; i < path.length-1; i++) {
+                let cn = new ExpandableTreeNode(path[i], null, this.isExpaned);
+                pn.firstChild = cn;
+                cn.parent = pn;
+                pn = cn;
+            }
+            pn.firstChild = newNode;
+            newNode.parent = pn;
+        }
+    }
+
+    sortInChild (newNode) {
+        newNode.parent = this;
+    
+        var prev = undefined;
+        for (var n = this.firstChild; n && n.name < newNode.name; n = n.nextSibling) prev = n;
+        if (prev) {
+            newNode.nextSibling = prev.nextSibling;
+            prev.nextSibling = newNode;
+        } else {
+            newNode.nextSibling = this.firstChild;
+            this.firstChild = newNode;
+        }
+    } 
+
+    expand() {
+        this.isExpanded = true;
+    }
+
+    collapse() {
+        this.isExpanded = false;
+    }
+
+    expandAll() {
+        this.depthFirstChildren( n=> n.isExpanded = true);
+    }
+
+    expandChildren() {
+        for (let n=this.firstChild; n; n = n.nextSibling) n.isExpanded = true;
+    }
+
+    collapseAll() {
+        this.depthFirstChildren( n=> n.isExpanded = false);
+    }
+
+    collapseChildren() {
+        for (let n=this.firstChild; n; n = n.nextSibling) n.isExpanded = false;
+    }
+
+    expandedDescendants() {
+        return this.depthFirstDescendants( n=> n.isExpanded);
+    }
+}
+
 
 class SkipListNode {
     constructor(data, next) {
@@ -159,7 +328,7 @@ class SkipListNode {
 //const MaxSkipListDepth = 16;
 const MaxSkipListDepth = 5;
 
-class SkipList {
+export class SkipList {
     constructor(depth, isBefore, isSame) {
         this.depth = depth;
         this.isBefore = isBefore;
@@ -175,6 +344,7 @@ class SkipList {
     }
 
     indexOf(data) {
+        let idx = 0;
         let n = this.head;
         for (let lvl = this.maxLevel; lvl >= 0; lvl--) {
             while (n.next[lvl] && this.isBefore(n.next[lvl].data, data)) {
@@ -408,7 +578,7 @@ class SkipList {
     }
 }
 
-class CircularBuffer {
+export class CircularBuffer {
     constructor(maxSize) {
         this.maxSize = maxSize;
         this.size = 0;
@@ -515,8 +685,6 @@ class CircularBuffer {
         return s;
     }
 }
-
-export { LinkedList, SkipList, CircularBuffer, TreeNode };
 
 //--- simple seeded PRNG to support reproducible values for testing (lifted from http://pracrand.sourceforge.net/)
 

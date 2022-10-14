@@ -246,4 +246,11 @@ package object common {
   final val AllId = "<all>"
 
   val emptyByteBuffer = ByteBuffer.allocate(0)
+
+  /**
+   * wrapper for turning a by-name argument into a Runnable (case classes don't accept by-name val/var)
+   */
+  class Runner (f: => Unit) extends Runnable {
+    override def run(): Unit = f
+  }
 }

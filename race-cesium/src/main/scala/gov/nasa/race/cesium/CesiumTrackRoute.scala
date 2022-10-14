@@ -53,7 +53,10 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute with CachedFileAsse
 
   def sendSourceList (remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
     var srcList = channelMap.values
-    if (srcList.isEmpty) srcList = config.getStrings("read-from")
+    if (srcList.isEmpty) {
+      warning("no 'channel-map' configured, falling back to 'read-from' bus channels")
+      srcList = config.getStrings("read-from")
+    }
 
     val msg = s"""{"sources":${srcList.mkString("[\"","\",\"","\"]")}}"""
     pushTo(remoteAddr, queue, TextMessage.Strict(msg))
@@ -77,8 +80,8 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute with CachedFileAsse
           }
         }
       } ~
-        fileAsset(jsModule) ~
-        fileAsset(icon)
+        fileAssetPath(jsModule) ~
+        fileAssetPath(icon)
     }
   }
 

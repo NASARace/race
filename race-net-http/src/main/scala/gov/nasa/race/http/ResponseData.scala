@@ -19,6 +19,7 @@ package gov.nasa.race.http
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.MediaType.Compressible
 import akka.http.scaladsl.model.{ContentType, HttpCharsets, HttpEntity, MediaType, MediaTypes}
+import gov.nasa.race.util.FileUtils
 
 /**
   * convenience helper to create http response content, to be used in complete(..) calls from routes
@@ -53,6 +54,10 @@ object ResponseData {
       case Some(f) => f(content)
       case None => HttpEntity(ContentType(MediaTypes.`application/octet-stream`), content)
     }
+  }
+
+  def forPathName (pathName: String, content: Array[Byte]): HttpEntity.Strict = {
+    forExtension( FileUtils.getExtension(pathName), content)
   }
 
   def html (content: Array[Byte]): HttpEntity.Strict = {

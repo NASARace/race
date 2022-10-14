@@ -22,6 +22,7 @@ import akka.http.scaladsl.model.{ContentType, HttpEntity, HttpRequest, HttpRespo
 import akka.http.scaladsl.server.Directives.{complete, extractUnmatchedPath, extractUri, onComplete, parameterSeq}
 import akka.http.scaladsl.server.{Directive1, Route}
 import akka.http.scaladsl.model.headers.Expires
+import akka.http.scaladsl.settings.{ClientConnectionSettings, ConnectionPoolSettings, ParserSettings}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.util.{FileUtils, NetUtils}
 import gov.nasa.race.uom.DateTime
@@ -40,6 +41,8 @@ import scala.util.{Failure, Success, Try}
   * a RaceRouteInfo that gets the content from external servers
   *
   * note that this is a root type which does not use any caching
+  * NOTE future callbacks should NOT access/modify actor state as they are executed in a non-actor thread
+  * (use pipeTo(self) => handle HttpResponse or RaceActor.execInActorThread(f))
   */
 trait ProxyRaceRoute extends RaceRouteInfo {
 
@@ -77,8 +80,8 @@ trait ProxyRaceRoute extends RaceRouteInfo {
     implicit val ec = scala.concurrent.ExecutionContext.global
 
     info(s"sending proxied request: $reqUri")
-    Http().singleRequest( HttpRequest(uri = reqUri)).flatMap{ resp =>
-      resp.entity.toStrict( maxRequestTimeout, maxRequestSize).map( strictEntity=> (strictEntity,resp))
+    Http().singleRequest(HttpRequest(uri = reqUri)).flatMap { resp =>
+      resp.entity.toStrict(maxRequestTimeout, maxRequestSize).map(strictEntity => (strictEntity, resp))
     }
   }
 
@@ -232,9 +235,16 @@ trait FSCachedProxyRoute extends ProxyRaceRoute {
     val path = file.toPath
     val view = Files.getFileAttributeView(path, classOf[UserDefinedFileAttributeView])
     if (view != null) {
-      view.write(FATTR_MIME_TYPE, Charset.defaultCharset().encode(contentType.mediaType.toString()))
-      expires.foreach { e=>
-        view.write(FATTR_EXPIRES, Charset.defaultCharset().encode(e.date.toString()))
+      // some filesystems have subtle constraints we don't want to turn into internal server errors (500)
+      // (e.g. 'file name too long' for macOS)
+      try {
+        val mimeType = Charset.defaultCharset().encode(contentType.mediaType.toString())
+        view.write(FATTR_MIME_TYPE, mimeType)
+        expires.foreach { e =>
+          view.write(FATTR_EXPIRES, Charset.defaultCharset().encode(e.date.toString()))
+        }
+      } catch {
+        case x: Throwable => warning(s"could not store extended fileattr for $file")
       }
     }
   }

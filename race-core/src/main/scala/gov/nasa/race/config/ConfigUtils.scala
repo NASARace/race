@@ -39,7 +39,7 @@ import scala.concurrent.duration._
  */
 object ConfigUtils {
 
-  val keyValRE = """ *([^ ]+) *: *([^ ]+)""".r
+  val keyValRE = " *(.+): *(.*)".r
 
   def showConfig( config: Config) = {
     config.root.render( ConfigRenderOptions.defaults().setComments(false).setOriginComments(false))

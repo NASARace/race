@@ -95,8 +95,8 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
 
   def uiCesiumHotspotRoute: Route = {
     get {
-      fileAsset("ui_cesium_hotspot.js") ~
-        fileAsset("hotspot-icon.svg")
+      fileAssetPath("ui_cesium_hotspot.js") ~
+        fileAssetPath("hotspot-icon.svg")
     }
   }
 

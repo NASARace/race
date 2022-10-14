@@ -1,3 +1,6 @@
+import * as util from "./ui_util.js";
+import { ExpandableTreeNode } from "./ui_data.js";
+
 if (window) {
     if (!window.main) window.main = {}; // used as an anchor for global properties available from document
 }
@@ -50,6 +53,7 @@ registerLoadFunction(function initialize() {
     _initializeCheckboxes();
     _initializeRadios();
     _initializeLists();
+    _initializeKvTables();
     _initializeTimeWidgets();
     _initializeSliderWidgets();
     _initializeMenus(); /* has to be last in case widgets add menus */
@@ -1482,14 +1486,60 @@ export function setSelectorDisabled(o, isDisabled) {
     _setDisabled(getSelector(o), isDisabled);
 }
 
-//--- lists
+//--- key-value tables (2 column lists, first column contains right aligned labels)
+
+function _initializeKvTables() {
+    let itemHeight = _rootVar("--list-item-height");
+    let itemPadding = _rootVar("--list-item-padding");
+   
+    for (let e of document.getElementsByClassName("ui_kvtable")) {
+        let nRows = _intDataAttrValue(e, "rows", 8);
+        e.style.maxHeight = `calc(${nRows} * (${itemHeight} + ${itemPadding}))`; // does not include padding, borders or margin
+    }
+}
+
+export function getKvTable(o) {
+    return _nearestElementWithClass(_elementOf(o), "ui_kvtable");
+}
+
+export function setKvList (o, kvList, createValueElement = undefined) {
+    let e = getKvTable(o);
+    if (e) {
+        _removeChildrenOf(e);
+        if (kvList) {
+            kvList.forEach( kv=> {
+                let tr = _createElement("TR");
+                let le = _createElement("TD", "ui_field_label");
+                le.innerText = kv[0];
+                tr.appendChild(le);
+
+                let ve = _createElement("TD", "ui_field");
+                if (createValueElement) {
+                    let ce = createValueElement(kv[1]);
+                    ve.appendChild(ce);
+                } else {
+                    if (util.isNumber(kv[1])) ve.classList.add("fixed");
+                    ve.innerText = kv[1];
+                }
+                tr.appendChild(ve);
+
+                e.appendChild(tr);
+            });
+        }
+        _resetPanelMaxHeight(e);
+    }
+}
+
+// no interaction for kv tables
+
+
+//--- lists (with columns)
 
 function _initializeLists() {
-    // this should be in CSS but unfortunately the 'attr()' function so far seems to be very limited
     let itemHeight = _rootVar("--list-item-height");
     let itemPadding = _rootVar("--list-item-padding");
 
-    for (let e of document.getElementsByClassName("ui_list")) {
+    for (let e of document.getElementsByClassName('ui_list')) {
         let nRows = _intDataAttrValue(e, "rows", 8);
         e.style.maxHeight = `calc(${nRows} * (${itemHeight} + ${itemPadding}))`; // does not include padding, borders or margin
         e.setAttribute("tabindex", "0");
@@ -1508,8 +1558,7 @@ function _initializeLists() {
         e._uiMapFunc = item => item.toString(); // item => itemElement text
         e._uiItemMap = new Map(); // item -> itemElement
 
-        // re-parent if not yet in a ui_list_wrapper - we need a parent if there are column headers but also to ensure layout if the content is changed
-        addListWrapper(e);
+        addListWrapper(e); // reparent
     }
 }
 
@@ -1527,6 +1576,7 @@ function listKeyDownHandler(event) {
     }
 }
 
+// re-parent if not yet in a ui_list_wrapper - we need a parent if there are column headers but also to ensure layout if the content is changed
 function addListWrapper(list) {
     let parent = list.parentElement;
     if (!parent.classList.contains("ui_list_wrapper")){
@@ -1564,8 +1614,11 @@ export function setListItemDisplayColumns(o, listAttrs, colSpecs) {
             if (he) he.appendChild(createSubitemHeader(he, cs, w));
         });
 
-        e.style.width = `calc(${totalWidth} + var(--scrollbar-track-width) + 2*var(--border-width) + 2*var(--list-item-padding))`;
-        if (listAttrs.includes("fit")) _addClass(e, "fit");
+        if (!_containsClass(e, "ui_tree")) {
+            e.style.width = `calc(${totalWidth} + var(--scrollbar-track-width) + 2*var(--border-width) + 2*var(--list-item-padding))`;
+            if (listAttrs.includes("fit")) _addClass(e, "fit");
+        }
+
         e._uiRowPrototype = re;
 
         if (he) addListHeader(e,he);
@@ -1708,6 +1761,111 @@ export function setListItems(o, items) {
         _resetPanelMaxHeight(e);
     }
 }
+
+//--- tree list variation
+
+export function setTree(o,root) {
+    let e = getList(o);
+    if (e) {
+        _setSelectedItemElement(e, null);
+        _removeChildrenOf(e);
+
+        if (root && root.constructor && root.constructor.name === 'ExpandableTreeNode') {
+            root.expandedDescendants().forEach( node=>e.appendChild(_createNodeElement(e, node)));
+            _resetPanelMaxHeight(e);
+        }
+    }
+}
+
+function _createNodeElement(e, node) {
+    let ne = _createElement("DIV", "ui_node");
+    ne._uiNode = node;
+
+    let nHeader = _createElement("DIV", "ui_node_header");
+    let nPrefix = _createElement("DIV", "ui_node_prefix", node.nodePrefix());
+    nPrefix.addEventListener("click", clickNodePrefix);
+    let nName = _createElement("DIV", "ui_node_name", node.name);
+    nHeader.appendChild(nPrefix);
+    nHeader.appendChild(nName);
+    ne.appendChild(nHeader);
+
+    let proto = e._uiRowPrototype;
+    if (node.data) {
+        if (proto) {
+            ne.appendChild( _createListItemElement(e, node.data, proto));
+        } else { // create an invisible dummy element so that it can be selected
+            let ie = _createElement("DIV", "ui_list_item");
+            ie.style.display = "none";
+            ie._uiItem = node.data; // ? do we have to add this to the list._uiItemMap
+            ne.appendChild( ie); // add a dummy element
+        }
+    } else {
+        _addClass(nName, "no_data");
+    }
+
+    nName.addEventListener("click", selectNode);
+    ne.addEventListener("click", selectNode);
+
+    return ne;
+}
+
+function selectNode (event) {
+    let ne = _nearestElementWithClass(event.target,"ui_node");
+    if (ne && !_containsClass(ne,"selected")) {
+        let list = nearestParentWithClass(ne, "ui_list");
+        if (list._uiSelectedNodeElement) _removeClass(list._uiSelectedNodeElement, "selected");
+        list._uiSelectedNodeElement = ne;
+        _addClass(ne, "selected");
+
+        if (ne._uiNode.data) {
+            let ie = ne.firstChild.nextElementSibling;
+            if (ie && _containsClass(ie, "ui_list_item")) _setSelectedItemElement(list,ie);
+            else _setSelectedItemElement(list,null);
+        } else {
+            _setSelectedItemElement(list,null);
+        }
+    }
+}
+
+function clickNodePrefix(event) {
+    let ne = _nearestElementWithClass(event.target,"ui_node");
+    let e = ne.parentElement;
+    _consumeEvent(event);
+
+    if (ne) {
+        let node = ne._uiNode;
+        if (node.hasChildren()){
+            if (node.isExpanded) { // collapse
+                let lvl = node.level();
+                for (let nne = ne.nextElementSibling; nne && nne._uiNode.level() > lvl; nne = ne.nextElementSibling) {
+                    if (nne._uiNode.data) {
+                        e._uiItemMap.delete(nne._uiNode.data);
+                    }
+                    e.removeChild(nne);
+                }
+                node.collapse();
+            } else { // expand
+                node.expand();
+                let nne = ne.nextElementSibling;
+                node.expandedDescendants().forEach( dn=> {
+                    let dne = _createNodeElement(e, dn, e._uiRowPrototype);
+                    if (nne) e.insertBefore(dne, nne);
+                    else e.appendChild(dne);
+                });
+            }
+            let nPrefix = ne.firstElementChild.firstElementChild;
+            nPrefix.innerText = node.nodePrefix();
+        }
+    }
+}
+
+export function getTreeList (o) {
+    let e = getList(o);
+    return (e && e.classList.contains("ui_tree")) ? e : null;
+}
+
+//--- end tree list
+
 
 function selectAndShow(e, ie) {
     if (ie) {
@@ -1894,6 +2052,11 @@ export function clearSelectedListItem(o) {
     let e = getList(o);
     if (e) {
         _setSelectedItemElement(e, null);
+
+        if (e._uiSelectedNodeElement) {
+            _removeClass(e._uiSelectedNodeElement, "selected");
+            e._uiSelectedNodeElement = undefined;
+        }
     }
 }
 
@@ -1907,7 +2070,6 @@ export function clearList(o) {
 
 export function getList(o) {
     let e = _elementOf(o);
-
     if (e) {
         let eCls = e.classList;
         if (eCls.contains("ui_list")) return e;
@@ -2046,6 +2208,7 @@ export function toggleMenuItemCheck(event) {
     }
 }
 
+
 //--- color input
 
 export function createColorInput(initClr, size, action) {
@@ -2070,6 +2233,7 @@ export function createImage(src, placeholder, w, h) {
     if (h) e.height = h;
     return e;
 }
+
 
 //--- general event processing
 

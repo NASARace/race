@@ -40,7 +40,7 @@ trait CesiumBldgRoute extends CesiumRoute with DocumentRoute with CachedFileAsse
   //--- route
 
   def bldgRoute: Route = {
-    fileAsset("ui_cesium_bldg.js")
+    fileAssetPath("ui_cesium_bldg.js")
   }
 
   override def route: Route = bldgRoute ~ super.route

@@ -7,6 +7,7 @@
     --theme: "night";
     --color: rgb(222, 141, 141);
     --darker-color: rgb(200,120,120);
+    --dim-color: rgb(100,40,40);
     --data-color: #fdb724;
     --selected-data-color: yellow;
     --input-data-color: yellow;
@@ -112,6 +113,7 @@
     --list-selection-color: var(--selected-data-color);
     --list-selection-background: var(--selection-background);
     --list-header-font: var(--font-small);
+    --table-border: 1px solid var(--border-dark-color);
     --clock-date-font: var(--font-small);
     --clock-time-font: bold 120% Courier;
     --clock-color: var(--field-value-color);

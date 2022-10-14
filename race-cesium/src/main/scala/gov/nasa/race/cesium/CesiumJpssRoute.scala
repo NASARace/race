@@ -24,7 +24,7 @@ import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.JsonWriter
+import gov.nasa.race.common.{JsonProducer, JsonWriter}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{BusEvent, ParentActor}
 import gov.nasa.race.http.{ContinuousTimeRaceRoute, DocumentRoute, PushWSRaceRoute, WSContext}
@@ -65,11 +65,9 @@ import gov.nasa.race.cesium.CesiumJpssRoute._
   * a RaceRouteInfo that serves active fires detected by polar orbiting satellites
   * note this can handle multiple satellites
   */
-trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTimeRaceRoute {
+trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTimeRaceRoute with JsonProducer {
 
   val jpssAssets = getSymbolicAssetMap("jpss.assets", config, Seq(("fire","fire.png")))
-
-  private val writer = new JsonWriter()
 
   //--- the satellites we expect (from config)
   val jpssSatellites = config.getConfigSeq("jpss.satellites").map(c=> new SatelliteInfo(c))
@@ -93,8 +91,8 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
           completeWithSymbolicAsset(p.toString, jpssAssets)
         }
       } ~
-      fileAsset(jsModule) ~
-      fileAsset(icon)
+      fileAssetPath(jsModule) ~
+      fileAssetPath(icon)
     }
   }
 

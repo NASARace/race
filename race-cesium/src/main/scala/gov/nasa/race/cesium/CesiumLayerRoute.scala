@@ -77,8 +77,8 @@ trait CesiumLayerRoute extends QueryProxyRoute with FSCachedProxyRoute with Cesi
       path ("proxy") {
         completeProxied // the request url is encoded in the query
       } ~
-        fileAsset("ui_cesium_layers.js") ~
-        fileAsset("layer-icon.svg")
+        fileAssetPath("ui_cesium_layers.js") ~
+        fileAssetPath("layer-icon.svg")
     }
   }
 

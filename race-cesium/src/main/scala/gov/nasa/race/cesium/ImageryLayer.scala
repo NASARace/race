@@ -53,7 +53,7 @@ object ImageryLayer {
       "arcgis",
       "ArcGIS Geographic",
       "https://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/",
-      "new Cesium.ArcGisMapServerImageryProvider({url:'$URL'})",
+      "new Cesium.ArcGisMapServerImageryProvider({url:'$URL',enablePickFeatures:false})",
       isBase = true,
       proxy = true,
       show = true,

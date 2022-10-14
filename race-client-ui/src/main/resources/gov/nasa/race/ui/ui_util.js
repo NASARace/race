@@ -300,6 +300,12 @@ const defaultLocalDateHMTimeFormat = new Intl.DateTimeFormat('en-US', {
     hourCycle: 'h23'
 });
 
+const defaultLocalDateFormat = new Intl.DateTimeFormat('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: '2-digit'
+});
+
 const defaultLocalMDDateFormat = new Intl.DateTimeFormat('en-US', {
     month: '2-digit',
     day: '2-digit'
@@ -328,7 +334,6 @@ const defaultLocalHMTimeFormat = new Intl.DateTimeFormat('default', {
 });
 
 
-
 export function timeFormat(timeOpts) {
     let to;
     if (!timeOpts) {
@@ -340,6 +345,10 @@ export function timeFormat(timeOpts) {
     }
 
     return new Intl.DateTimeFormat('en-US', to);
+}
+
+export function toLocalDateString(d) {
+    return toFormattedDateTimeString(d, defaultLocalDateFormat);
 }
 
 export function toFormattedDateTimeString (d,fmt) {
@@ -491,4 +500,11 @@ export function distanceBetweenGeoPos(lat1Deg,lon1Deg, lat2Deg,lon2Deg) {
 
 export function countMatching(array, pred) {
     return array.reduce((acc, e) => pred(e) ? acc + 1 : acc, 0);
+}
+
+export function firstDefined(...theArgs) {
+    for (const arg of theArgs) {
+        if (arg) return arg;
+    }
+    return undefined;
 }

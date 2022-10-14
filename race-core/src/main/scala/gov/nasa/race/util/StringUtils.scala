@@ -157,6 +157,7 @@ object StringUtils {
   val QuotedRE = """"(.*)"""".r
 
   val digitRE = """\d""".r
+  val fractionalNumberRE = """^\d+(?:\.\d*)?$""".r
   val latinLetterRE = """[a-zA-Z]""".r
   def containsDigit(s: String) = digitRE.findFirstIn(s).isDefined
   def containsLatinLetter(s: String) = latinLetterRE.findFirstIn(s).isDefined
@@ -165,6 +166,8 @@ object StringUtils {
     // TODO - should also cover '?'
     new Regex("^" + glob.replace("*", ".*") + '$').anchored
   }
+
+  def isFractionalNumber(s: String): Boolean = fractionalNumberRE.matches(s)
 
   def startsWith(cs: Array[Char], i0: Int, s: String): Boolean = {
     var i = 0
@@ -252,6 +255,9 @@ object StringUtils {
     }
     i
   }
+
+  def quote(s: String): String = s"'$s'"
+  def doubleQuote(s: String): String = s""""$s""""
 
   def mkString[T] (a: Seq[T], sep: Char)(f: T=>String): String = {
     if (a.nonEmpty) {

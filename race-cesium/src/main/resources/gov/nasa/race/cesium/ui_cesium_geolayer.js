@@ -1,6 +1,7 @@
 import * as config from "./config.js";
 import * as ws from "./ws.js";
 import * as util from "./ui_util.js";
+import { ExpandableTreeNode } from "./ui_data.js";
 import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
@@ -16,32 +17,62 @@ var sources = []; // will be populated by getLayers messages
 var sourceView = undefined;
 var defaultRender = config.geolayer.render;
 
+var objectView = undefined;
+
+const renderModules = new Map();
+var defaultRenderFunc = undefined;
+
 ui.registerLoadFunction(function initialize() {
     sourceView = initSourceView();
+    objectView = ui.getKvTable("geolayer.object");
 
     uiCesium.setEntitySelectionHandler(geoLayerSelection);
     ws.addWsHandler(config.wsUrl, handleWsGeoLayerMessages);
+
+    if (config.geolayer.render) processRenderOpts(config.geolayer.render);
 
     uiCesium.initLayerPanel("geolayer", config.geolayer, showGeoLayer);
     console.log("ui_cesium_geolayer initialized");
 });
 
+async function loadRenderModule (modPath,sourceEntry=null) {
+    let renderFunc = renderModules.get(modPath);
+    if (!renderFunc) {
+        try {
+            const { render } = await import(modPath);
+            if (render) {
+                renderModules.set(modPath, render);
+                renderFunc = render;
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    }
+
+    if (renderFunc) { 
+        if (sourceEntry) sourceEntry.renderFunc = renderFunc;
+        else defaultRenderFunc = renderFunc;
+    }
+}
+
 function geoLayerSelection() {
-    let sel = uiCesium.getSelectedEntity();
-    if (sel) {
-        // sel.properties.propertyNames.forEach( n=> {
-        //     let v = sel.properties[n]._value;
-        //     console.log( "@@ " + n + " = " + v);
-        // })
+    let e = uiCesium.getSelectedEntity();
+    if (e && e.properties && e.properties.propertyNames) {
+        let kvList = e.properties.propertyNames.map( key=> [key, e.properties[key]._value]);
+        ui.setKvList(objectView,kvList);
+    } else {
+        ui.setKvList(objectView,null);
     }
 }
 
 function initSourceView() {
     let view = ui.getList("geolayer.source.list");
     if (view) {
-        ui.setListItemDisplayColumns(view, ["fit"], [
-            { name: "", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSource) },
-            { name: "path", width: "12rem", attrs: [], map: e=> e.source.pathName }
+        ui.setListItemDisplayColumns(view, ["header"], [
+            { name: "date", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateString(e.source.date)},
+            { name: "objs", width: "5rem", attrs: ["fixed", "alignRight"], map: e => e.nEntities ? e.nEntities : ""},
+            ui.listItemSpacerColumn(),
+            { name: "show", width: "2.1rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSource) }
         ]);
     }
     return view;
@@ -71,7 +102,34 @@ function handleWsGeoLayerMessages(msgType, msg) {
 function handleGeoLayersMessage(geoLayers) {
     // TODO - needs to handle updates differently from init
     sources = geoLayers.map( src=> new SourceEntry(src));
-    ui.setListItems( sourceView, sources);
+    
+    let srcTree = ExpandableTreeNode.from( sources, e=> e.source.pathName);
+    ui.setTree( sourceView, srcTree);
+
+    sources.forEach( e=> {
+        if (e.source.render) {
+            processRenderOpts( e.source.render, e);
+        }
+    });
+}
+
+function processRenderOpts (opts, sourceEntry=null) {
+    if (opts.module) loadRenderModule( opts.module, sourceEntry);
+
+    // transform once into Cesium representation so that we don't re-create similar objects when loading the layer
+
+    if (opts.pointDistance) {
+        opts.pointDC = new Cesium.DistanceDisplayCondition(opts.pointDistance, Number.MAX_VALUE);
+        opts.billboardDC = new Cesium.DistanceDisplayCondition( 0, opts.pointDistance);
+    }
+
+    if (opts.geometryDistance) {
+        opts.geometryDC = new Cesium.DistanceDisplayCondition( 0, opts.geometryDistance);
+    }
+
+    if (util.isString(opts.markerColor)) opts.markerColor = Cesium.Color.fromCssColorString(opts.markerColor);
+    if (util.isString(opts.stroke)) opts.stroke = Cesium.Color.fromCssColorString(opts.stroke);
+    if (util.isString(opts.fill)) opts.fill = Cesium.Color.fromCssColorString(opts.fill);
 }
 
 function loadSource(sourceEntry) {
@@ -89,6 +147,10 @@ function loadSource(sourceEntry) {
                 new Cesium.GeoJsonDataSource.load(data, renderOpts).then(
                     ds => {
                         sourceEntry.dataSource = ds;
+                        postProcessDataSource(sourceEntry, renderOpts);
+                        sourceEntry.nEntities = ds.entities.values.length;
+                        ui.updateListItem(sourceView, sourceEntry);
+
                         uiCesium.viewer.dataSources.add(ds);
                         uiCesium.requestRender();
                         setTimeout( () => uiCesium.requestRender(), 300); // ??
@@ -106,20 +168,13 @@ function collectRenderOpts (sourceEntry) {
         ...sourceEntry.source.render
     };
 
-    // this should go into initialization
-    if (o.stroke && util.isString(o.stroke)) o.stroke = Cesium.Color.fromCssColorString(o.stroke);
-    if (o.markerColor && util.isString(o.markerColor)) o.markerColor = Cesium.Color.fromCssColorString(o.markerColor);
-    if (o.fill && util.isString(o.fill)) o.fill = Cesium.Color.fromCssColorString(o.fill);
-
     return o;
 }
 
-function setEntityProperties (ds, renderOpts) {
-    // set points, billboard symbols, set DCs copy GeoJSON features etc
-    let entities = ds.entities.values;
-    for (var i = 0; i < entities.length; i++) {
-        var entity = entities[i];
-        //entity.billboard = undefined;
+function postProcessDataSource (sourceEntry, renderOpts) {
+    let renderFunc = util.firstDefined(sourceEntry.renderFunc, defaultRenderFunc);
+    if (renderFunc) {
+        renderFunc( sourceEntry.dataSource.entities, renderOpts);
     }
 }
 
@@ -129,6 +184,9 @@ function unloadSource(sourceEntry) {
         uiCesium.viewer.dataSources.remove(sourceEntry.dataSource, true);
         sourceEntry.dataSource = undefined;
         uiCesium.requestRender();
+
+        sourceEntry.nEntities = undefined;
+        ui.updateListItem(sourceView, sourceEntry);
     }
 }
 
@@ -138,6 +196,6 @@ function showGeoLayer(cond) {
 ui.exportToMain(function selectGeoLayerSource(event) {
     let e = event.detail.curSelection;
     if (e) {
-        console.log("selected: " + e);
+        console.log("selected: ", e);
     }
 });

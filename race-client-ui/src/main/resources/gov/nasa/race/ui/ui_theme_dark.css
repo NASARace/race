@@ -8,6 +8,7 @@
     /* basic values */
     --color: rgb(200, 200, 200);
     --darker-color: rgb(170,170,170);
+    --dim-color: rgb(80,80,80);
     --data-color: #01ff01;
     /* rgb(0,255,0); */
     --selected-data-color: yellow;
@@ -129,6 +130,8 @@
     --list-selection-color: var(--selected-data-color);
     --list-selection-background: var(--selection-background);
     --list-header-font: var(--font-small);
+    /* tables */
+    --table-border: 1px solid rgb(50,50,50);
     /* clocks */
     --clock-date-font: var(--font-small);
     --clock-time-font: bold 120% Courier;

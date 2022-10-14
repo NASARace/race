@@ -673,3 +673,10 @@ trait ToJson {
 trait JsonAdapter[T] {
   def writeJson(writer: JsonWriter, obj: T): Unit
 }
+
+/**
+ * something that needs a JsonWriter that is shared between traits
+ */
+trait JsonProducer {
+  protected val writer: JsonWriter = new JsonWriter()
+}

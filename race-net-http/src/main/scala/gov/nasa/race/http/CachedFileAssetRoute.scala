@@ -112,9 +112,6 @@ trait CachedFileAssetRoute extends RaceRouteInfo {
     }
   }
 
-  def loadFromFileList(pathName: String): Unit = {}
-
-
   def clearCachedFileAsset (fileName: String): Unit = {
     cachedFiles = cachedFiles - fileName
     cachedResources = cachedResources - fileName
@@ -158,7 +155,8 @@ trait CachedFileAssetRoute extends RaceRouteInfo {
     }
   }
 
-  def fileAsset(fileName: String): Route = {
+  // this completes if 'fileName' is the unmatched path
+  def fileAssetPath(fileName: String): Route = {
     path(fileName) {
       complete( ResponseData.forExtension( FileUtils.getExtension(fileName), getFileAssetContent(fileName)))
     }
@@ -180,7 +178,4 @@ trait CachedFileAssetRoute extends RaceRouteInfo {
       case None => complete(StatusCodes.NotFound, key)
     }
   }
-
-
-
 }

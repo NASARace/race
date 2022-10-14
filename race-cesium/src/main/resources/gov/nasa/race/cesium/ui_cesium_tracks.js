@@ -105,7 +105,7 @@ function initTrackSourceView() {
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit"], [
             { name: "", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSource) },
-            { name: "id", width: "5rem", attrs: ["alignLeft"], map: e => e.id },
+            { name: "id", width: "8rem", attrs: ["alignLeft"], map: e => e.id },
             { name: "size", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.trackEntries.size.toString() },
             { name: "date", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalTimeString(e.date) }
         ]);

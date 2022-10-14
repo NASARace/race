@@ -30,6 +30,7 @@ package object ui {
   type UiID = String
 
   val NoAction = ""
+  val NoClass = ""
   val NoId = ""
   val NoIcon = ""
   val NoWidth = ""
@@ -174,20 +175,34 @@ package object ui {
 
   def uiLabel (eid: UiID, isPermanent: Boolean=false, maxWidthInRem:Int=0, minWidthInRem:Int=0): Text.TypedTag[String] = {
     val classList = if (isPermanent) "ui_label permanent" else "ui_label"
-    var mods = List(cls:=classList, id:=eid)
-    if (maxWidthInRem > 0) mods = (style:=s"max-width: ${maxWidthInRem}rem") :: mods
-    if (minWidthInRem > 0) mods = (style:=s"min-width: ${minWidthInRem}rem") :: mods
+    var mods: List[AttrPair] = List(cls:=classList, id:=eid)
+    mods = addRemWidthStyles( mods, minWidthInRem, maxWidthInRem)
+
+    div(mods: _*)
+  }
+
+  def genList (eid: UiID, extraCls: String=NoClass, maxRows: Int, maxWidthInRem: Int = 0, minWidthInRem: Int = 0,
+               selectAction: String=NoAction, clickAction: String=NoAction, contextMenuAction: String=NoAction, dblClickAction: String=NoAction): Text.TypedTag[String] = {
+    val clsList = if (extraCls.isEmpty) "ui_list" else s"ui_list $extraCls"
+    var mods = List(cls:=clsList, id:=eid, data("rows"):=maxRows)
+    mods = addRemWidthStyles( mods, minWidthInRem, maxWidthInRem)
+
+    if (clickAction.nonEmpty) mods = (onclick:=clickAction) :: mods
+    if (dblClickAction.nonEmpty) mods = (ondblclick:=dblClickAction) :: mods
+    if (selectAction.nonEmpty) mods = (data("onselect"):=selectAction) :: mods
+    if (contextMenuAction.nonEmpty) mods = (oncontextmenu:=contextMenuAction) :: mods
+
     div(mods: _*)
   }
 
   def uiList (eid: UiID, maxRows: Int,
               selectAction: String=NoAction, clickAction: String=NoAction, contextMenuAction: String=NoAction, dblClickAction: String=NoAction): Text.TypedTag[String] = {
-    var mods = List(cls:="ui_list", id:=eid, data("rows"):=maxRows)
-    if (clickAction.nonEmpty) mods = (onclick:=clickAction) :: mods
-    if (dblClickAction.nonEmpty) mods = (ondblclick:=dblClickAction) :: mods
-    if (selectAction.nonEmpty) mods = (data("onselect"):=selectAction) :: mods
-    if (contextMenuAction.nonEmpty) mods = (oncontextmenu:=contextMenuAction) :: mods
-    div(mods: _*)
+    genList(eid,NoClass, maxRows,0,0,selectAction,clickAction,contextMenuAction,dblClickAction)
+  }
+
+  def uiTreeList (eid: UiID, maxRows: Int, maxWidthInRem: Int = 0, minWidthInRem: Int = 0,
+                  selectAction: String=NoAction, clickAction: String=NoAction, contextMenuAction: String=NoAction, dblClickAction: String=NoAction): Text.TypedTag[String] = {
+    genList(eid,"ui_tree", maxRows,maxWidthInRem,minWidthInRem,selectAction,clickAction,contextMenuAction,dblClickAction)
   }
 
   def uiClock (label: String, eid: UiID, tz: String): Text.TypedTag[String] = {
@@ -225,6 +240,21 @@ package object ui {
     var mods = List(cls:="ui_choice", data("id"):=eid, data("label"):=label)
     if (changeAction.nonEmpty) mods = (onchange:=changeAction) :: mods
     div(mods: _*)
+  }
+
+  def uiKvTable (eid: UiID, maxRows: Int, maxWidthInRem: Int = 0, minWidthInRem: Int = 0): Text.TypedTag[String] = {
+    var mods = List(cls:="ui_kvtable", id:=eid, data("rows"):=maxRows)
+    mods = addRemWidthStyles(mods, minWidthInRem, maxWidthInRem)
+
+    table(mods: _*)
+  }
+
+  def addRemWidthStyles(mods: List[AttrPair], minWidthInRem: Int, maxWidthInRem: Int): List[AttrPair] = {
+    var styleSpecs = "";
+    if (maxWidthInRem > 0) styleSpecs = s"max-width:${maxWidthInRem}rem;"
+    if (minWidthInRem > 0) styleSpecs += s"min-width:${minWidthInRem}rem;"
+
+    if (styleSpecs.nonEmpty) (style:=styleSpecs) :: mods else mods
   }
 
   def basicUiModules: Seq[Text.TypedTag[String]] = {

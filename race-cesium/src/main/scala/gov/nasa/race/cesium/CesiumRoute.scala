@@ -19,7 +19,7 @@ package gov.nasa.race.cesium
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{PathMatcher, PathMatchers, Route}
+import akka.http.scaladsl.server.{ExceptionHandler, PathMatcher, PathMatchers, Route}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
 import gov.nasa.race.cesium.CesiumRoute.cesiumJsUrl
@@ -42,7 +42,7 @@ object CesiumRoute {
 
   val imageryPrefixMatcher = PathMatcher(imageryPrefix / "[^/]+".r ~ Slash)
 
-  val defaultCesiumJsVersion = "1.97"
+  val defaultCesiumJsVersion = "1.98"
 
   val cesiumPathMatcher = PathMatchers.separateOnSlashes("Build/Cesium/")
   def cesiumJsUrl (version: String): String = {
@@ -92,27 +92,27 @@ trait CesiumRoute
   def uiCesiumRoute: Route = {
     get {
       //--- dynamic geospatial content requested by Cesium at runtime
-      pathPrefix(CesiumRoute.imageryPrefixMatcher) { layerId=>// we only get this if we act as a proxy
-          layerMap.get(layerId) match {
-            case Some(url) => completeProxied(url)
-            case None => complete(StatusCodes.NotFound, p.toString())
-          }
+      pathPrefix(CesiumRoute.imageryPrefixMatcher) { layerId => // we only get this if we act as a proxy
+        layerMap.get(layerId) match {
+          case Some(url) => completeProxied(url)
+          case None => complete(StatusCodes.NotFound, p.toString())
+        }
 
       } ~ pathPrefix(CesiumRoute.terrainPrefix) { // also just when configured as proxy
         completeProxied(terrainProvider)
 
         //--- the standard Cesium assets - note we always proxy these fs-cached with a pre-configured host URL
       } ~ pathPrefix(cesiumPathMatcher) {
-        completeProxied( cesiumJsUrl(cesiumVersion))
+        completeProxied(cesiumJsUrl(cesiumVersion))
 
         //--- our Cesium assets
       } ~
-        fileAsset ("ui_cesium.js") ~
-        fileAsset ("ui_cesium.css") ~
-        fileAsset ("time-icon.svg") ~
-        fileAsset ("view-icon.svg") ~
-        fileAsset ("layer-icon.svg") ~
-        fileAsset ("map-cursor.png")
+        fileAssetPath("ui_cesium.js") ~
+        fileAssetPath("ui_cesium.css") ~
+        fileAssetPath("time-icon.svg") ~
+        fileAssetPath("view-icon.svg") ~
+        fileAssetPath("layer-icon.svg") ~
+        fileAssetPath("map-cursor.png")
     }
   }
 

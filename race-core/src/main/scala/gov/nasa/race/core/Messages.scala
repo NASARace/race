@@ -104,7 +104,9 @@ case object RaceTerminateRequest  // ras internal termination request: RaceActor
 
 case class RaceAck () extends RaceSystemMessage // generic acknowledgement, sent directly
 case object RaceTick extends RaceSystemMessage // used to trigger periodic actions
+
 case class RaceRetry(e:Any) // to-reprocess a message
+case class RaceExecRunnable (f: Runnable) extends RaceSystemMessage // to execute a runnable within the actor thread
 
 //--- RaceActorSystem control messages (RaceActorSystem <-> Master <-> remoteMaster)
 protected[core] case object RaceCreate                // RAS -> Master
@@ -195,6 +197,10 @@ case class ChannelTopicRelease (channelTopic: ChannelTopic, client: ActorRef)  e
 
 case class SetTimeout (msg: Any, duration: FiniteDuration) extends RaceSystemMessage
 
+/**
+ * wrapper for delayed action execution
+ * Note this is not a system message, i.e. if there is no handler it will be ignored
+ */
 case class DelayedAction(originator: ActorRef, action: ()=>Unit)
 
 

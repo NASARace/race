@@ -23,7 +23,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
-import gov.nasa.race.common.JsonWriter
+import gov.nasa.race.common.{JsonProducer, JsonWriter}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{BusEvent, ParentActor, PeriodicRaceDataClient}
 import gov.nasa.race.http.{DocumentRoute, PushWSRaceRoute, WSContext}
@@ -49,8 +49,7 @@ import CesiumGoesrRoute._
   * a Cesium RaceRouteInfo that uses a collection of geostationary and polar-orbiter satellites to detect
   * fire hotspots
   */
-trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRaceDataClient {
-  private val writer = new JsonWriter()
+trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRaceDataClient with JsonProducer {
 
   val goesrSatellites = config.getConfigArray("goes-r.satellites").map(c=> new SatelliteInfo(c))
   val goesrAssets = getSymbolicAssetMap("goesr.assets", config, Seq(("fire","fire.png")))
@@ -77,8 +76,8 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
           completeWithSymbolicAsset(p.toString, goesrAssets)
         }
       } ~
-      fileAsset(jsModule) ~
-      fileAsset(icon)
+      fileAssetPath(jsModule) ~
+      fileAssetPath(icon)
     }
   }
 
