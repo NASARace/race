@@ -17,10 +17,10 @@ lazy val testSettings = commonSettings ++ noPublishSettings  // test projects do
 
 //--- root project (only for aggregation)
 lazy val root = createRootProject("race").
-aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceShare,raceSwing,raceWW,raceAir,raceWWAir,raceEarth,raceClientUI,
+aggregate(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceNetSmtp,raceShare,raceSwing,raceWW,raceAir,raceWWAir,raceEarth,raceClientUI,
 raceCesium,raceSpace,raceLauncher,raceAdapter,
 raceCL,raceTools,raceTestKit,raceCoreTest,raceNetJMSTest,raceNetHttpTest,raceShareTest,raceNetKafkaTest,raceCLTest,raceAirTest,raceEarthTest,raceSpaceTest,raceClientUiTest).
-dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceSwing,raceWW,raceAir,raceWWAir,raceEarth,raceSpace,raceLauncher,raceShare,raceCesium).
+dependsOn(raceCore,raceNetJMS,raceNetKafka,raceNetDDS,raceNetHttp,raceNetSmtp,raceSwing,raceWW,raceAir,raceWWAir,raceEarth,raceSpace,raceLauncher,raceShare,raceCesium).
 enablePlugins(JavaAppPackaging,LauncherJarPlugin,LaikaPlugin).
 settings(
 commonSettings,
@@ -67,6 +67,10 @@ addLibraryDependencies(omgDDS)
 lazy val raceNetHttp = createProject("race-net-http", commonSettings).
 dependsOn(raceCore).
 addLibraryDependencies(akkaHttp,scalaTags,argon2,jfreeChart,webauthn)
+
+lazy val raceNetSmtp = createProject("race-net-smtp", commonSettings).
+  dependsOn(raceCore).
+  addLibraryDependencies(akkaAll,jakartaMail)
 
 lazy val raceSwing = createProject("race-swing", commonSettings).
 dependsOn(raceCore).

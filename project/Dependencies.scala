@@ -192,6 +192,9 @@ val kafkaVersion = "3.1.0"
   //--- Apache Commons Net (FTP, NTP etc.)
   val apacheCommonsNet = "commons-net" % "commons-net" % "3.8.0" 
 
+  //--- Apache Jakarta Mail
+  val jakartaMail = "com.sun.mail" % "jakarta.mail" % "2.0.1"
+
   //--- AWS SDK
   val awsS3 = "software.amazon.awssdk" % "s3" % "2.17.276"
 
