@@ -1,4 +1,5 @@
 import * as config from "../config.js";
+import * as util from "../ui_util.js";
 
 console.log("geolayer module loaded: " +  new URL(import.meta.url).pathname.split("/").pop())
 
@@ -21,6 +22,12 @@ export function render (entityCollection, opts) {
             };
 
             e.billboard.distanceDisplayCondition = (opts.billboardDC ? opts.billboardDC : defaultBillboardDC);
+            if (opts.markerSymbol && opts.markerSymbol.endsWith(".png")) {
+                e.billboard.image = opts.markerSymbol;
+                e.billboard.color = opts.markerColor;
+                e.billboard.horizontalOrigin = Cesium.HorizontalOrigin.CENTER;
+                e.billboard.verticalOrigin = Cesium.VerticalOrigin.CENTER;
+            }
         }
 
         if (e.polygon) {

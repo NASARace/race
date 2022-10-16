@@ -126,7 +126,7 @@ case class GeoLayer (pathName: String, file: File, date: DateTime, info: String,
 
 object GeoLayerRoute {
   val jsModule = "ui_cesium_geolayer.js"
-  val icon = "infrastructure.svg"
+  val icon = "map-annotation-icon.svg"
 
   val windowId = "geolayer"
 }
@@ -172,15 +172,14 @@ trait GeoLayerRoute extends CesiumRoute with JsonProducer {
       } ~
       pathPrefix( MODULE_PREFIX ~ Slash) {
         extractUnmatchedPath { p =>
-          val pathName = s"$MODULE_PREFIX/$p"
-          val bs = getFileAssetContent(pathName)
-          if (bs.nonEmpty) {
-            complete( ResponseData.forPathName(pathName, bs))
-          } else {
-            complete(StatusCodes.NotFound, p.toString())
-          }
+          completeWithFileAsset(p, s"$MODULE_PREFIX/$p")
         }
       } ~
+        pathPrefix( "geolayer-asset" ~ Slash) {
+          extractUnmatchedPath { p =>
+            completeWithFileAsset(p, p.toString)
+          }
+        } ~
       fileAssetPath(jsModule) ~
       fileAssetPath(icon)
     }
@@ -212,7 +211,7 @@ trait GeoLayerRoute extends CesiumRoute with JsonProducer {
   def geoLayerConfig(requestUri: Uri, remoteAddr: InetSocketAddress): String = {
     val cfg = config.getConfig("geolayer")
     s"""export const geolayer = {
-  ${cesiumLayerConfig(cfg, "/infra/hifld", "infrastructure sub-layers from HIFLD")},
+  ${cesiumLayerConfig(cfg, "/overlay/annotation", "static map overlays with symbolic data")},
    render: ${defaultRendering.toJs}
  };"""
   }

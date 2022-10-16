@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.http
 
+import akka.http.scaladsl.model.Uri.Path
 import akka.http.scaladsl.model.{HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, path}
 import akka.http.scaladsl.server.Route
@@ -124,6 +125,15 @@ trait CachedFileAssetRoute extends RaceRouteInfo {
 
   private var _firstRequest = true
   def showResolvers(): Unit = cfaResolvers.foreach(_.show())
+
+  def completeWithFileAsset (p: Path, pathName: String): Route = {
+    val bs = getFileAssetContent(pathName)
+    if (bs.nonEmpty) {
+      complete( ResponseData.forPathName(pathName, bs))
+    } else {
+      complete(StatusCodes.NotFound, p.toString())
+    }
+  }
 
   def getFileAssetContent(fileName: String): Array[Byte] = {
     //if (_firstRequest) { _firstRequest = false; showResolvers() }

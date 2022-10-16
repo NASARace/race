@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="32.0px"
+   height="32.0px"
+   viewBox="0 0 32.0 32.0"
+   version="1.1"
+   id="SVGRoot"
+   sodipodi:docname="map-annotation-icon.svg"
+   inkscape:version="1.2.1 (9c6d41e, 2022-07-14)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview4367"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="px"
+     showgrid="true"
+     inkscape:zoom="14.276023"
+     inkscape:cx="15.025193"
+     inkscape:cy="10.261962"
+     inkscape:window-width="1806"
+     inkscape:window-height="1199"
+     inkscape:window-x="887"
+     inkscape:window-y="411"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid4430" />
+  </sodipodi:namedview>
+  <defs
+     id="defs4362" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:none;stroke-width:2.12596;stroke:none"
+       id="rect4649"
+       width="32"
+       height="32"
+       x="0"
+       y="0" />
+    <path
+       style="fill:#525252;fill-opacity:1;stroke:#e2dfdf;stroke-width:1.17988;stroke-opacity:1"
+       d="m 18.111929,27.803017 -1.439161,-7.065606 5.468813,-3.280459 5.180982,3.280459 -0.863497,6.056234 z"
+       id="path972"
+       sodipodi:nodetypes="cccccc" />
+    <path
+       style="fill:#525252;stroke:#e2dfdf;stroke-width:1.01302"
+       d="M 5.3858642,26.289045 12.969557,14.01873 27.370912,10.912322 27.753926,12.853828 14.501616,15.804915 7.071129,27.531609 Z"
+       id="path2541" />
+    <path
+       style="fill:#525252;stroke:#e2dfdf;stroke-width:0.92"
+       d="M 6.5144192,16.251025 5.113469,13.379077 H 3.0120433 V 8.4757499 l 6.9347035,0.070048 -0.07005,4.9033271 -2.171474,0.140095 z"
+       id="path2597"
+       sodipodi:nodetypes="cccccccc" />
+    <path
+       style="fill:#525252;stroke:#e2dfdf;stroke-width:0.92"
+       d="M 16.531215,10.43708 15.130264,7.5651325 H 13.028839 V 2.6618058 l 6.934703,0.070048 -0.07005,4.9033267 -2.171474,0.140095 z"
+       id="path2599"
+       sodipodi:nodetypes="cccccccc" />
+  </g>
+</svg>
