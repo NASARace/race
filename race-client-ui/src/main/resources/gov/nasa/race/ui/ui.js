@@ -1630,6 +1630,9 @@ function createSubitemHeader(header, cs, w) {
     e.style.flexBasis = w;
     e.innerText = cs.name;
     _setAlignment(e, cs.attrs);
+
+    if (cs.tip) createTooltip(e, cs.tip);
+
     return e;
 }
 
@@ -2080,6 +2083,41 @@ export function getList(o) {
     return undefined;
 }
 
+//--- tooltips
+
+function createTooltip (e, text) {
+    let ett = _createElement("DIV", "ui_tooltip", text);
+    document.body.appendChild(ett);
+    e._uiTooltip = ett;
+
+    _addClass( e, "tooltipped");
+
+    e.addEventListener("mouseenter", (event) =>{
+        let e = event.target;
+        let ett = e._uiTooltip;
+        if (ett) {
+            let cr = e.getBoundingClientRect();
+            let tcr = ett.getBoundingClientRect();
+
+            let x = cr.x + cr.width/2 - tcr.width/2
+            ett.style.left = x + "px";
+            ett.style.top = (cr.y - tcr.height - 8) + "px";
+            ett.style.visibility = "visible";
+
+            tcr = ett.getBoundingClientRect();
+        }
+    });
+
+    e.addEventListener("mouseleave", (event) =>{
+        let e = event.target;
+        let ett = e._uiTooltip;
+        if (ett) {
+            ett.style.visibility = "hidden";
+            ett.style.left = "-1000px";
+        }
+    });
+}
+
 //--- menus
 
 var _uiActivePopupMenus = [];
@@ -2207,7 +2245,6 @@ export function toggleMenuItemCheck(event) {
         throw "not a menuitem";
     }
 }
-
 
 //--- color input
 

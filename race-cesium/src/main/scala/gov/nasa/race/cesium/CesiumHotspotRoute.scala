@@ -26,7 +26,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{JsonSerializable, JsonWriter}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.core.{BusEvent, ParentActor}
+import gov.nasa.race.core.{BusEvent, ParentActor, PipedRaceDataClient}
 import gov.nasa.race.http.{ContinuousTimeRaceRoute, DocumentRoute, PushWSRaceRoute, WSContext}
 import gov.nasa.race.earth.{Hotspot, Hotspots}
 import gov.nasa.race.ui.{NoAction, NoId, extModule, uiButton, uiCheckBox, uiColumnContainer, uiIcon, uiList, uiMenuItem, uiPanel, uiPopupMenu, uiRadio, uiRowContainer, uiSlider, uiTextInput, uiWindow}
@@ -58,7 +58,7 @@ import CesiumHotspotRoute._
 /**
   * a RaceRouteInfo that shows satellite hotspots
   */
-trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTimeRaceRoute {
+trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTimeRaceRoute with PipedRaceDataClient {
   private val writer = new JsonWriter()
 
   protected val hotspots = mutable.ArrayDeque.empty[Hotspots[_]]

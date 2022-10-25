@@ -75,7 +75,7 @@ object DefaultWsMessageWriter extends WsMessageWriter {
 /**
   * this message can also be sent by external actors
   */
-case class WsConnectRequest (uri: String)
+case class WsConnectRequest (uri: String, timeout: FiniteDuration = Duration.Zero)
 
 
 /**
@@ -201,7 +201,7 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
     case m:WsConnectSuccess => handleWsConnectSuccess(m)
     case m:WsConnectFailure => handleWsConnectFailure(m)
     case m:WsClosed => handleWsClosed(m)
-    case WsConnectRequest(uri) => connect(uri)
+    case WsConnectRequest(uri,timeout) => connect(uri,timeout)
     case m:WsCheckConnection => handleWsCheckConnection(m)
     case WsProcessIncoming(msg) => processIncomingMessage(msg)
     case WsProcessIncomingData(data, f) => f(data)
@@ -260,16 +260,20 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
   }
 
   /**
-    * subtypes should also override onConnectionDeadline(uri)
+    * subtypes should also override onConnectTimeout(uri,dur)
     */
   def connectWithCheck (uri: String, dur: FiniteDuration): Unit = {
-    info(s"trying to connect to $uri with timeout $dur")
     connect(uri)
     connectionChecks += (uri -> scheduler.scheduleOnce(dur,self,WsCheckConnection(uri,dur)))
   }
 
   // override if we need to re-route this into the actor thread
   protected def createInboundSink(): Sink[Message,Future[Done]] = Sink.foreach( processIncomingMessage)
+
+  def connect (uri: String, timeout: FiniteDuration): Unit = {
+    if (timeout.toMillis == 0) connect(uri)
+    else connectWithCheck( uri, timeout)
+  }
 
   /**
     * this is the main method of WsAdapterActor that sends the WebSocketRequest

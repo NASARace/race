@@ -27,7 +27,7 @@ import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.Source
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{BusEvent, ParentActor}
+import gov.nasa.race.core.{BusEvent, ParentActor, RaceDataClient}
 import scalatags.Text.all.{head => htmlHead, _}
 
 import scala.collection.immutable.Iterable
@@ -137,7 +137,7 @@ class TestRefresh (val parent: ParentActor, val config: Config) extends Subscrib
 /**
   * test route that pushes data to all connections
   */
-class TestPusher (val parent: ParentActor, val config: Config) extends PushWSRaceRoute {
+class TestPusher (val parent: ParentActor, val config: Config) extends PushWSRaceRoute with RaceDataClient {
 
   override def route: Route = {
     get {
@@ -243,7 +243,7 @@ class EchoService (val parent: ParentActor, val config: Config) extends Protocol
   *
   * this service echos incoming messages to the requester and otherwise periodically pushes data to all connections
   */
-class AuthorizedEchoPushService (val parent: ParentActor, val config: Config) extends PushWSRaceRoute with PwAuthorizedWSRoute {
+class AuthorizedEchoPushService (val parent: ParentActor, val config: Config) extends PushWSRaceRoute with PwAuthorizedWSRoute with RaceDataClient {
 
   override protected def handleIncoming (ctx: WSContext, m: Message): Iterable[Message] = {
     m match {

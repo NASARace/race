@@ -17,17 +17,20 @@
 package gov.nasa.race.air.actor
 
 import com.typesafe.config.Config
-import gov.nasa.race.actor.SocketLineImportActor
+import gov.nasa.race.actor.{ReconnectSocket, SocketDataAcquisitionThread, SocketLineImportActor}
 import gov.nasa.race.air.SbsUpdater
 import gov.nasa.race.common.{ByteSlice, MutRawByteSlice}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.RaceActorCapabilities.{SupportsPauseResume, SupportsSimTimeReset}
+import gov.nasa.race.ifSome
 import gov.nasa.race.track.{TrackDropped, Tracked3dObject}
 import gov.nasa.race.uom.{DateTime, Time}
 import gov.nasa.race.uom.DateTime.UndefinedDateTime
 import gov.nasa.race.uom.Time.Milliseconds
+import gov.nasa.race.util.ThreadUtils
 
-import scala.concurrent.duration.DurationInt
+import java.net.{ConnectException, Socket}
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 /**
   * a SocketLineImportActor for SBS formatted ADS-B messages
@@ -46,6 +49,17 @@ class SbsImportActor (conf: Config) extends SocketLineImportActor(conf) with Sbs
   override def defaultPort = 30003
 
   val updater = new SbsUpdater() // the parser/accumulator for received messages
+
+
+  //--- configure socket and data acquisition behavior
+  override protected def initializeSocket(sock: Socket): Unit = {
+    sock.setSoTimeout(conf.getFiniteDurationOrElse("socket-timeout", 30.seconds).toMillis.toInt)
+  }
+
+  override protected def initializeDataAcquisitionThread(dat: SocketDataAcquisitionThread): Unit = {
+    dat.setConnectionTimeoutHandler( reconnect)
+    dat.setConnectionLossHandler( (dat,x) => reconnect(dat))
+  }
 
   // NOTE - this is executed from the data acquisition thread, /not/ the actor thread
   override protected def processLine (line: ByteSlice): Boolean = {

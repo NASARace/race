@@ -70,9 +70,9 @@ function initSourceView() {
     if (view) {
         ui.setListItemDisplayColumns(view, ["header"], [
             { name: "date", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateString(e.source.date)},
-            { name: "objs", width: "5rem", attrs: ["fixed", "alignRight"], map: e => e.nEntities ? e.nEntities : ""},
+            { name: "objs", tip: "number of loaded objects", width: "5rem", attrs: ["fixed", "alignRight"], map: e => e.nEntities ? e.nEntities : ""},
             ui.listItemSpacerColumn(),
-            { name: "show", width: "2.1rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSource) }
+            { name: "show", tip: "toggle visibility", width: "2.1rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSource) }
         ]);
     }
     return view;

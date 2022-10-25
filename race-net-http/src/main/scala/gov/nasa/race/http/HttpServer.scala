@@ -27,7 +27,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{ParentActor, ParentRaceActor, RaceContext, SubscribingRaceActor}
+import gov.nasa.race.core.{DataClientExecutor, ParentActor, ParentRaceActor, RaceContext, RaceDataClientMessage, SubscribingRaceActor}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -48,7 +48,7 @@ object HttpServer {
   * This actor itself does not yet subscribe from or publish to RACE channels, but we might add control and/or
   * stats channels in the future
   */
-class HttpServer (val config: Config) extends ParentRaceActor with SubscribingRaceActor with SSLContextUser {
+class HttpServer (val config: Config) extends ParentRaceActor with SubscribingRaceActor with DataClientExecutor with SSLContextUser {
   import HttpServer._
 
   val serverTimeout = config.getFiniteDurationOrElse("server-timeout", 5.seconds)
@@ -139,6 +139,8 @@ class HttpServer (val config: Config) extends ParentRaceActor with SubscribingRa
     info(s"serving requests: $requestSpec")
     routeInfos.forall( _.onRaceStarted(this)) && super.onStartRaceActor(originator)
   }
+
+  override def handleMessage: Receive = handleDataClientMessage.orElse( super.handleMessage)
 
   def requestSpec: String = {
     val protocol = if (useSSL) "https" else "http"

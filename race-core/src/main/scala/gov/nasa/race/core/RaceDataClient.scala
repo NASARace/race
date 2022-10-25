@@ -22,6 +22,8 @@ import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.BusEvent
 
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+
 /**
   * an interface for a non-actor object that needs to obtain data from an associated second tier actor that
   * is essentially a bus interface. The DataClient instantiates this actor and hence could break encapsulation, so
@@ -65,24 +67,50 @@ trait RaceDataClient extends ConfigLoggable {
   def publishData(data: Any): Unit = {
     actorRef ! PublishRaceData(data)
   }
+
+  def defaultTickInterval: FiniteDuration = 0.seconds  // no periodic notification unless config has a race-tick
+
+  // function to be periodically invoked if config explicitly specifies a tick-interval
+  def onRaceTick(): Unit = {}
 }
 
 /**
-  * wrapper for something the DataClient wants to publish through its DataClientRaceActor
+ * a RaceDataClient that pipes all data updates through a single actor to avoid race conditions when processing the data
+ */
+trait PipedRaceDataClient extends RaceDataClient {
+
+  def getActorRef: ActorRef
+
+  override def instantiateActor: DataClientRaceActor = new PipedDataClientRaceActor( getActorRef, this, config)
+}
+
+/**
+ * wrapper for a message to be sent to an actor that owns a RaceDataClient: bus -> parentActor(DC)
+ */
+case class RaceDataClientMessage (dc: RaceDataClient, msg: Any)
+
+/**
+  * wrapper for something the DataClient wants to publish through its DataClientRaceActor: DC -> bus
   */
 case class PublishRaceData (data: Any)
 
 /**
   * generic second tier (automatically created) actor that forwards received messages to a non-actor object
   */
-class DataClientRaceActor(val dataClient: RaceDataClient, val config: Config) extends SubscribingRaceActor with PublishingRaceActor {
+class DataClientRaceActor (val dataClient: RaceDataClient, val config: Config) extends SubscribingRaceActor with PublishingRaceActor with PeriodicRaceActor {
+
+  override def defaultTickInterval: FiniteDuration = dataClient.defaultTickInterval
 
   /**
     * inform the dataClient of data received from the bus
     * override in case a specialized DataClientRaceActor has its own means of notifying its DataClient
     */
-  def setClientData (newData: Any): Unit = {
-    dataClient.receiveData.apply(newData)
+  protected def setClientData (newData: Any): Unit = {
+    dataClient.receiveData( newData)
+  }
+
+  override def onRaceTick(): Unit = {
+    dataClient.onRaceTick()
   }
 
   /**
@@ -90,7 +118,7 @@ class DataClientRaceActor(val dataClient: RaceDataClient, val config: Config) ex
     * override if concrete actor type has to consolidate data
     */
   override def handleMessage: Receive = {
-    case e: BusEvent => setClientData(e)
+    case e: BusEvent => setClientData(e)    // note that we don't unwrap BusEvents so that data clients see the channel and sender
     case msg: String => setClientData(msg)  // mostly for testing purposes
 
       // outbound (directly sent from dataClient) - publish to our write-to channel
@@ -99,17 +127,25 @@ class DataClientRaceActor(val dataClient: RaceDataClient, val config: Config) ex
 }
 
 /**
-  * a RaceDataClient that gets periodic RaceTick notifications at configured intervals
-  */
-trait PeriodicRaceDataClient extends RaceDataClient {
-  override protected def instantiateActor: DataClientRaceActor = new PeriodicDataClientRaceActor(this,config)
+ * a DataClientRaceActor that pipes dataClient notifications through a provided actorRef
+ * use to transfer data processing into a single actor to avoid race conditions
+ */
+class PipedDataClientRaceActor (val actorRef: ActorRef, dataClient: RaceDataClient, config: Config) extends DataClientRaceActor(dataClient, config) {
+  override protected def setClientData (newData: Any): Unit = {
+    actorRef ! RaceDataClientMessage( dataClient, newData)
+  }
 
-  def onRaceTick(): Unit
+  override def handleRaceTick: Receive = {
+    case RaceTick => actorRef ! RaceDataClientMessage( dataClient, RaceTick)
+  }
 }
 
-class PeriodicDataClientRaceActor(dataClient: PeriodicRaceDataClient, config: Config)
-                                                extends DataClientRaceActor(dataClient,config) with PeriodicRaceActor {
-  override def onRaceTick(): Unit = {
-    dataClient.onRaceTick()
+/**
+ * a RaceActor that is used to pipe processing of data client updates to avoid race conditions
+ */
+trait DataClientExecutor extends RaceActor {
+  def handleDataClientMessage: Receive = {
+    case RaceDataClientMessage(dc,RaceTick) => dc.onRaceTick()
+    case RaceDataClientMessage(dc,msg) => dc.receiveData(msg)
   }
 }

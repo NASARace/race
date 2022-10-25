@@ -21,7 +21,7 @@ import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{JsonProducer, JsonWriter}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.core.BusEvent
+import gov.nasa.race.core.{BusEvent, RaceDataClient}
 import gov.nasa.race.track.{TrackDropped, TrackedObject, TrackedObjects}
 
 import scala.collection.immutable.{Iterable, TreeSeqMap}
@@ -37,7 +37,7 @@ object TrackWSRoute {
   val DATE = asc("date")
   val LABEL = asc("label")
 }
-import TrackWSRoute._
+import gov.nasa.race.http.TrackWSRoute._
 
 /**
   * a RaceRoute that pushes TrackedObject updates over a websocket connection
@@ -45,7 +45,8 @@ import TrackWSRoute._
   * Note that we don't imply the client processing here (e.g. Cesium visualization) - this only handles the track data update
   * No assets are associated with this route fragment
   */
-trait TrackWSRoute extends PushWSRaceRoute with JsonProducer {
+trait TrackWSRoute extends PushWSRaceRoute with JsonProducer with RaceDataClient {
+
   val flatten = config.getBooleanOrElse("flatten", false)
 
   // map from bus channels (which are RACE-internal) to symbolic names (that can be used by clients etc.)
@@ -78,15 +79,15 @@ trait TrackWSRoute extends PushWSRaceRoute with JsonProducer {
     w.endObject
   }
 
-  def serializeTrack (channel: String, track: TrackedObject): Unit = {
-    writer.clear().writeObject { w=>
+  def serializeTrack (writer: JsonWriter, channel: String, track: TrackedObject): Unit = {
+    writer.writeObject { w=>
       w.writeMemberName(TRACK)
       writeTrackObject(w,channel,track)
     }
   }
 
-  def serializeTracks[T<:TrackedObject](channel: String, tracks: TrackedObjects[T]): Unit = {
-    writer.clear()
+  def serializeTracks[T<:TrackedObject](writer: JsonWriter, channel: String, tracks: TrackedObjects[T]): Unit = {
+    writer
       .beginObject
       .writeMemberName(TRACK_LIST)
       .writeArray { w=>
@@ -95,8 +96,8 @@ trait TrackWSRoute extends PushWSRaceRoute with JsonProducer {
       .endObject
   }
 
-  def serializeDrop(channel: String, drop: TrackDropped): Unit = {
-    writer.clear()
+  def serializeDrop(writer: JsonWriter, channel: String, drop: TrackDropped): Unit = {
+    writer
       .beginObject
       .writeMemberName(DROP)
       .beginObject
@@ -108,32 +109,20 @@ trait TrackWSRoute extends PushWSRaceRoute with JsonProducer {
       .endObject
   }
 
-  // called from associated actor (different thread)
+  // NOTE - called from associated actor (different thread), use own writer!
   def receiveTrackData: Receive = {
     case BusEvent(channel,track: TrackedObject,_) =>
-      synchronized {
-        serializeTrack(channel, track)
-        push(TextMessage.Strict(writer.toJson))
-      }
+      val msg = toNewJson( serializeTrack(_,channel,track))
+      push( TextMessage.Strict( msg))
 
     case BusEvent(channel,tracks: TrackedObjects[_],_) =>
-      synchronized {
-        if (flatten) {
-          tracks.foreach { track =>
-            serializeTrack(channel, track)
-            push(TextMessage.Strict(writer.toJson))
-          }
-        } else {
-          serializeTracks(channel, tracks)
-          push(TextMessage.Strict(writer.toJson))
-        }
+      if (flatten) {
+        tracks.foreach( track => push( TextMessage.Strict( toNewJson(serializeTrack(_,channel, track)))))
+      } else {
+        push( TextMessage.Strict( toNewJson( serializeTracks(_, channel, tracks))))
       }
 
-    case BusEvent(channel,drop: TrackDropped,_) =>
-      synchronized {
-        serializeDrop(channel,drop)
-        push(TextMessage.Strict(writer.toJson))
-      }
+    case BusEvent(channel,drop: TrackDropped,_) => push( TextMessage.Strict( toNewJson( serializeDrop(_, channel, drop))))
   }
 
   override def receiveData: Receive = receiveTrackData.orElse(super.receiveData)

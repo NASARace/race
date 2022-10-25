@@ -47,6 +47,13 @@
     --icon-on-fill-color: rgb(220, 220, 220);
     --icon-on-border: 1px solid white;
     --icon-border-radius: 5px;
+    --tooltip-color: var(--color);
+    --tooltip-background: var(--background);
+    --tooltip-border-color: var(--border-color);
+    --tooltip-border-style: solid;
+    --tooltip-border-width: 1px;
+    --tooltip-border: var(--tooltip-border-width) var(--tooltip-border-style) var(--tooltip-border-color);
+    --tooltip-shadow: 2px 2px 2px var(--tooltip-border-color);
     --titlebar-height: 1.4rem;
     --titlebar-color: rgb(255, 196, 196);
     --titlebar-background: rgb(27 1 1);
@@ -134,4 +141,5 @@
     --icon-box-margin: var(--margin);
     --icon-box-gap: var(--gap);
     --icon-box-background: rgba(0, 0, 0, 0);
+    --document-background: black;
 }

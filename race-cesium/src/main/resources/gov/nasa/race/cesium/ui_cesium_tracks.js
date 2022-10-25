@@ -103,10 +103,10 @@ ui.registerLoadFunction(function initialize() {
 function initTrackSourceView() {
     let view = ui.getList("tracks.sources");
     if (view) {
-        ui.setListItemDisplayColumns(view, ["fit"], [
-            { name: "", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSource) },
+        ui.setListItemDisplayColumns(view, ["fit header"], [
+            { name: "show", tip: "toggle visibility", width: "2.5rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSource) },
             { name: "id", width: "8rem", attrs: ["alignLeft"], map: e => e.id },
-            { name: "size", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.trackEntries.size.toString() },
+            { name: "tracks", tip: "number of tracks", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.trackEntries.size.toString() },
             { name: "date", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalTimeString(e.date) }
         ]);
     }
@@ -189,7 +189,7 @@ function trackSelection() {
         ui.setSelectedListItem(trackEntryView, te);
     } else {
         ui.clearSelectedListItem(trackEntryView);
-        uiCesium.clearSelectedEntity(); // this takes care of the selIndicator re-flicker when showing paths
+        //uiCesium.clearSelectedEntity(); // this takes care of the selIndicator re-flicker when showing paths
     }
 }
 
@@ -490,7 +490,7 @@ function trackEntityLabel(trackEntry, trackColor, heightRef) {
         outlineWidth: 1,
         pixelOffset: config.track.labelOffset,
         //disableDepthTestDistance: config.minLabelDepth,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        //disableDepthTestDistance: Number.POSITIVE_INFINITY,
         distanceDisplayCondition: config.track.labelDC,
         heightReference: heightRef
     };
@@ -577,7 +577,7 @@ function createTrackInfoAsset(trackEntry, pos) {
                 outlineWidth: 1,
                 pixelOffset: config.track.infoOffset,
                 //disableDepthTestDistance: config.minLabelDepth,
-                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                //disableDepthTestDistance: Number.POSITIVE_INFINITY,
                 distanceDisplayCondition: config.track.infoDC
             }
         });
@@ -593,10 +593,10 @@ function updateTrackInfoAsset(trackEntry, pos) {
     info.position = pos;
 }
 
-const DOWN = '▽'; // '-' '▽' '↓' '⊤' '⎤' '⇩'
-const LEFT = '◁'; // '-' '◁' '↶' '⟲'
-const UP = '△'; // '+' '△' '↑' '⊥' '⎦'
-const RIGHT = '▷'; // '+' '▷' '↷' '⟳'
+const DOWN = '↓'; // '-' '▽' '↓' '⊤' '⎤' '⇩'
+const LEFT = '↺'; // '-' '◁' '↶' '⟲'
+const UP = '↑'; // '+' '△' '↑' '⊥' '⎦'
+const RIGHT = '↻'; // '+' '▷' '↷' '⟳'
 const SAME = ' '; // ' ' '⊣' '⎢'
 
 function trackInfoLabel(trackEntry) {

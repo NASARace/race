@@ -16,6 +16,7 @@
  */
 package gov.nasa.race.http
 
+import akka.actor.Actor.Receive
 import akka.actor.{ActorRef, Cancellable}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
@@ -23,7 +24,7 @@ import akka.http.scaladsl.server.{PathMatchers, Route}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.SubConfigurable
-import gov.nasa.race.core.{ConfigLoggable, ParentActor, RaceActorSystem, RaceDataClient}
+import gov.nasa.race.core.{ConfigLoggable, ParentActor, RaceActorSystem, RaceDataClient, RaceDataClientMessage}
 import gov.nasa.race.util.StringUtils
 import scalatags.Text
 
@@ -81,6 +82,8 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
       complete(StatusCodes.NotFound, s"document $uri not found")
     }
   }
+
+  def getActorRef: ActorRef = parent.self
 
   def getActorRef (actorName: String): ActorRef = {
     val sel = parent.context.actorSelection(s"*/$actorName")
@@ -144,4 +147,13 @@ trait ContinuousTimeRaceRoute extends RaceRouteInfo {
 }
 
 
+/**
+ * a RaceRouteInfo that processes messages from associated DataClientRaceActors and re-routes them through its parent actor so
+ * that we don't have to synchronize route resources
+ */
+trait DataClientRaceRoute extends RaceRouteInfo with RaceDataClient {
 
+  override def receiveData: Receive = {
+    case msg => parent.self ! RaceDataClientMessage(this, msg)
+  }
+}

@@ -26,7 +26,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{BatchedTimeoutMap, BufferedStringJsonPullParser, ByteSlice, JsonParseException, JsonSerializable, JsonWriter, TimeoutSubject}
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.{BusEvent, ParentActor}
+import gov.nasa.race.core.{BusEvent, ParentActor, PipedRaceDataClient}
 import gov.nasa.race.http._
 import gov.nasa.race.uom.Time.Milliseconds
 import gov.nasa.race.uom.{DateTime, Time}
@@ -47,7 +47,7 @@ import scala.concurrent.duration.DurationInt
   * we assume all our clients will get the same data
   */
 class UserServerRoute (parent: ParentActor, config: Config) extends AuthSiteRoute(parent,config)
-                              with PushWSRaceRoute with AuthWSRaceRoute {
+                              with PushWSRaceRoute with AuthWSRaceRoute with PipedRaceDataClient {
   /**
     * what we need to keep track of EditRequests - userChange messages are only valid between a requestEdit and
     * endEdit, up to a configurable inactive timeout that is reset upon each userChange

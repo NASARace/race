@@ -30,36 +30,50 @@ import java.net.{Socket, SocketTimeoutException}
   *
   * note also that we don't handle line processing exceptions here
   */
-class SocketLineAcquisitionThread (name: String, socket: Socket, initSize: Int, maxSize: Int,
-                                   processLine: ByteSlice=>Boolean,
-                                   processTimeout: Option[()=>Boolean] = None
-                                  ) extends SocketDataAcquisitionThread(name) with LogWriter {
+class SocketLineAcquisitionThread (name: String, sock: Socket, initSize: Int, maxSize: Int, processLine: ByteSlice=>Boolean)
+                                                      extends SocketDataAcquisitionThread(name,sock) with LogWriter {
 
   override def run(): Unit = {
-    val is = socket.getInputStream
-    val buf = new CanonicalLineBuffer(is, initSize, maxSize)
 
     while (!isDone.get()) {
-      try {
-        if (buf.nextLine()) { // this is the blocking point - note LineBuffer fills automatically from its InputStream
-          if (!processLine(buf)) isDone.set(true)
-        }
 
-      } catch {
-        case ix: InterruptedException =>
-          // nothing to do - the interrupter has to set isDone if we should stop
+      val sock = socket
+      val is = sock.getInputStream
+      val buf = new CanonicalLineBuffer(is, initSize, maxSize)
 
-        case _: SocketTimeoutException =>
-          processTimeout.foreach( f=> if (!f()) isDone.set(true))
-
-        case iox: IOException =>
-          if (!socket.isClosed) {
-            warning(s"socket stream closed: $iox")
-          } else {
-            info("socket closed")
-            isDone.set(true)
+      while (!isDone.get() && (sock eq socket) && !sock.isClosed ) {
+        try {
+          if (buf.nextLine()) { // this is the blocking point - note LineBuffer fills automatically from its InputStream
+            if (!processLine(buf)) isDone.set(true)
           }
+
+        } catch {
+          case ix: InterruptedException => // ignore - the interrupter has to set isDone if we should stop
+            println("@@@ interrupted")
+
+          //--- note that all handleX() functions are potential blocking points
+
+          case x: SocketTimeoutException =>
+            println(s"@@@ socket timeout: $x")
+
+            if (sock.isClosed) {
+              handleConnectionLoss(x)
+            } else {
+              handleConnectionTimeout()
+            }
+
+          case x: Throwable =>
+            println(s"@@@ socket exception: $x")
+
+            if (sock.isClosed) {
+              handleConnectionLoss(x)
+            } else {
+              handleConnectionError(x)
+            }
+        }
       }
     }
+
+    println("@@@ dat terminated.")
   }
 }

@@ -23,13 +23,13 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
-import gov.nasa.race.common.{JsonProducer, JsonWriter}
+import gov.nasa.race.common.JsonProducer
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.core.{BusEvent, ParentActor, PeriodicRaceDataClient}
-import gov.nasa.race.http.{DocumentRoute, PushWSRaceRoute, WSContext}
+import gov.nasa.race.core.{BusEvent, ParentActor, RaceDataClient}
 import gov.nasa.race.earth.GoesRHotspot.{N_GOOD, N_PROBABLE, N_TOTAL}
 import gov.nasa.race.earth.Hotspot._
 import gov.nasa.race.earth.{GoesRHotspot, GoesRHotspots, HotspotMap}
+import gov.nasa.race.http.{DocumentRoute, PushWSRaceRoute, WSContext}
 import gov.nasa.race.space.SatelliteInfo
 import gov.nasa.race.ui._
 import gov.nasa.race.uom.Time._
@@ -43,13 +43,13 @@ object CesiumGoesrRoute {
   val jsModule = "ui_cesium_goesr.js"
   val icon = "geo-sat-icon.svg"
 }
-import CesiumGoesrRoute._
+import gov.nasa.race.cesium.CesiumGoesrRoute._
 
 /**
   * a Cesium RaceRouteInfo that uses a collection of geostationary and polar-orbiter satellites to detect
   * fire hotspots
   */
-trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRaceDataClient with JsonProducer {
+trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with RaceDataClient with JsonProducer {
 
   val goesrSatellites = config.getConfigArray("goes-r.satellites").map(c=> new SatelliteInfo(c))
   val goesrAssets = getSymbolicAssetMap("goesr.assets", config, Seq(("fire","fire.png")))
@@ -96,19 +96,12 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
   }
 
   def serializeGoesrSatellites: String = {
-    writer.clear()
-    writer.writeObject { w=>
-      w.writeArrayMember("goesrSatellites") { w=>
-        goesrSatellites.foreach( _.serializeTo(w))
+    toNewJson { w=>
+      w.writeObject { w=>
+        w.writeArrayMember("goesrSatellites") { w=>
+          goesrSatellites.foreach( _.serializeTo(w))
+        }
       }
-    }
-    writer.toJson
-  }
-
-  // periodic notification from bus actor
-  override def onRaceTick(): Unit = {
-    synchronized {
-      if (purgeOldHotspots()) pushChangedHotspots() // only push if we actually changed something
     }
   }
 
@@ -143,28 +136,28 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
   }
 
   def serializeHotspots (serializeAll: Boolean): String = {
-    writer.clear()
+    toNewJson { w=>
+      w.writeObject { w =>
+        w.writeArrayMember("goesrHotspots") { w =>
+          goesrHotspots.foreach { e =>
+            val satId = e._1
+            val hs = e._2
 
-    writer.writeObject { w=>
-      w.writeArrayMember("goesrHotspots") { w=>
-        goesrHotspots.foreach { e=>
-          val satId = e._1
-          val hs = e._2
-
-          if (serializeAll || hs.hasChanged) {
-            w.writeObject { w => // per satellite
-              w.writeIntMember(SAT_ID, satId)
-              w.writeDateTimeMember(DATE, hs.getLastDate)
-              w.writeIntMember(N_TOTAL, hs.getLastUpdateCount)
-              w.writeIntMember(N_GOOD, hs.getLastGoodCount)
-              w.writeIntMember(N_PROBABLE, hs.getLastProbableCount)
-              w.writeArrayMember(HOTSPOTS) { w =>
-                hs.foreachLatLon { (latDeg, lonDeg, hs) =>
-                  w.writeObject { w =>
-                    w.writeDoubleMember(LAT, latDeg) // those are rounded
-                    w.writeDoubleMember(LON, lonDeg)
-                    w.writeArrayMember(HISTORY) { w =>
-                      hs.foreach(_.serializeTo(w))
+            if (serializeAll || hs.hasChanged) {
+              w.writeObject { w => // per satellite
+                w.writeIntMember(SAT_ID, satId)
+                w.writeDateTimeMember(DATE, hs.getLastDate)
+                w.writeIntMember(N_TOTAL, hs.getLastUpdateCount)
+                w.writeIntMember(N_GOOD, hs.getLastGoodCount)
+                w.writeIntMember(N_PROBABLE, hs.getLastProbableCount)
+                w.writeArrayMember(HOTSPOTS) { w =>
+                  hs.foreachLatLon { (latDeg, lonDeg, hs) =>
+                    w.writeObject { w =>
+                      w.writeDoubleMember(LAT, latDeg) // those are rounded
+                      w.writeDoubleMember(LON, lonDeg)
+                      w.writeArrayMember(HISTORY) { w =>
+                        hs.foreach(_.serializeTo(w))
+                      }
                     }
                   }
                 }
@@ -174,8 +167,6 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with PeriodicRac
         }
       }
     }
-
-    writer.toJson
   }
 
   //--- document content

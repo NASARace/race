@@ -38,7 +38,7 @@ import scala.util.{Failure, Success}
   *
   * Note this kind of websocket route needs to keep track of connections and therefore imposes a scaling constraint
   */
-trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner[Message] with RaceDataClient {
+trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner[Message] {
 
   protected var connections: Map[InetSocketAddress,SourceQueueWithComplete[Message]] = Map.empty
 
@@ -116,7 +116,8 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner[Message] with Ra
         }
 
       case Failure(e) =>
-          println("@@@ FAILURE: ${m.toString.substring(0,55)} => $e")
+        error(s"failed to push message $m to $remoteAddr: $e")
+          //println("@@@ FAILURE: ${m.toString.substring(0,55)} => $e")
     }
   }
 

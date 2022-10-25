@@ -17,7 +17,7 @@ function initTreeView() {
     let view = ui.getTreeList("test.tree");
     if (view) {
         ui.setListItemDisplayColumns(view, ["header"], [
-            { name: "show", width: "2rem", attrs: [], map: e => ui.createCheckBox(false, toggleShowSource) }
+            { name: "show", tip: "toggle visibility", width: "2.5rem", attrs: ["alignRight"], map: e => ui.createCheckBox(false, toggleShowSource) }
         ]);
     }
     return view;

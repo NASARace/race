@@ -206,12 +206,12 @@ function initSatelliteView() {
     let view = ui.getList("goesr.satellites");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
-            { name: "", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSatellite) },
-            { name: "sat", width: "4rem", attrs: [], map: e => e.sat.name },
-            { name: "good", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nGood },
-            { name: "prob", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nProbable },
-            { name: "all", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nTotal },
-            { name: "time", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalHMTimeString(e.date) }
+            { name: "show", tip: "toggle visibility", width: "2.5rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSatellite) },
+            { name: "sat", tip: "name of satellite", width: "4rem", attrs: [], map: e => e.sat.name },
+            { name: "good", tip: "number of good fire pixels", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nGood },
+            { name: "prob", tip: "number of probable fire pixels", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nProbable },
+            { name: "all", tip: "number of all fire pixels", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nTotal },
+            { name: "time", tip: "last report", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalHMTimeString(e.date) }
         ]);
     }
     return view;
@@ -221,9 +221,9 @@ function initHotspotView() {
     let view = ui.getList("goesr.hotspots");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
-            { name: "class", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.classifier() },
+            { name: "class", tip: "classification of fire pixel", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.classifier() },
             ui.listItemSpacerColumn(),
-            { name: "sat", width: "4rem", attrs: [], map: e => e.satName },
+            { name: "sat", tip: "name of satellite", width: "4rem", attrs: [], map: e => e.satName },
             { name: "good", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.nGood },
             { name: "all", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.nTotal },
             { name: "lat", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.f_4.format(e.hotspot.lat) },
@@ -237,10 +237,10 @@ function initHistoryView() {
     let view = ui.getList("goesr.history");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
-            { name: "mask", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.mask },
-            { name: "temp", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.temp) ? "-" : util.f_0.format(e.temp) },
-            { name: "frp", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.frp) ? "-" : util.f_0.format(e.frp) },
-            { name: "area", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.area) ? "-" : util.f_0.format(util.squareMetersToAcres(e.area)) },
+            { name: "mask", tip: "fire pixel classification code", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.mask },
+            { name: "temp", tip: "pixel temperature [K]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.temp) ? "-" : util.f_0.format(e.temp) },
+            { name: "frp", tip: "fire radiative power [MW]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.frp) ? "-" : util.f_0.format(e.frp) },
+            { name: "area", tip: "surface area [ac]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.area) ? "-" : util.f_0.format(util.squareMetersToAcres(e.area)) },
             { name: "time", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalHMTimeString(e.date) },
         ]);
     }

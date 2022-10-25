@@ -59,7 +59,9 @@ class TestTreeRoute  (val parent: ParentActor, val config: Config) extends Docum
 
   def uiTestWindow : Text.TypedTag[String] = {
     uiWindow("test","test", icon)(
-      uiTreeList(eid = "test.tree", maxRows = 10, minWidthInRem = 20, selectAction = "main.selectSource(event)")
+      uiPanel("layers", true)(
+        uiTreeList(eid = "test.tree", maxRows = 10, minWidthInRem = 20, selectAction = "main.selectSource(event)")
+      )
     )
   }
 

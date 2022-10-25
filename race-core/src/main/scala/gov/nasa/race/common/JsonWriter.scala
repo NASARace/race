@@ -19,6 +19,7 @@ package gov.nasa.race.common
 import gov.nasa.race.common.ImplicitGenerics._
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.DateTime
+import gov.nasa.race.yieldAfter
 
 import java.text.NumberFormat
 import scala.collection.mutable.ArrayBuffer
@@ -676,7 +677,19 @@ trait JsonAdapter[T] {
 
 /**
  * something that needs a JsonWriter that is shared between traits
+ * primary purpose of this type is to make the shared writer use thread safe
+ *
+ * NOTE - this only protects 'writer' - there still can be races in the JSON production function f
  */
 trait JsonProducer {
-  protected val writer: JsonWriter = new JsonWriter()
+  // make sure nobody else sees this instance as writers are not thread safe
+  private val writer: JsonWriter = new JsonWriter()
+
+  protected def toNewJson(f: JsonWriter=>Unit): String = {
+    writer.synchronized {
+      writer.clear()
+      f(writer)
+      yieldAfter(writer.toJson)(writer.clear())
+    }
+  }
 }

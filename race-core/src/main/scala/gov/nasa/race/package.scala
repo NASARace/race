@@ -141,6 +141,12 @@ package object race {
     a
   }
 
+  /** return first parameter after executing f */
+  def yieldAfter[A](a:A)(f: =>Unit): A = {
+    f
+    a
+  }
+
   def lift[A, B](f: A => B): Option[A] => Option[B] = _ map f
 
   def liftPredicate[A](o1: Option[A], o2: Option[A])(f: (A, A) => Boolean): Boolean = {

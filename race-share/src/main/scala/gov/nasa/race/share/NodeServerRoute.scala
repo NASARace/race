@@ -23,7 +23,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
 import com.typesafe.config.Config
 import gov.nasa.race.common.{BufferedStringJsonPullParser, JsonSerializable, JsonWriter}
-import gov.nasa.race.core.{BusEvent, ParentActor, Ping, PingParser, Pong}
+import gov.nasa.race.core.{BusEvent, ParentActor, Ping, PingParser, PipedRaceDataClient, Pong}
 import gov.nasa.race.http.{PushWSRaceRoute, WSContext}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.{ifSome, withSomeOrElse}
@@ -45,7 +45,7 @@ object NodeServerRoute {
   * server does not need to know client IP addresses a priori
   */
 class NodeServerRoute(val parent: ParentActor, val config: Config)
-                                        extends PushWSRaceRoute with NodeDatesResponder {
+                                        extends PushWSRaceRoute with NodeDatesResponder with PipedRaceDataClient {
 
   /**
     * the parser for incoming (web socket) messages. Note this is from trusted/checked connections

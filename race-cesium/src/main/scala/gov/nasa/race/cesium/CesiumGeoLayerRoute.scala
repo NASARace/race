@@ -224,12 +224,14 @@ trait GeoLayerRoute extends CesiumRoute with JsonProducer {
   }
 
   def initializeGeoLayerConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
-    val msg = serializeSources( sources.values)
-    pushTo( ctx.remoteAddress, queue, TextMessage.Strict(msg))
+    pushTo( ctx.remoteAddress, queue, TextMessage.Strict( toNewJson( serializeSources(_, sources.values))))
   }
 
-  def serializeSources (srcs: Iterable[GeoLayer]): String = {
-    writer.clear().writeObject(w=> w.writeArrayMember("geoLayers")(w=> srcs.foreach( _.serializeTo(w)))).toJson
+  def serializeSources (writer: JsonWriter, srcs: Iterable[GeoLayer]): Unit = {
+    writer
+      .beginObject
+      .writeArrayMember("geoLayers")(w=> srcs.foreach( _.serializeTo(w)))
+      .endObject
   }
 }
 

@@ -24,15 +24,14 @@ import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{JsonProducer, JsonWriter}
+import gov.nasa.race.common.JsonProducer
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.core.{BusEvent, ParentActor}
-import gov.nasa.race.http.{ContinuousTimeRaceRoute, DocumentRoute, PushWSRaceRoute, WSContext}
+import gov.nasa.race.core.{BusEvent, ParentActor, RaceDataClient}
 import gov.nasa.race.earth.ViirsHotspots
+import gov.nasa.race.http.{ContinuousTimeRaceRoute, DocumentRoute, PushWSRaceRoute, WSContext}
 import gov.nasa.race.space.{OverpassRegion, OverpassSeq, SatelliteInfo}
 import gov.nasa.race.ui._
 import gov.nasa.race.uom.DateTime
-import gov.nasa.race.uom.Time.Days
 import gov.nasa.race.util.StringUtils
 import scalatags.Text
 
@@ -65,7 +64,7 @@ import gov.nasa.race.cesium.CesiumJpssRoute._
   * a RaceRouteInfo that serves active fires detected by polar orbiting satellites
   * note this can handle multiple satellites
   */
-trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTimeRaceRoute with JsonProducer {
+trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTimeRaceRoute with RaceDataClient with JsonProducer {
 
   val jpssAssets = getSymbolicAssetMap("jpss.assets", config, Seq(("fire","fire.png")))
 
@@ -246,27 +245,27 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
   }
 
   def serializeJpssSatellites: String = {
-    writer.clear().writeObject(w=> w.writeArrayMember("jpssSatellites")(w=> jpssSatellites.foreach( _.serializeTo(w)))).toJson
+    toNewJson( w=> w.writeObject(w=> w.writeArrayMember("jpssSatellites")(w=> jpssSatellites.foreach( _.serializeTo(w)))))
   }
 
   def serializeJpssRegion(sat: OverpassRegion): String = {
-    writer.clear().writeObject(w=> w.writeObjectMember("jpssRegion")( sat.serializeMembersTo)).toJson
+    toNewJson( w=> w.writeObject(w=> w.writeObjectMember("jpssRegion")( sat.serializeMembersTo)))
   }
 
   def serializeJpssOverpassSeq(ops: OverpassSeq): String = {
-    writer.clear().writeObject(w=> w.writeObjectMember("jpssOverpass")( ops.serializeMembersTo)).toJson
+    toNewJson( w=> w.writeObject(w=> w.writeObjectMember("jpssOverpass")( ops.serializeMembersTo)))
   }
 
   def serializeJpssHotspots(hs: ViirsHotspots): String = {
-    writer.clear().writeObject(w=> w.writeObjectMember("jpssHotspots")( hs.serializeMembersTo)).toJson
+    toNewJson( w=> w.writeObject(w=> w.writeObjectMember("jpssHotspots")( hs.serializeMembersTo)))
   }
 
   def serializeJpssDropHotspots (date: DateTime): String = {
-    writer.clear().writeObject(w=> w.writeDateTimeMember("jpssDropHotspots", date)).toJson
+    toNewJson( w=> w.writeObject(w=> w.writeDateTimeMember("jpssDropHotspots", date)))
   }
 
   def serializeJpssDropOverpass (date: DateTime): String = {
-    writer.clear().writeObject(w=> w.writeDateTimeMember("jpssDropOverpass", date)).toJson
+    toNewJson( w=> w.writeObject(w=> w.writeDateTimeMember("jpssDropOverpass", date)))
   }
 
   //--- cleanup

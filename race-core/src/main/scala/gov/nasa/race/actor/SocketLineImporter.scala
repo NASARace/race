@@ -34,11 +34,8 @@ class SocketLineImportActor (val config: Config) extends SocketImporter with Pub
   val maxLineLength = config.getIntOrElse("max-line", 512)
   val publishRaw = config.getBooleanOrElse("publish-raw", false) // publish as Array[Byte]
 
-  // override if we have a timeout on the socket reads
-  val processTimeout: Option[()=>Boolean] = None
-
   override protected def createDataAcquisitionThread(sock: Socket): Option[SocketDataAcquisitionThread] = {
-    Some( new SocketLineAcquisitionThread(name, sock, initLineLength, maxLineLength, processLine, processTimeout))
+    Some( new SocketLineAcquisitionThread(name, sock, initLineLength, maxLineLength, processLine))
   }
 
   // override for translation etc.

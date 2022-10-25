@@ -26,7 +26,7 @@ import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import gov.nasa.race.common.CachedByteFile
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core.BusEvent
+import gov.nasa.race.core.{BusEvent, PipedRaceDataClient}
 import gov.nasa.race.util.{FileUtils, NetUtils}
 
 import java.io.File
@@ -43,7 +43,7 @@ case class FileUpdate (pathName: String, data: Array[Byte])
 /**
   * a PushWSRaceRoute that manages updates of a list of filehame patterns under a common root directory
   */
-trait CachedFileRoute extends PushWSRaceRoute {
+trait CachedFileRoute extends PushWSRaceRoute with PipedRaceDataClient {
 
   val routePrefix = config.getStringOrElse("route-prefix", name)
   val cacheDir = config.getExistingDir("cache-dir")

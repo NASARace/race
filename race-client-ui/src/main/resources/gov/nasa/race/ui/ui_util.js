@@ -508,3 +508,11 @@ export function firstDefined(...theArgs) {
     }
     return undefined;
 }
+
+export function checkDefined(...theArgs) {
+    var arg = undefined;
+    for (arg of theArgs) {
+        if (!arg) return undefined;
+    }
+    return arg;
+}
