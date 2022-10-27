@@ -41,6 +41,9 @@ import gov.nasa.race.common.ConstCharSequences._
 
 /**
   * a byte slice that encodes Chars
+ *
+ * NOTE - CharSeqByteSlices cannot be used as Map key types when using String key values - equals() is not symmetric
+ * (String equals checks for exact type). Key values have to be of the exact same type
   */
 trait CharSeqByteSlice extends ByteSlice with CharSequence {
 
@@ -71,6 +74,7 @@ trait CharSeqByteSlice extends ByteSlice with CharSequence {
     h
   }
 
+  // NOTE - this does not compare equal to String instances (which does not support CharSequence value comparison)
   override def equals (o: Any): Boolean = {
     o match {
         // unfortunately we can't widen this to general CharSequence since it wouldn't be symmetric: String.equals(CSBS) != CSBS.equals(String)

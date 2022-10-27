@@ -103,7 +103,7 @@ ui.registerLoadFunction(function initialize() {
 function initTrackSourceView() {
     let view = ui.getList("tracks.sources");
     if (view) {
-        ui.setListItemDisplayColumns(view, ["fit header"], [
+        ui.setListItemDisplayColumns(view, ["fit", "header"], [
             { name: "show", tip: "toggle visibility", width: "2.5rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSource) },
             { name: "id", width: "8rem", attrs: ["alignLeft"], map: e => e.id },
             { name: "tracks", tip: "number of tracks", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.trackEntries.size.toString() },
