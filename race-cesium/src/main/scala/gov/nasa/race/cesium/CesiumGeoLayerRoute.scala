@@ -211,7 +211,7 @@ trait GeoLayerRoute extends CesiumRoute with JsonProducer {
   def geoLayerConfig(requestUri: Uri, remoteAddr: InetSocketAddress): String = {
     val cfg = config.getConfig("geolayer")
     s"""export const geolayer = {
-  ${cesiumLayerConfig(cfg, "/overlay/annotation", "static map overlays with symbolic data")},
+   ${cesiumLayerConfig(cfg, "/overlay/annotation", "static map overlays with symbolic data")},
    render: ${defaultRendering.toJs}
  };"""
   }

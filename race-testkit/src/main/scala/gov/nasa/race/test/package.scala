@@ -56,7 +56,7 @@ package object test {
 
   def elapsedThreadCpuNanos(n: Int)(f: => Any): Long = {
     setThreadCpuEnabled
-    val tid = Thread.currentThread.threadId()
+    val tid = Thread.currentThread.getId()  // should be replaced by .threadId() once JDK 19 is mainstream enough
     val t0 = threadMxBean.getThreadCpuTime(tid)
     var i = 0
     while (i < n) {
