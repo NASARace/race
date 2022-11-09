@@ -48,7 +48,7 @@ trait UiSettingsRoute extends UiRoute with ConfigScriptRoute with CachedFileAsse
       uiRowContainer("align_center")(
         uiChoice("theme","settings.theme", "main.selectTheme(event)"),
         uiButton("Edit", "main.editTheme()"),
-        uiButton("Remove", "main.removeLocalTheme()", "settings.remove")
+        uiButton("Remove", "main.removeLocalTheme()", eid="settings.remove")
       ),
       uiPanel("theme vars", false)(
         uiColumnContainer("align_right")(
@@ -56,7 +56,7 @@ trait UiSettingsRoute extends UiRoute with ConfigScriptRoute with CachedFileAsse
           uiTextInput("value", "settings.value", "main.themeVarChange(event)","", "15rem")
         ),
         uiRowContainer()(
-          uiButton("Save", "main.saveLocalTheme()", "settings.save")
+          uiButton("Save", "main.saveLocalTheme()", eid="settings.save")
         )
       )
     )

@@ -229,14 +229,13 @@ class ConsoleAppender extends ClientSocketPrinter("consoleLogging",
                                                   ConsoleAppender.getLoggingHost,
                                                   ConsoleAppender.getLoggingPort,
                                                   SystemLoggable) with LogAppender {
-  private var curClr: String = null
 
-  @inline private def printColoredOn(ps: PrintStream, s: String, ansiClr: String): Unit = {
-    if (ansiClr != curClr) {
-      curClr = ansiClr
+  private def printColoredOn(ps: PrintStream, s: String, ansiClr: String): Unit = {
+    synchronized {
       ps.print(ansiClr)
+      ps.println(s)
+      ps.println(scala.Console.RESET)
     }
-    ps.println(s)
   }
 
   //--- LogAppender interface
@@ -244,7 +243,7 @@ class ConsoleAppender extends ClientSocketPrinter("consoleLogging",
   override def appendError(s: String): Unit = withPrintStreamOrElse(System.out)( printColoredOn(_,s,scala.Console.RED))
   override def appendWarning(s: String): Unit = withPrintStreamOrElse(System.out)( printColoredOn(_,s,scala.Console.YELLOW))
   override def appendInfo(s: String): Unit = withPrintStreamOrElse(System.out)( printColoredOn(_,s,scala.Console.RESET))
-  override def appendDebug(s: String): Unit = withPrintStreamOrElse(System.out)( printColoredOn(_,s,scala.Console.RESET))
+  override def appendDebug(s: String): Unit = withPrintStreamOrElse(System.out)( printColoredOn(_,s,scala.Console.MAGENTA))
 
   override def terminate: Unit = {
     withPrintStreamOrElse(System.out) { ps =>

@@ -14,7 +14,7 @@
     --selected-data-color: yellow;
     --input-data-color: yellow;
     --disabled-color: rgba(200, 200, 200, 0.297);
-    --background: rgba(42, 42, 64, 1.0);
+    --background: rgb(42, 42, 64);
     --data-background: rgb(20, 20, 20);
     --selection-background: rgb(64, 64, 200);
     --hover-background: rgb(84, 84, 160);
@@ -54,9 +54,9 @@
     --icon-on-border: 1px solid white;
     --icon-border-radius: 5px;
     /* tooltips */
-    --tooltip-color: var(--color);
-    --tooltip-background: var(--background);
-    --tooltip-border-color: var(--border-color);
+    --tooltip-color: rgb(255, 255, 93);
+    --tooltip-background: rgb(84, 84, 164);
+    --tooltip-border-color: var(--tooltip-color);
     --tooltip-border-style: solid;
     --tooltip-border-width: 1px;
     --tooltip-border: var(--tooltip-border-width) var(--tooltip-border-style) var(--tooltip-border-color);
@@ -111,11 +111,13 @@
     --choice-value-color: var(--input-data-color);
     --choice-field-background: var(--data-background);
     /* pushbuttons */
-    --button-height: 2.0rem;
+    --button-height: 2.2rem;
     --button-color: rgb(200, 200, 200);
-    --button-background: rgb(74, 74, 74);
-    --button-hover-background: rgb(64, 64, 200);
+    --button-hover-color: rgb(230, 230, 230);
+    --button-background: rgb(62, 59, 122);
+    --button-hover-background: rgb(56, 56, 101);
     --button-border: 3px groove var(--border-color);
+    --button-hover-border: var(--button-border);
     --button-border-radius: 0px;
     --button-color-pressed: yellow;
     --button-border-pressed: var(--button-border);
@@ -150,6 +152,11 @@
     --slider-width: 12rem;
     --slider-thumb-size: 1.2rem;
     --slider-range-color: rgba(200, 200, 200, 0.6);
+    /* tabs */
+    --tab-color: var(--darker-color);
+    --selected-tab-color: var(--color);
+    --tab-background: rgb(30, 30, 50);
+    --selected-tab-background: var(--background);
     /* general containers */
     --container-padding: 4px;
     --container-margin: var(--margin) 0 var(--margin) 0;

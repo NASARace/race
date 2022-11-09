@@ -35,20 +35,6 @@ package object util {
     case _ =>
   }
 
-  /**
-    * order-independent, iterator free processing of XmlPullParser attributes
-    */
-  trait XmlAttrProcessor {
-    this: XmlPullParser =>
-
-    def processAttributes(pf: PartialFunction[String,Unit]) = {
-      val attrPf = pf.orElse(acceptAll)
-      while (parseNextAttribute) {
-        attrPf(attr)
-      }
-    }
-  }
-
   //--- Java interoperability
 
   // to use Scala lambdas as Java method arguments

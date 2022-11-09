@@ -141,7 +141,7 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
           case tm: TextMessage.Strict => f(tm.text.getBytes)
           case bm: BinaryMessage.Strict => f(bm.data.toArray[Byte])
           case sm: TextMessage.Streamed =>
-            sm.toStrict(maxIncomingTimeout)(materializer).onComplete {
+            sm.toStrict(timeout)(materializer).onComplete {
               case Success(strictMsg) => self ! WsProcessIncomingData(strictMsg.text.getBytes, f)
               case Failure(x) => error(s"failed to retrieve incoming message: $x")
             }

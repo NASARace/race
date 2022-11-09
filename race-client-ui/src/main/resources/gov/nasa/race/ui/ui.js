@@ -655,6 +655,28 @@ export function setLabelText(o, text) {
     }
 }
 
+//--- general text
+
+export function setTextContent(o,newContent) {
+    let e = getText(o);
+    if (e) {
+        e.setHTML(newContent); // use the sanitizer to avoid XSS (allow static html such as links)
+        _resetPanelMaxHeight(e);
+    }
+}
+
+export function clearTextContent(o) {
+    setTextContent(o,null);
+}
+
+export function getText(o) {
+    let e = _elementOf(o);
+    if (e && e.classList.contains("ui_text")) {
+        return e;
+    }
+    throw "not a text";
+}
+
 //--- time & date widgets
 
 var _timer = undefined;
@@ -1609,6 +1631,7 @@ export function setListItemDisplayColumns(o, listAttrs, colSpecs) {
 
             _setAlignment(ce, cs.attrs);
             if (cs.attrs.includes("fixed")) _addClass(ce, "fixed");
+            if (cs.attrs.includes("small")) _addClass(ce, "small");
 
             re.appendChild(ce);
             if (he) he.appendChild(createSubitemHeader(he, cs, w));
@@ -2246,7 +2269,13 @@ export function toggleMenuItemCheck(event) {
     }
 }
 
-//--- color input
+//--- color 
+
+export function createColorBox(clrSpec) {
+    let e = _createElement("DIV", "ui_color_box");
+    e.style.background = clrSpec;
+    return e;
+}
 
 export function createColorInput(initClr, size, action) {
     let e = document.createElement("input");

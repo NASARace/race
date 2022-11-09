@@ -77,6 +77,8 @@ object JsonWriter {
   def forObject: JsonWriter = new JsonWriter(ObjectType)
   def forArray: JsonWriter = new JsonWriter(ArrayType)
   def forElements: JsonWriter = new JsonWriter(RawElements)
+
+  def toJsonString(s: String) = s.replace("\"","\\\"")
 }
 import JsonWriter._
 

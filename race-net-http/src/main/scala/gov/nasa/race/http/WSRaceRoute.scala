@@ -107,6 +107,14 @@ trait WSRaceRoute extends RaceRouteInfo with CachedFileAssetRoute {
       case bm: BinaryMessage => bm.dataStream.runWith(Sink.ignore)
     }
   }
+
+  protected def withStrictMessageData(msg: Message)(f: Array[Byte]=>Unit): Unit = {
+    msg match {
+      case tm: TextMessage.Strict => f(tm.text.getBytes)
+      case bm: BinaryMessage.Strict => f(bm.data.toArray[Byte])
+      case _ => warning("websocket message not strict")
+    }
+  }
 }
 
 /**

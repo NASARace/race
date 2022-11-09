@@ -36,13 +36,9 @@ import java.util.TimeZone
 
 
 object CesiumRoute {
-
-  val imageryPrefix = "imagery"
   val terrainPrefix = "terrain"
 
-  val imageryPrefixMatcher = PathMatcher(imageryPrefix / "[^/]+".r ~ Slash)
-
-  val defaultCesiumJsVersion = "1.98"
+  val defaultCesiumJsVersion = "1.99"
 
   val cesiumPathMatcher = PathMatchers.separateOnSlashes("Build/Cesium/")
   def cesiumJsUrl (version: String): String = {
@@ -78,12 +74,6 @@ trait CesiumRoute
   val targetFrameRate = config.getIntOrElse("frame-rate", -1)
   val proxyTerrain = config.getBooleanOrElse("proxy-elevation-provider", true)
   val terrainProvider = config.getStringOrElse("elevation-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
-  val imageryLayers = ImageryLayer.readConfig(config)
-  val layerMap: Map[String,String] = Map.from( imageryLayers.map( layer=> (layer.name, layer.url))) // symbolic map layer name -> url
-
-  // these can be overridden by what is in the theme, which can be overridden what is specified in the layer itself
-  // (if the layer has a spec that prevents anything but manual modification on the client side)
-  val imageryParams = ImageryLayer.getDefaultImageryParams(config.getOptionalConfig("imagery-params"))
 
   //--- cesium related routes
 
@@ -92,13 +82,7 @@ trait CesiumRoute
   def uiCesiumRoute: Route = {
     get {
       //--- dynamic geospatial content requested by Cesium at runtime
-      pathPrefix(CesiumRoute.imageryPrefixMatcher) { layerId => // we only get this if we act as a proxy
-        layerMap.get(layerId) match {
-          case Some(url) => completeProxied(url)
-          case None => complete(StatusCodes.NotFound, p.toString())
-        }
-
-      } ~ pathPrefix(CesiumRoute.terrainPrefix) { // also just when configured as proxy
+      pathPrefix(CesiumRoute.terrainPrefix) { // also just when configured as proxy
         completeProxied(terrainProvider)
 
         //--- the standard Cesium assets - note we always proxy these fs-cached with a pre-configured host URL
@@ -181,8 +165,6 @@ export const cesium = {
   accessToken: '$accessToken',
   requestRenderMode: $requestRenderMode,
   targetFrameRate: $targetFrameRate,
-  imageryParams: ${imageryParams.toJs},
-  imageryLayers: ${StringUtils.mkString(imageryLayers,"[\n  ",",\n  ","\n]")(_.toJs)},
   terrainProvider: new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'}),
 };
 """
@@ -225,19 +207,6 @@ export const cesium = {
       uiColumnContainer("align_right")(
         uiCheckBox("render on-demand", "main.toggleRequestRenderMode()", "view.rm"),
         uiSlider("frame rate", "view.fr", "main.setFrameRate(event)")
-      ),
-      uiPanel("map layers", true)(
-        uiList("view.map.list", 10, "main.selectMapLayer(event)"),
-      ),
-      uiPanel("layer parameters", false)(
-        uiColumnContainer("align_right")(
-          uiSlider("alpha", "view.map.alpha", "main.setMapAlpha(event)"),
-          uiSlider("brightness", "view.map.brightness", "main.setMapBrightness(event)"),
-          uiSlider("contrast", "view.map.contrast", "main.setMapContrast(event)"),
-          uiSlider("hue", "view.map.hue", "main.setMapHue(event)"),
-          uiSlider("saturation", "view.map.saturation","main.setMapSaturation(event)"),
-          uiSlider("gamma", "view.map.gamma", "main.setMapGamma(event)")
-        )
       )
     )
   }

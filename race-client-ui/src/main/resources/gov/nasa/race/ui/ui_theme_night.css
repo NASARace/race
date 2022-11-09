@@ -98,9 +98,11 @@
     --choice-field-background: var(--data-background);
     --button-height: 2.0rem;
     --button-color: rgb(255 89 89);
+    --button-hover-color: rgb(255,20,20);
     --button-background: rgb(38 3 3);
     --button-hover-background: rgb(122, 0, 0);
     --button-border: 3px groove var(--border-color);
+    --button-hover-border: var(--button-border);
     --button-border-radius: 0px;
     --button-color-pressed: yellow;
     --button-border-pressed: var(--button-border);

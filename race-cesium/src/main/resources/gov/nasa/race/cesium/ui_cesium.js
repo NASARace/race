@@ -31,10 +31,6 @@ export var viewer = undefined;
 
 var cameraSpec = undefined;
 
-var mapLayerView = undefined;
-var selectedMapLayer = undefined;
-var activeBaseLayer = undefined;
-
 var requestRenderMode = false;
 var targetFrameRate = -1;
 
@@ -90,12 +86,7 @@ ui.registerLoadFunction(function initialize() {
 
     ws.addWsHandler(config.wsUrl, handleWsViewMessages);
 
-    adjustImageryParams();
-    initImageryLayers();
-    initViewWindow();
     initLayerWindow();
-
-    ui.registerThemeChangeHandler(themeChanged);
 
     viewer.scene.postRender.addEventListener(function(scene, time) {
         pendingRenderRequest = false;
@@ -164,105 +155,6 @@ export function withDetailedSampledTerrain(positions, action) {
     Promise.resolve(promise).then(action);
 }
 
-function themeChanged() {
-    imageryLayers.forEach(li => li.imageryParams = li.originalImageryParams); // restore original imageryParams
-    adjustImageryParams(); // adjust defaults according to theme
-
-    if (selectedMapLayer) { // update selectedMapLayer
-        updateSelectedMapLayer();
-        setMapSliders(selectedMapLayer);
-    }
-}
-
-function adjustImageryParams() {
-    let docStyle = getComputedStyle(document.documentElement);
-    let anyChanged = false;
-
-    imageryParams = {...config.cesium.imageryParams }; // reset
-
-    let hue = docStyle.getPropertyValue("--map-hue");
-    if (hue) {
-        imageryParams.hue = hue;
-        anyChanged = true;
-    }
-
-    let brightness = docStyle.getPropertyValue("--map-brightness");
-    if (brightness) {
-        imageryParams.brightness = brightness;
-        anyChanged = true;
-    }
-
-    let saturation = docStyle.getPropertyValue("--map-saturation");
-    if (saturation) {
-        imageryParams.saturation = saturation;
-        anyChanged = true;
-    }
-
-    let contrast = docStyle.getPropertyValue("--map-contrast");
-    if (contrast) {
-        imageryParams.contrast = contrast;
-        anyChanged = true;
-    }
-
-    if (anyChanged) updateSelectedMapLayer();
-}
-
-function initImageryLayers() {
-    let viewerLayers = viewer.imageryLayers;
-    let defaultImageryLayer = viewerLayers.get(0); // Cesium uses Bing aerial as default (provider already instantiated)
-
-    imageryLayers.forEach(il => {
-        let layer = il.provider ? new Cesium.ImageryLayer(il.provider) : defaultImageryLayer;
-        il.layer = layer;
-
-        // save the original imageryParams so that we can later-on restore
-        il.originalImageryParams = il.imageryParams;
-
-        let ip = il.imageryParams ? il.imageryParams : config.cesium.imageryParams
-        setLayerImageryParams(layer, ip);
-
-        if (il.show) {
-            if (il.isBase) {
-                if (activeBaseLayer) { // there can only be one
-                    activeBaseLayer.show = false;
-                    activeBaseLayer.layer.show = false;
-                }
-                activeBaseLayer = il;
-            }
-            layer.show = true;
-            selectedMapLayer = il;
-        } else {
-            layer.show = false;
-        }
-
-        if (il.provider) { // this is a new layer
-            viewerLayers.add(layer);
-        }
-    });
-}
-
-function updateSelectedMapLayer() {
-    if (selectedMapLayer) {
-        if (!selectedMapLayer.imageryParams) { // if we have those set explicitly they take precedence
-            setLayerImageryParams(selectedMapLayer.layer, imageryParams);
-        }
-    }
-}
-
-function setLayerImageryParams(layer, imageryParams) {
-    layer.alpha = imageryParams.alpha;
-    layer.brightness = imageryParams.brightness;
-    layer.contrast = imageryParams.contrast;
-    layer.hue = imageryParams.hue * Math.PI / 180.0;
-    layer.saturation = imageryParams.saturation;
-    layer.gamma = imageryParams.gamma;
-}
-
-function initViewWindow() {
-    mapLayerView = initMapLayerView();
-    initMapSliders();
-}
-
 export function createScreenSpaceEventHandler() {
     return new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 }
@@ -273,110 +165,6 @@ export function setCursor(cssCursorSpec) {
 
 export function setDefaultCursor() {
     viewer.scene.canvas.style.cursor = "default";
-}
-
-function initMapLayerView() {
-    let view = ui.getList("view.map.list");
-    if (view) {
-        ui.setListItemDisplayColumns(view, ["fit"], [{
-                name: "show",
-                width: "2rem",
-                attrs: [],
-                map: e => {
-                    if (e.isBase) return ui.createRadio(e.show, _toggleShowMapLayer, null);
-                    else return ui.createCheckBox(e.show, _toggleShowMapLayer, null);
-                }
-            },
-            { name: "id", width: "12rem", attrs: ["alignLeft"], map: e => e.description }
-        ]);
-
-        ui.setListItems(view, config.cesium.imageryLayers);
-    }
-
-    return view;
-}
-
-function _showLayer(layerInfo, newState) {
-    layerInfo.show = newState;
-    layerInfo.layer.show = newState;
-}
-
-// note we get this before the item is selected
-function _toggleShowMapLayer(event) {
-    let e = ui.getSelector(event.target);
-    if (e) {
-        let li = ui.getListItemOfElement(e);
-        if (li) {
-            let show = ui.isSelectorSet(e);
-            if (show) {
-                if (li.isBase) { // there can only be one at a time
-                    if (activeBaseLayer) {
-                        let ie = ui.getNthSubElementOfListItem(mapLayerView, activeBaseLayer, 0);
-                        if (ie) ui.setSelector(ie.firstChild, false);
-                        _showLayer(activeBaseLayer, false);
-                    }
-                    activeBaseLayer = li;
-                }
-            }
-            _showLayer(li, show)
-        }
-    }
-}
-
-ui.exportToMain(function selectMapLayer(event) {
-    let li = ui.getSelectedListItem(mapLayerView);
-    if (li) {
-        selectedMapLayer = li;
-        setMapSliders(li);
-    }
-})
-
-function getImageryParams(li) {
-    if (li.imageryParams) return li.imageryParams; // if we have some set this has precedence
-    else return imageryParams;
-}
-
-// this sets imageryParams if they are not set
-function getModifiableImageryParams(li) {
-    if (!li.imageryParams) li.imageryParams = {...imageryParams };
-    return li.imageryParams;
-}
-
-function setMapSliders(li) {
-    let ip = getImageryParams(li);
-
-    ui.setSliderValue('view.map.alpha', ip.alpha);
-    ui.setSliderValue('view.map.brightness', ip.brightness);
-    ui.setSliderValue('view.map.contrast', ip.contrast);
-    ui.setSliderValue('view.map.hue', ip.hue);
-    ui.setSliderValue('view.map.saturation', ip.saturation);
-    ui.setSliderValue('view.map.gamma', ip.gamma);
-}
-
-function initMapSliders() {
-    let e = ui.getSlider('view.map.alpha');
-    ui.setSliderRange(e, 0, 1.0, 0.1, util.f_1);
-    ui.setSliderValue(e, imageryParams.alpha);
-
-    e = ui.getSlider('view.map.brightness');
-    ui.setSliderRange(e, 0, 2.0, 0.1, util.f_1);
-    ui.setSliderValue(e, imageryParams.brightness);
-
-    e = ui.getSlider('view.map.contrast');
-    ui.setSliderRange(e, 0, 2.0, 0.1, util.f_1);
-    ui.setSliderValue(e, imageryParams.contrast);
-
-    e = ui.getSlider('view.map.hue');
-    ui.setSliderRange(e, 0, 360, 1, util.f_0);
-    ui.setSliderValue(e, imageryParams.hue);
-
-    e = ui.getSlider('view.map.saturation');
-    ui.setSliderRange(e, 0, 2.0, 0.1, util.f_1);
-    ui.setSliderValue(e, imageryParams.saturation);
-
-    e = ui.getSlider('view.map.gamma');
-    ui.setSliderRange(e, 0, 2.0, 0.1, util.f_1);
-    ui.setSliderValue(e, imageryParams.gamma);
 }
 
 function setCanvasSize() {
@@ -655,78 +443,6 @@ ui.exportToMain(function raiseModuleLayer(event){
 ui.exportToMain(function lowerModuleLayer(event){
     let le = ui.getSelectedListItem(layerOrderView);
     console.log("TBD lower layer: " + le);
-});
-
-//--- explicitly set map rendering parameters for selected layer (will be reset when switching themes)
-
-ui.exportToMain(function setMapAlpha(event) {
-    if (selectedMapLayer) {
-        let v = ui.getSliderValue(event.target);
-        selectedMapLayer.layer.alpha = v;
-        getModifiableImageryParams(selectedMapLayer).alpha = v;
-        requestRender();
-    }
-});
-
-ui.exportToMain(function setMapBrightness(event) {
-    let v = ui.getSliderValue(event.target);
-    setMapLayerBrightness(v);
-    requestRender();
-
-});
-
-function setMapLayerBrightness(v) {
-    if (selectedMapLayer) {
-        selectedMapLayer.layer.brightness = v;
-        getModifiableImageryParams(selectedMapLayer).brightness = v;
-        requestRender();
-    }
-}
-
-ui.exportToMain(function setMapContrast(event) {
-    if (selectedMapLayer) {
-        let v = ui.getSliderValue(event.target);
-        selectedMapLayer.layer.contrast = v;
-        getModifiableImageryParams(selectedMapLayer).contrast = v;
-        requestRender();
-    }
-});
-
-ui.exportToMain(function setMapHue(event) {
-    let v = ui.getSliderValue(event.target);
-    setMapLayerHue(v);
-    requestRender();
-});
-
-function setMapLayerHue(v) {
-    if (selectedMapLayer) {
-        selectedMapLayer.layer.hue = (v * Math.PI) / 180; // needs radians
-        getModifiableImageryParams(selectedMapLayer).hue = v;
-        requestRender();
-    }
-}
-
-ui.exportToMain(function setMapSaturation(event) {
-    let v = ui.getSliderValue(event.target);
-    setMapLayerSaturation(v);
-    requestRender();
-});
-
-function setMapLayerSaturation(v) {
-    if (selectedMapLayer) {
-        selectedMapLayer.layer.saturation = v;
-        getModifiableImageryParams(selectedMapLayer).saturation = v;
-        requestRender();
-    }
-}
-
-ui.exportToMain(function setMapGamma(event) {
-    if (selectedMapLayer) {
-        let v = ui.getSliderValue(event.target);
-        selectedMapLayer.layer.gamma = v;
-        getModifiableImageryParams(selectedMapLayer).gamma = v;
-        requestRender();
-    }
 });
 
 //--- interactive geo input

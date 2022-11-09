@@ -65,6 +65,10 @@ function handleServerMessage(msg) {
     // if we get here the message was ignored
 }
 
+export function sendWsMessage (data) {
+    ws.send(data);
+}
+
 export function shutdown() {
     ws.close();
 }

@@ -18,9 +18,11 @@ package gov.nasa.race.smtp
 
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.RaceActor
-import jakarta.mail.internet.{InternetAddress, MimeMessage}
-import jakarta.mail.{Address, Authenticator, Message, PasswordAuthentication, Transport, Session => SmtpSession}
+import gov.nasa.race.yieldInitialized
+import jakarta.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart}
+import jakarta.mail.{Address, Authenticator, Message, Part, PasswordAuthentication, Transport, Session => SmtpSession}
 
+import java.io.File
 import java.util.Properties
 
 /**
@@ -53,27 +55,58 @@ trait SmtpActor extends RaceActor {
   protected def sendEmail( fromAddr: String, toAddrs: Seq[String], ccAddrs: Seq[String], bccAddrs: Seq[String],
                            subject: String, text: String): Unit = {
     try {
-      val message = new MimeMessage(smtpSession)
-      message.setFrom( new InternetAddress(fromAddr))
+      val msg = new MimeMessage(smtpSession)
 
-      if (toAddrs.nonEmpty) {
-        message.setRecipients(Message.RecipientType.TO, toAddrs.map( new InternetAddress(_)).toArray[Address])
-      }
+      msg.setFrom( new InternetAddress(fromAddr))
 
-      if (ccAddrs.nonEmpty) {
-        message.setRecipients(Message.RecipientType.CC, ccAddrs.map( new InternetAddress(_)).toArray[Address])
-      }
+      if (toAddrs.nonEmpty) msg.setRecipients(Message.RecipientType.TO, toAddrs.map( new InternetAddress(_)).toArray[Address])
+      if (ccAddrs.nonEmpty) msg.setRecipients(Message.RecipientType.CC, ccAddrs.map( new InternetAddress(_)).toArray[Address])
+      if (bccAddrs.nonEmpty) msg.setRecipients(Message.RecipientType.BCC, bccAddrs.map( new InternetAddress(_)).toArray[Address])
 
-      if (bccAddrs.nonEmpty) {
-        message.setRecipients(Message.RecipientType.BCC, bccAddrs.map( new InternetAddress(_)).toArray[Address])
-      }
+      msg.setSubject(subject)
+      msg.setText(text)
 
-      message.setSubject(subject)
-      message.setText(text)
-
-      Transport.send(message)
+      Transport.send(msg)
     } catch {
-      case x: Throwable => warning(s"failed to send alarm: $x")
+      case x: Throwable => warning(s"failed to send email: $x")
     }
   }
+
+  protected def sendEmail (fromAddr: String, toAddrs: Seq[String], ccAddrs: Seq[String], bccAddrs: Seq[String],
+                           subject: String, parts: Seq[MimeBodyPart]): Unit = {
+    try {
+      val msg = new MimeMessage(smtpSession)
+
+      msg.setFrom( new InternetAddress(fromAddr))
+
+      if (toAddrs.nonEmpty) msg.setRecipients(Message.RecipientType.TO, toAddrs.map( new InternetAddress(_)).toArray[Address])
+      if (ccAddrs.nonEmpty) msg.setRecipients(Message.RecipientType.CC, ccAddrs.map( new InternetAddress(_)).toArray[Address])
+      if (bccAddrs.nonEmpty) msg.setRecipients(Message.RecipientType.BCC, bccAddrs.map( new InternetAddress(_)).toArray[Address])
+
+      msg.setSubject(subject)
+
+      val mp = new MimeMultipart()
+      parts.foreach(mp.addBodyPart)
+      msg.setContent(mp)
+
+      Transport.send(msg)
+    } catch {
+      case x: Throwable => warning(s"failed to send email: $x")
+    }
+  }
+
+  protected def textPart (text: String): MimeBodyPart = {
+    yieldInitialized (new MimeBodyPart()) { mbp=>
+      mbp.setContent(text, "text/plain")
+    }
+  }
+
+  protected def fileAttachmentPart (file: File, disposition: String = Part.ATTACHMENT): MimeBodyPart = {
+    yieldInitialized( new MimeBodyPart()) { mbp=>
+      mbp.attachFile(file)
+      mbp.setDisposition(disposition)
+    }
+  }
+
+  protected def inlinedFileAttachmentPart (file: File): MimeBodyPart = fileAttachmentPart(file, Part.INLINE)
 }

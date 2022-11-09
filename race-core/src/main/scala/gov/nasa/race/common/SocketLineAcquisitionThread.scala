@@ -49,31 +49,28 @@ class SocketLineAcquisitionThread (name: String, sock: Socket, initSize: Int, ma
 
         } catch {
           case ix: InterruptedException => // ignore - the interrupter has to set isDone if we should stop
-            println("@@@ interrupted")
 
           //--- note that all handleX() functions are potential blocking points
 
           case x: SocketTimeoutException =>
-            println(s"@@@ socket timeout: $x")
-
-            if (sock.isClosed) {
-              handleConnectionLoss(x)
-            } else {
-              handleConnectionTimeout()
+            if (!isDone.get()) {
+              if (sock.isClosed) {
+                handleConnectionLoss(x)
+              } else {
+                handleConnectionTimeout()
+              }
             }
 
           case x: Throwable =>
-            println(s"@@@ socket exception: $x")
-
-            if (sock.isClosed) {
-              handleConnectionLoss(x)
-            } else {
-              handleConnectionError(x)
+            if (!isDone.get()) {
+              if (sock.isClosed) {
+                handleConnectionLoss(x)
+              } else {
+                handleConnectionError(x)
+              }
             }
         }
       }
     }
-
-    println("@@@ dat terminated.")
   }
 }

@@ -136,9 +136,9 @@ import GeoLayerRoute._
  * a route that serves configured GeoJSON content
  */
 trait GeoLayerRoute extends CesiumRoute with JsonProducer {
-  val defaultRendering = new DefaultGeoJsonRendering(config.getConfigOrElse("geolayer.render", NoConfig))
-  val sources = mutable.LinkedHashMap.from( config.getConfigSeq("geolayer.sources").map(GeoLayer(_)).map(l=> l.pathName -> l))
-  val renderModules = getRenderModules(sources.values)
+  private val defaultRendering = new DefaultGeoJsonRendering(config.getConfigOrElse("geolayer.render", NoConfig))
+  private val sources = mutable.LinkedHashMap.from( config.getConfigSeq("geolayer.sources").map(GeoLayer(_)).map(l=> l.pathName -> l))
+  private val renderModules = getRenderModules(sources.values)
 
   def getRenderModules(srcs: Iterable[GeoLayer]): Seq[Text.TypedTag[String]] = {
     val mods = ArrayBuffer.empty[Text.TypedTag[String]]
@@ -162,6 +162,7 @@ trait GeoLayerRoute extends CesiumRoute with JsonProducer {
           val pathName = NetUtils.decodeUri(p.toString())
           sources.get(pathName) match {
             case Some(geoLayer) =>
+
               FileUtils.fileContentsAsBytes(geoLayer.file) match {
                 case Some(content) => complete( ResponseData.json(content))
                 case None => complete(StatusCodes.InternalServerError, p.toString())

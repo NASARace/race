@@ -46,6 +46,10 @@
     font: var(--mono-font);
 }
 
+.small {
+    font-size: var(--font-size-small);
+}
+
 .fit {
     width: inherit;
 }
@@ -260,8 +264,8 @@ div.ui_tab {
 	border: 1px solid var(--border-color);
 	border-radius: 8px 8px 0 0;
 	overflow: hidden;
-    color: var(--darker-color);
-    background: var(--background);
+    color: var(--tab-color);
+    background: var(--tab-background);
 }
 
 div.ui_tab:hover {
@@ -270,8 +274,8 @@ div.ui_tab:hover {
 
 div.ui_tab.show {
     border-bottom: none;
-    color: var(--selected-data-color);
-    background: var(--selection-background);
+    color: var(--selected-tab-color);
+    background: var(--selected-tab-background);
     overflow: visible;
 }
 
@@ -289,7 +293,15 @@ div.ui_tab_container.show {
     visibility: visible;
 }
 
-/* stand-alone text element */
+/* stand-alone text elements */
+
+div.ui_text {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-top: var(--margin);
+    margin-bottom: var(--margin);
+}
 
 div.ui_label {
     display: inline-block;
@@ -363,6 +375,14 @@ td.ui_field {
 
 td.ui_field.fixed {
     font: var(--mono-font);
+}
+
+/* color box */
+
+div.ui_color_box {
+    margin: 3px;
+    width: 90%;
+    height: 90%;
 }
 
 /* clock widget */
@@ -668,6 +688,8 @@ div.ui_radio_label {
 }
 
 .ui_button:hover {
+    border: var(--button-hover-border);
+    color: var(--button-hover-color);
     background: var(--button-hover-background);
 }
 

@@ -17,14 +17,14 @@
 
 package gov.nasa.race.schedule
 
-import java.io._
 import gov.nasa.race._
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{UTF8XmlPullParser2, XmlPullParser2}
-import gov.nasa.race.schedule.FileEventScheduler.SCHEDULE
-import gov.nasa.race.util.DateTimeUtils._
-import gov.nasa.race.util.{FileUtils, XmlAttrProcessor, XmlPullParser}
+import gov.nasa.race.common.UTF8XmlPullParser2
 import gov.nasa.race.uom.{DateTime, Time}
+import gov.nasa.race.util.DateTimeUtils._
+import gov.nasa.race.util.FileUtils
+
+import java.io._
 
 object FileEventScheduler {
   val SCHEDULE = asc("schedule")

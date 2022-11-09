@@ -16,28 +16,28 @@
  */
 package gov.nasa.race.cesium
 
-import akka.http.scaladsl.model.Uri
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.model.{StatusCodes, Uri}
+import akka.http.scaladsl.server.{PathMatcher, Route}
 import akka.http.scaladsl.server.Directives._
 import com.typesafe.config.Config
-import gov.nasa.race.cesium.GeoLayerRoute.{icon, jsModule, windowId}
-import gov.nasa.race.common.{JsWritable, JsonProducer, JsonSerializable, JsonWriter}
+import gov.nasa.race.common.{JsConvertible, JsonProducer, JsonSerializable, JsonWriter}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.config.NoConfig
 import gov.nasa.race.core.ParentActor
-import gov.nasa.race.http.DocumentRoute
+import gov.nasa.race.http.{DocumentRoute, ResponseData}
 import gov.nasa.race.ifSome
-import gov.nasa.race.ui.{extModule, uiColumnContainer, uiIcon, uiKvTable, uiPanel, uiSlider, uiTreeList, uiWindow}
-import gov.nasa.race.util.ClassLoaderUtils
+import gov.nasa.race.ui.{extModule, uiColumnContainer, uiIcon, uiKvTable, uiLabel, uiList, uiPanel, uiRowContainer, uiSlider, uiText, uiTreeList, uiWindow}
+import gov.nasa.race.util.{ClassLoaderUtils, FileUtils, StringUtils}
 import scalatags.Text
 
+import java.io.File
 import java.net.InetSocketAddress
 import scala.collection.mutable
 
 /**
  * imagery instance specific rendering parameters
  */
-class ImageryRendering (conf: Config) extends JsWritable {
+class ImageryRendering (conf: Config) extends JsConvertible {
   def alpha: Option[Double] = conf.getOptionalDouble("alpha")
   def brightness: Option[Double] = conf.getOptionalDouble("brightness")
   def contrast: Option[Double] = conf.getOptionalDouble("contrast")
@@ -45,14 +45,20 @@ class ImageryRendering (conf: Config) extends JsWritable {
   def saturation: Option[Double] = conf.getOptionalDouble("saturation")
   def gamma: Option[Double] = conf.getOptionalDouble("gamma")
 
+  def alphaColor: Option[String] = conf.getOptionalString("alpha-color")
+  def alphaColorThreshold: Option[Double] = conf.getOptionalDouble("alpha-color-threshold")
 
-  def appendJsMembers (sb: StringBuffer): Unit = {
-    ifSome(alpha){ v=> appendDoubleMember(sb,"alpha",v) }
-    ifSome(brightness){ v=> appendDoubleMember(sb,"brightness",v) }
-    ifSome(contrast){ v=> appendDoubleMember(sb, "contrast",v) }
-    ifSome(hue){ v=> appendDoubleMember(sb,"hue",v) }
-    ifSome(saturation){ v=> appendDoubleMember(sb, "saturation",v) }
-    ifSome(gamma){ v=> appendDoubleMember(sb, "gamma",v) }
+
+  def appendJs(sb: StringBuilder): Unit = {
+    appendOptionalJsDoubleMember(sb,"alpha",alpha)
+    appendOptionalJsDoubleMember(sb,"brightness",brightness)
+    appendOptionalJsDoubleMember(sb, "contrast",contrast)
+    appendOptionalJsDoubleMember(sb,"hue",hue)
+    appendOptionalJsDoubleMember(sb, "saturation",saturation)
+    appendOptionalJsDoubleMember(sb, "gamma",gamma)
+
+    appendOptionalJsStringMember(sb, "alphaColor", alphaColor)
+    appendOptionalJsDoubleMember(sb, "alphaColorThreshold",alphaColorThreshold)
   }
 }
 
@@ -69,36 +75,46 @@ object ImgLayer {
   def apply (conf: Config): ImgLayer = {
     val pathName = conf.getString( "pathname")
     val info = conf.getString("info")
-    val provider: CesiumImageryProvider = ClassLoaderUtils.newInstance( this, conf.getString("provider-class"),
+    val provider = ClassLoaderUtils.newInstance[CesiumImageryProvider]( this, conf.getString("provider-class"),
       Array(classOf[Config]), Array(conf)).get
+    val exclusive = conf.getStringSeq("exclusive")
+    val colorMap = conf.getOptionalString("color-map")
+    val proxy = conf.getBooleanOrElse("proxy", false)
+    val show = conf.getBooleanOrElse("show", false)
     val renderCfg = conf.getOptionalConfig("render").map( new ImageryRendering(_))
 
-    ImgLayer(pathName, info, provider, renderCfg)
+    ImgLayer(pathName, info, provider, exclusive, proxy, show, colorMap, renderCfg)
   }
 }
 
 /**
  * server model of imagery spec
  */
-case class ImgLayer (pathName: String, info: String, provider: CesiumImageryProvider, render: Option[ImageryRendering])  {
+case class ImgLayer (pathName: String, info: String, provider: CesiumImageryProvider,
+                     exclusive: Seq[String], proxy: Boolean, show: Boolean,
+                     colorMap: Option[String],
+                     render: Option[ImageryRendering]) extends JsConvertible {
 
-  def appendJs (sb: StringBuffer): Unit = {
-    sb.append('{')
-    sb.append(s"pathName:'$pathName',")
-    sb.append(s"info:'$info',")
+  val id = pathName.replace('/', '-') // unique id has to be a single url component
 
-    ifSome(render){ r=> r.appendObjectMember(sb, "render", r) }
-    sb.append('}')
-  }
-
-  def toJs: String = {
-    val sb = new StringBuffer()
-
-    sb.toString()
+  def appendJs(sb: StringBuilder): Unit = {
+    appendJsStringMember(sb, "pathName", pathName)
+    appendJsStringMember(sb, "info", info)
+    appendJsMember(sb, "provider")( sb=>provider.appendJs(sb))
+    appendJsArrayMember(sb, "exclusive", exclusive)
+    if (show) appendJsBooleanMember(sb, "show", show)
+    ifSome(colorMap) { _ => appendJsStringMember(sb, "colorMap", s"${ImageryLayerRoute.clrMapPrefix}/$id.json")}
+    appendOptionalJsObjectMember(sb, "render", render)
   }
 }
 
 object ImageryLayerRoute {
+  val imageryPrefix = "imagery"
+  val imageryPrefixMatcher = PathMatcher(imageryPrefix / "[^/?]+".r) // match the imagery prefix plus the imagery id
+
+  val clrMapPrefix = "imagery-cmap"
+  val clrMapPrefixMatcher = PathMatcher(clrMapPrefix / "[^/?]+".r) // match the resource prefix plus the imagery id
+
   val jsModule = "ui_cesium_imglayer.js"
   val icon = "imagery-icon.svg"
   val windowId = "imglayer"
@@ -109,13 +125,58 @@ import ImageryLayerRoute._
  * a RaceRouteInfo for Cesium Imagery Layers
  */
 trait ImageryLayerRoute extends CesiumRoute with JsonProducer {
-  val defaultRendering = new DefaultImageryRendering(config.getConfigOrElse("imglayer.render", NoConfig))
-  val sources = mutable.LinkedHashMap.from( config.getConfigSeq("imglayer.sources").map(ImgLayer(_)).map(l=> l.pathName -> l))
+  private val defaultRendering = new DefaultImageryRendering(config.getConfigOrElse("imglayer.render", NoConfig))
+  private val sources = config.getConfigSeq("imglayer.sources").map(ImgLayer(_))
+
+  private val proxyMap = createProxyMap(sources) // proxy-name -> external url
+  private val colorMap = createColorMap(sources) // pathName -> internal path
+
+  def createProxyMap (imgLayers: Seq[ImgLayer]): Map[String,String] = {
+    imgLayers.foldLeft(Map.empty[String,String]) { (map, layer) =>
+      if (layer.proxy) {
+        val id = layer.id
+        val provider = layer.provider
+        provider.setProxied(s"$imageryPrefix/$id") // has to go into the js instantiation code
+        map + (id -> provider.url)
+      } else map
+    }
+  }
+
+  def createColorMap (imgLayers: Seq[ImgLayer]): Map[String,String] = {
+    imgLayers.foldLeft(Map.empty[String,String]) { (map, layer) =>
+      if (layer.colorMap.isDefined) {
+        val id = s"${layer.id}.json"
+        map + (id -> layer.colorMap.get)
+      } else map
+    }
+  }
 
   //--- route
   override def route: Route = imgLayerRoute ~ super.route
 
-  def imgLayerRoute: Route = ???
+  def imgLayerRoute: Route = {
+      get {
+        pathPrefix(imageryPrefixMatcher) { layerId =>
+          proxyMap.get(layerId) match {
+            case Some(url) => completeProxied(url)
+            case None => complete(StatusCodes.NotFound, s"$imageryPrefix/$layerId")
+          }
+        } ~
+        pathPrefix(clrMapPrefixMatcher) { cmapId =>
+          colorMap.get(cmapId) match {
+            case Some(fileName) =>
+              // not worth caching unless we have hundreds of users
+              FileUtils.fileContentsAsBytes(fileName) match {
+                case Some(bs) => complete( ResponseData.forExtension( FileUtils.getExtension(fileName), bs))
+                case None => complete( StatusCodes.NotFound, cmapId)
+              }
+            case None => complete( StatusCodes.NotFound, s"$clrMapPrefix/$cmapId")
+          }
+        } ~
+          fileAssetPath(jsModule) ~
+          fileAssetPath(icon)
+      }
+  }
 
   //--- document fragments
 
@@ -129,16 +190,21 @@ trait ImageryLayerRoute extends CesiumRoute with JsonProducer {
     uiWindow(title, windowId, icon)(
       cesiumLayerPanel(windowId, "main.toggleShowImgLayer(event)"),
       uiPanel("sources", true)(
-        uiTreeList(s"$windowId.source.list", maxRows = 15, minWidthInRem = 25, selectAction="main.selectImgLayer(event)")
+        uiTreeList(s"$windowId.source.list", maxRows = 15, minWidthInRem = 25, selectAction="main.selectImgLayerSrc(event)"),
+        uiText(s"$windowId.source.info", maxWidthInRem = 25)
+      ),
+      uiPanel("color map", false)(
+        uiList(s"$windowId.cm.list", maxRows = 15, selectAction = "main.selectImgCmapEntry(event)"),
+        uiText(s"$windowId.cm.info", maxWidthInRem = 25)
       ),
       uiPanel("layer parameters", false)(
         uiColumnContainer("align_right")(
-          uiSlider("alpha", "view.img.alpha", "main.setImgAlpha(event)"),
-          uiSlider("brightness", "view.img.brightness", "main.setImgBrightness(event)"),
-          uiSlider("contrast", "view.img.contrast", "main.setImgContrast(event)"),
-          uiSlider("hue", "view.img.hue", "main.setImgHue(event)"),
-          uiSlider("saturation", "view.img.saturation","main.setImgSaturation(event)"),
-          uiSlider("gamma", "view.img.gamma", "main.setImgGamma(event)")
+          uiSlider("alpha", "imglayer.render.alpha", "main.setImgAlpha(event)"),
+          uiSlider("brightness", "imglayer.render.brightness", "main.setImgBrightness(event)"),
+          uiSlider("contrast", "imglayer.render.contrast", "main.setImgContrast(event)"),
+          uiSlider("hue", "imglayer.render.hue", "main.setImgHue(event)"),
+          uiSlider("saturation", "imglayer.render.saturation","main.setImgSaturation(event)"),
+          uiSlider("gamma", "imglayer.render.gamma", "main.setImgGamma(event)")
         )
       )
     )
@@ -147,15 +213,13 @@ trait ImageryLayerRoute extends CesiumRoute with JsonProducer {
   def uiImgLayerIcon: Text.TypedTag[String] = uiIcon(icon, s"main.toggleWindow(event,'$windowId')", "imglayer_icon")
 
   def imgLayerConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
-    val cfg = config.getConfig("imgLayer")
+    val cfg = config.getConfig("imglayer")
     s"""
- export const imgLayer = {
-  ${cesiumLayerConfig(cfg, "/imagery", "static imagery")},
-   sources: [
-
-   ],
-   render: ${defaultRendering.toJs}
- };"""
+export const imglayer = {
+  ${cesiumLayerConfig(cfg, "/background/imagery", "static imagery")},
+  sources: ${StringUtils.mkString(sources, "[\n    ", ",\n    ",   "  \n]")(src=> src.toJsObject)},
+  render: ${defaultRendering.toJsObject}
+};"""
   }
 
     //--- no websocket messages (yet?)
@@ -163,61 +227,64 @@ trait ImageryLayerRoute extends CesiumRoute with JsonProducer {
 
 //--- configurable cesium map service abstractions (TODO - needs more complete constructor options
 
-trait CesiumImageryProvider {
+trait CesiumImageryProvider extends JsConvertible {
   val config: Config
 
-  // the js code to instantiate the Cesium ImageryLayer (part of the js module config)
-  def instantiationCode: String
+  val url: String = config.getString("url")
+  protected var clientUrl: String = url
+
+  def setProxied (proxyUrl: String): Unit = clientUrl = proxyUrl
 }
 
 class DefaultImageryProvider (val config: Config) extends CesiumImageryProvider {
-  def instantiationCode: String = "" // nothing (all Cesium built-in)
-
+  def appendJs (sb: StringBuilder): Unit = sb.append("null") // nothing to instantiate
 }
 
 class ArcGisMapServerImageryProvider (val config: Config) extends CesiumImageryProvider {
-  def instantiationCode: String = {
-    s"""new Cesium.ArcGisMapServerImageryProvider({ url: '${config.getString("url")}' })"""
+  def appendJs (sb: StringBuilder): Unit = {
+    sb.append("new Cesium.ArcGisMapServerImageryProvider({")
+    appendJsStringMember(sb, "url", clientUrl)
+    sb.append("})")
   }
 }
 
 class OpenStreetMapImageryProvider (val config: Config) extends CesiumImageryProvider {
-  def instantiationCode: String =  {
-    s"""new Cesium.Cesium.OpenStreetMapImageryProvider({ url:'${config.getString("url")}' })"""
+  def appendJs (sb: StringBuilder): Unit = {
+    sb.append("new Cesium.OpenStreetMapImageryProvider({")
+    appendJsStringMember(sb, "url", clientUrl)
+    sb.append("})")
   }
 }
 
 class WebMapServiceImageryProvider (val config: Config) extends CesiumImageryProvider {
-  def instantiationCode: String = {
-    val sb = new StringBuffer()
-    sb.append(s"""new Cesium.WebMapServiceImageryProvider({\n""")
-    sb.append(s"""    url:'${config.getString("url")}',\n""")
-    sb.append("    enablePickFeatures: false,\n")
-    ifSome(config.getOptionalString("layers")) { s=> sb.append(s"""    layers:'$s',\n""") }
-    ifSome(config.getOptionalString("parameters")) { s=> sb.append(s"""    parameters:'$s',\n""") }
+  def appendJs (sb: StringBuilder): Unit = {
+    sb.append("new Cesium.WebMapServiceImageryProvider({")
+    appendJsStringMember(sb, "url", clientUrl)
+    appendJsBooleanMember(sb, "enablePickFeatures", false)
+    appendOptionalJsStringMember(sb, "layers", config.getOptionalString("wms.layers"))
+    appendOptionalJsStringMember(sb, "parameters", config.getOptionalString("wms.parameters"))
     sb.append("})")
-    sb.toString
   }
 }
 
 class WebMapTileServiceImageryProvider (val config: Config) extends CesiumImageryProvider {
-  def instantiationCode: String = {
-    val sb = new StringBuffer()
-    sb.append(s"""new Cesium.WebMapTileServiceImageryProvider({\n""")
-    sb.append(s"""    url:'${config.getString("url")}',\n""")
-    ifSome(config.getOptionalString("layer")) { s=> sb.append(s"""    layer:'$s',\n""") }
-    ifSome(config.getOptionalString("style")) { s=> sb.append(s"""    style:'$s',\n""") }
-    ifSome(config.getOptionalString("tileMatrixSetID")) { s=> sb.append(s"""    tileMatrixSetID:'$s',\n""") }
-    ifSome(config.getOptionalInt("maximumLevel")) { n=> sb.append(s"""    maximumLevel:$n,\n""") }
-    ifSome(config.getOptionalString("format")) { s=> sb.append(s"""    format:'$s',\n""") }
+  def appendJs (sb: StringBuilder): Unit = {
+    sb.append("new Cesium.WebMapTileServiceImageryProvider({")
+    appendJsStringMember(sb, "url", clientUrl)
+    appendOptionalJsStringMember(sb, "layer", config.getOptionalString("wmts.layer"))
+    appendOptionalJsStringMember(sb, "style", config.getOptionalString("wmts.style"))
+    appendOptionalJsStringMember(sb, "tileMatrixSetID", config.getOptionalString("wmts.tileMatrixSetID"))
+    appendOptionalJsIntMember(sb, "maximumLevel", config.getOptionalInt("wmts.maximumLevel"))
+    appendOptionalJsStringMember(sb, "format", config.getOptionalString("wmts.format"))
     sb.append("})")
-    sb.toString
   }
 }
 
 class TileMapServiceImageryProvider (val config: Config) extends CesiumImageryProvider {
-  def instantiationCode: String = {
-    s"""new Cesium.TileMapServiceImageryProvider({ url:'${config.getString("url")}' })"""
+  def appendJs (sb: StringBuilder): Unit = {
+    sb.append("new Cesium.Cesium.TileMapServiceImageryProvider({")
+    appendJsStringMember(sb, "url", clientUrl)
+    sb.append("})")
   }
 }
 

@@ -116,13 +116,14 @@ class DataClientRaceActor (val dataClient: RaceDataClient, val config: Config) e
   /**
     * the generic implementation just forwards everything we receive from our 'read-from' channels to the client
     * override if concrete actor type has to consolidate data
+    *
+    * note that if the client wants to publish something as a BusEvent this needs a sender and the configured channel,
+    * hence we have to relay through the DataClientRaceActor
     */
   override def handleMessage: Receive = {
-    case e: BusEvent => setClientData(e)    // note that we don't unwrap BusEvents so that data clients see the channel and sender
-    case msg: String => setClientData(msg)  // mostly for testing purposes
-
-      // outbound (directly sent from dataClient) - publish to our write-to channel
-    case PublishRaceData(data) => publish(data)
+    case r:RaceSystemMessage => handleSystemMessage.apply(r) // make sure we don't forward system messages
+    case PublishRaceData(data) => publish(data) // client wants to publish a BusEvent to our configured write-to channel
+    case msg: Any => setClientData(msg)  // note that we don't unwrap BusEvents so that data clients see the channel and sender
   }
 }
 

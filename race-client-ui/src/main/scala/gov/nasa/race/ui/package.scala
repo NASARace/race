@@ -74,9 +74,10 @@ package object ui {
     div(mods: _*)
   }
 
-  def uiButton (text: String, action: String, eid: UiID=NoId): Text.TypedTag[String] = {
+  def uiButton (text: String, action: String, widthInRem:Int=0, eid: UiID=NoId): Text.TypedTag[String] = {
     var mods = List(cls:="ui_button", tpe:="button", value:=text, onclick:=action)
     if (eid.nonEmpty) mods = (id:=eid) :: mods
+    if (widthInRem!= 0) mods = (style:=s"width:${widthInRem}rem") :: mods
     input(mods: _*)
   }
 
@@ -240,6 +241,12 @@ package object ui {
     var mods = List(cls:="ui_choice", data("id"):=eid, data("label"):=label)
     if (changeAction.nonEmpty) mods = (onchange:=changeAction) :: mods
     div(mods: _*)
+  }
+
+  def uiText (eid: UiID, maxWidthInRem: Int = 0, minWidthInRem: Int = 0,  text: String = ""): Text.TypedTag[String] = {
+    var mods: List[AttrPair] = List(cls:="ui_text", id:= eid)
+    mods = addRemWidthStyles(mods, minWidthInRem,maxWidthInRem)
+    div(mods: _*)(text)
   }
 
   def uiKvTable (eid: UiID, maxRows: Int, maxWidthInRem: Int = 0, minWidthInRem: Int = 0): Text.TypedTag[String] = {

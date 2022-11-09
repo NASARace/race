@@ -49,6 +49,10 @@ package object race {
     None
   }
 
+  def ifTrueSome[A] (cond: Boolean)(f: => A): Option[A] = {
+    if (cond) Some(f) else None
+  }
+
   def flatMapAny[T: Manifest,U](opt: Option[Any])(f: T=>Option[U]): Option[U] = {
     opt match {
       case Some(t: T) => f(t)

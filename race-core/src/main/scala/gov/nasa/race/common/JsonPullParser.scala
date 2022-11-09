@@ -48,6 +48,7 @@ object JsonPullParser {
   sealed trait AggregateDelimiter extends JsonParseResult {
     override def isAggregateDelimiter = true
     def isStartBracket: Boolean
+    def matchesParseResult(res: JsonParseResult): Boolean = (this eq res) || (this == res)
   }
   sealed trait AggregateStart extends AggregateDelimiter {
     override def isStartBracket = true
@@ -70,6 +71,11 @@ object JsonPullParser {
   }
   case object ArrayEnd extends AggregateEnd {
     override def char = ']'
+  }
+
+  // this is an artificial construct to support remainder parsing
+  case class AnyStart (endDelimiter: AggregateEnd) extends AggregateStart {
+    override def matchesParseResult (res: JsonParseResult): Boolean = true // matches any reslt
   }
 
   sealed trait ScalarValue extends JsonParseResult {
@@ -154,6 +160,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     if (i0 + maxLen < limit) s = s + "..."
     s
   }
+  def remainingDataAsString: String = new String(data,idx,limit-idx)
 
   def getLastResult: JsonParseResult = lastResult
   def getIdx: Int = idx
@@ -611,7 +618,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
 
   // FIXME - this does not handle empty aggregates
   def foreachInAggregate(res: JsonParseResult, expected: AggregateStart)(f: =>Unit): Unit = {
-    if (res == expected) {
+    if (expected.matchesParseResult(res)) {
       if (peekNext != expected.endDelimiter.char) {
         val endLevel = level
         do {
@@ -665,6 +672,18 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     foreachInAggregate(lastResult, ObjectStart) {
       readNext()
       if (!isNull) f.applyOrElse(member, (_:CharSequence) => {})
+    }
+  }
+
+  /**
+   * apply the given partial function to all remaining members of the current object
+   * this can be used to do value based parsing
+   * note though that JSON does not guarantee member order - use only if the producer is known or the order does not matter
+   */
+  final def foreachRemainingMember (f: PartialFunction[CharSeqByteSlice,Unit]): Unit = {
+    foreachInAggregate(lastResult, AnyStart(ObjectEnd)) {
+      readNext()
+      if (!isNull) f.applyOrElse(member, (_: CharSequence) => {})
     }
   }
 
@@ -809,6 +828,11 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     foreachElementInCurrentArray(buf.addOne(quotedValue.toString))
     buf.toSeq
   }
+  def readCurrentInternedStringArray(): Seq[String] = {
+    val buf = mutable.Buffer.empty[String]
+    foreachElementInCurrentArray(buf.addOne(quotedValue.intern))
+    buf.toSeq
+  }
   def readNextStringArray(): Seq[String] = {
     val buf = mutable.Buffer.empty[String]
     foreachInNextArray(buf.addOne(quotedValue.toString))
@@ -928,6 +952,8 @@ abstract class JsonPullParser extends LogWriter with Thrower {
               else _addToContainer(c, if (value.contains('.')) JsonDouble(value.toDouble) else JsonLong(value.toLong))
               // TODO - check for NumberFormatExceptions
             }
+
+          case _:AnyStart => // cannot happen - this is only an artificial construct we use for remainder parsing
 
           case NoValue | ArrayEnd | ObjectEnd => return
         }
@@ -1166,6 +1192,8 @@ abstract class JsonPullParser extends LogWriter with Thrower {
           indent -= 1
           printIndent
           ps.println('}')
+
+        case _:AnyStart => // ignore, this is just an artificial construct to support remainder parsing
 
         case v:ScalarValue =>
           printIndent

@@ -41,7 +41,7 @@ trait PassThroughJsConverter[T] extends JsConverter[T] {
 /**
  * something that can produce a JavaScript string
  */
-trait JsWritable {
+trait JsConvertible {
 
   def appendJs(sb: StringBuilder): Unit
 
@@ -51,7 +51,7 @@ trait JsWritable {
     sb.append('}')
   }
 
-  def toJsObject(): String = {
+  def toJsObject: String = {
     val sb = new StringBuilder()
     appendJsObject(sb)
     sb.toString
@@ -119,7 +119,7 @@ trait JsWritable {
     }
   }
 
-  def appendJsObject(sb: StringBuilder, o: JsWritable): Unit = {
+  def appendJsObject(sb: StringBuilder, o: JsConvertible): Unit = {
     if (o != null) {
       sb.append('{')
       o.appendJs(sb)
@@ -136,13 +136,13 @@ trait JsWritable {
     f(sb)
   }
 
-  def appendJsObjectMember(sb: StringBuilder, propertyName: String, o: JsWritable): Unit = {
+  def appendJsObjectMember(sb: StringBuilder, propertyName: String, o: JsConvertible): Unit = {
     checkObjectMemberSep(sb)
     sb.append(propertyName)
     sb.append(':')
     appendJsObject(sb,o)
   }
-  def appendOptionalJsObjectMember(sb: StringBuilder, propertyName: String, maybeValue: Option[JsWritable]): Unit = {
+  def appendOptionalJsObjectMember(sb: StringBuilder, propertyName: String, maybeValue: Option[JsConvertible]): Unit = {
     if (maybeValue.isDefined) appendJsObjectMember(sb,propertyName,maybeValue.get)
   }
 
@@ -159,7 +159,7 @@ trait JsWritable {
     sb.append(']')
   }
 
-  def appendJsArray(sb: StringBuilder, o: IterableOnce[JsWritable]): Unit = {
+  def appendJsArray(sb: StringBuilder, o: IterableOnce[JsConvertible]): Unit = {
     val it = o.iterator
     sb.append('[')
     if (it.nonEmpty) {
@@ -179,13 +179,13 @@ trait JsWritable {
     appendJsArray(sb,o)
   }
 
-  def appendJsArrayMember(sb: StringBuilder, propertyName: String, o: IterableOnce[JsWritable]): Unit = {
+  def appendJsArrayMember(sb: StringBuilder, propertyName: String, o: IterableOnce[JsConvertible]): Unit = {
     checkObjectMemberSep(sb)
     sb.append(propertyName)
     sb.append(':')
     appendJsArray(sb,o)
   }
-  def appendOptionalJsArrayMember(sb: StringBuilder, propertyName: String, maybeValue: Option[IterableOnce[JsWritable]]): Unit = {
+  def appendOptionalJsArrayMember(sb: StringBuilder, propertyName: String, maybeValue: Option[IterableOnce[JsConvertible]]): Unit = {
     if (maybeValue.isDefined) appendJsArrayMember(sb,propertyName,maybeValue.get)
   }
 

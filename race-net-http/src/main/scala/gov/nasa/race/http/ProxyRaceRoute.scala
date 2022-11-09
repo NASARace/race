@@ -244,7 +244,8 @@ trait FSCachedProxyRoute extends ProxyRaceRoute {
           view.write(FATTR_EXPIRES, Charset.defaultCharset().encode(e.date.toString()))
         }
       } catch {
-        case x: Throwable => warning(s"could not store extended fileattr for $file")
+            // FIXME - on macOS this runs into 'File name too long' FileSystemExceptions if this is a long (e.g. WMS) URL
+        case x: Throwable => info(s"could not store extended fileattr for $file: $x")
       }
     }
   }
