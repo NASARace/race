@@ -2,6 +2,7 @@
 
 var ws = undefined;
 var wsUrl = undefined;
+var isShutdown = false;
 
 window.addEventListener('load', e => {
     setTimeout(() => {
@@ -31,11 +32,19 @@ export function initialize() {
                     console.log(error);
                     //console.log(evt.data.toString());
                 }
-            }
+            };
+
+            ws.onerror = function(evt) {
+                if (!isShutdown) {
+                    console.log('websocket error: ', evt);
+                    // TODO - if we get a 'WebSocket is already in CLOSING or CLOSED state' outside of a shutdown we should try to reconnect
+                }
+            };
 
             ws.onclose = function() {
                 console.log("connection is closed...");
             };
+
         } else {
             console.log("no WebSocket url set");
         }
@@ -70,5 +79,6 @@ export function sendWsMessage (data) {
 }
 
 export function shutdown() {
+    isShutdown = true;
     ws.close();
 }

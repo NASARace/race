@@ -40,8 +40,8 @@
         { pathName: "infrastruct/powerlines/ca" },
         { pathName: "infrastruct/celltowers/ca"},
         { pathName: "infrastruct/substations/ca"},
-        { pathName: "emergency/firestations/ca"},
         { pathName: "emergency/hospitals/ca"},
+        { pathName: "emergency/firestations/ca"},
         { pathName: "local/plan" }
     ];
     let root = ExpandableTreeNode.from(items);
@@ -50,5 +50,22 @@
     root.expandedDescendants().forEach(showNode);
  }
 
+function testOrderedTreeConstruction() {
+   console.log("\n--- test ordered tree construction");
+   let items = [
+       { pathName: "infrastruct/powerlines/ca" },
+       { pathName: "infrastruct/celltowers/ca"},
+       { pathName: "infrastruct/substations/ca"},
+       { pathName: "emergency/hospitals/ca"},
+       { pathName: "emergency/firestations/ca"},
+       { pathName: "local/plan" }
+   ];
+   let root = ExpandableTreeNode.fromPreOrdered(items);
+
+   //root.depthFirstChildren(showNode);
+   root.expandedDescendants().forEach(showNode);
+}
+
  testTreeNode();
  testTreeConstruction();
+ testOrderedTreeConstruction();

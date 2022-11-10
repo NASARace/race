@@ -216,10 +216,30 @@ export class ExpandableTreeNode extends TreeNode {
                 root.sortInPathName(pathName, data)
             }
         });
-        root.expandToLevel(expansionLevel);
 
+        root.expandToLevel(expansionLevel);
         return root;
     }
+
+    
+
+    static _fromPreOrdered (items, pathExtractor = o=>o.pathName, expansionLevel=1) {
+        let root = ExpandableTreeNode.newRoot();
+
+        items.forEach( data=> {
+            let pathName = pathExtractor(data);
+            let path = pathSeq(pathName).reverse();
+
+            for (let i=0; i<paths.length; i++) {
+
+            }
+        });
+
+        root.expandToLevel(expansionLevel);
+        return root;
+    }
+
+    
 
     sortInPathName(pathName, newData=null, expand=false) {
         let path = pathName.split('/');
@@ -711,4 +731,13 @@ for (let i = 0; i < 15; i++) _rand(); // warm up shuffle
 // this is a drop-in replacement for math.random() which is non-seedable
 export function pseudoRandom() {
     return _rand();
+}
+
+function pathSeq (path) {
+    let a = [];
+    for (let i = path.indexOf('/'); i>= 0; i = path.indexOf('/',i+1)) {
+        a.push( path.substring(0,i));
+    }
+    a.push(path);
+    return a;
 }

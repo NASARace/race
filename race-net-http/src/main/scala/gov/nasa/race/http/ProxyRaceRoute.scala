@@ -23,6 +23,7 @@ import akka.http.scaladsl.server.Directives.{complete, extractUnmatchedPath, ext
 import akka.http.scaladsl.server.{Directive1, Route}
 import akka.http.scaladsl.model.headers.Expires
 import akka.http.scaladsl.settings.{ClientConnectionSettings, ConnectionPoolSettings, ParserSettings}
+import gov.nasa.race.common.LongStringDigest
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.util.{FileUtils, NetUtils}
 import gov.nasa.race.uom.DateTime
@@ -144,6 +145,8 @@ trait QueryProxyRoute extends ProxyRaceRoute {
 object FSCachedProxyRoute {
   val FATTR_MIME_TYPE = "mimetype"
   val FATTR_EXPIRES = "expires"
+
+  val MaxFileNameLength = 128
 }
 
 /**
@@ -156,6 +159,7 @@ trait FSCachedProxyRoute extends ProxyRaceRoute {
   import FSCachedProxyRoute._
 
   val cacheDir: File = new File(config.getStringOrElse("cache-dir", ".cache"))
+  val md = new LongStringDigest(MaxFileNameLength)
 
   if (FileUtils.ensureWritableDir(cacheDir).isEmpty) throw new RuntimeException(s"invalid cache dir: $cacheDir")
 
@@ -221,7 +225,14 @@ trait FSCachedProxyRoute extends ProxyRaceRoute {
       case NetUtils.UrlRE(_,_,host,_,path,query) =>
         val p = NetUtils.mapToFsPathString( host, path, query)
         val file = new File(cacheDir, p)
-        Some(file)
+        val fname = file.getName
+        if (fname.length <= MaxFileNameLength) {
+          Some(file)
+        } else {
+          val hashedName = md.hash(fname)
+          Some( new File(file.getParent, hashedName))
+        }
+
       case _ => None
     }
   }

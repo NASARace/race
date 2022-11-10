@@ -143,7 +143,6 @@ function loadSource(sourceEntry) {
         request.onload = function() {
             let data = request.response;
             if (data) {
-                console.log("@@ got data")
                 let renderOpts = collectRenderOpts(sourceEntry);
                 new Cesium.GeoJsonDataSource.load(data, renderOpts).then(
                     ds => {

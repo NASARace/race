@@ -16,13 +16,14 @@
  */
 package gov.nasa.race.cesium
 
-import akka.http.scaladsl.model.{StatusCodes, Uri}
+import akka.http.scaladsl.model.{ContentType, HttpEntity, MediaTypes, StatusCodes, Uri}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives._
-import akka.stream.scaladsl.SourceQueueWithComplete
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import akka.util.ByteString
 import gov.nasa.race.cesium.GeoLayer.MODULE_PREFIX
 import gov.nasa.race.common.{JsonProducer, JsonSerializable, JsonWriter}
 import gov.nasa.race.config.NoConfig
@@ -34,8 +35,9 @@ import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.{FileUtils, NetUtils}
 import scalatags.Text
 
-import java.io.File
+import java.io.{File, FileInputStream, InputStream}
 import java.net.InetSocketAddress
+import java.util.zip.GZIPInputStream
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -161,13 +163,8 @@ trait GeoLayerRoute extends CesiumRoute with JsonProducer {
         extractUnmatchedPath { p =>
           val pathName = NetUtils.decodeUri(p.toString())
           sources.get(pathName) match {
-            case Some(geoLayer) =>
-
-              FileUtils.fileContentsAsBytes(geoLayer.file) match {
-                case Some(content) => complete( ResponseData.json(content))
-                case None => complete(StatusCodes.InternalServerError, p.toString())
-              }
-            case None => complete(StatusCodes.NotFound, p.toString())
+            case Some(geoLayer) => completeWithFileContent(geoLayer.file, MediaTypes.`application/json`, pathName)
+            case None => complete(StatusCodes.NotFound, pathName)
           }
         }
       } ~
@@ -183,6 +180,45 @@ trait GeoLayerRoute extends CesiumRoute with JsonProducer {
         } ~
       fileAssetPath(jsModule) ~
       fileAssetPath(icon)
+    }
+  }
+
+  val StrictFileSizeThreshold = 4 * 1024*1024 // everything larger than 4MB is not served as Strict content
+  val ChunkSize = 65536
+
+  /**
+   * the actual file transfer. Note that we try to avoid loading huge files into server memory or send
+   * compressed data, hence we need to handle such files non-strict. Note also that Strict.withSizeLimit(..) won't help
+   * us since we also try to avoid reading the ByteString into server memory
+   */
+  def completeWithFileContent (file: File, contentType: ContentType, reqPath: String): Route = {
+
+    def readChunk(is: InputStream, buf: Array[Byte]): Option[HttpEntity.ChunkStreamPart] = {
+      val nRead = is.read(buf)
+      if (nRead < 0) None else Some(ByteString.fromArray(buf,0,nRead))
+    }
+
+    def completeChunked (is: InputStream): Route = {
+      val buf = new Array[Byte](ChunkSize)
+      val src = Source.unfoldResource[HttpEntity.ChunkStreamPart,InputStream](
+        () => is,
+        is => readChunk(is, buf),
+        is => is.close()
+      )
+      complete(StatusCodes.OK, HttpEntity.Chunked(contentType, src))
+    }
+
+    if (file.isFile) {
+      if (FileUtils.getExtension(file) == "gz") { // gzipped file content is always chunked - we don't know the size yet
+        completeChunked( new GZIPInputStream( new FileInputStream(file)))
+      } else if (file.length > StrictFileSizeThreshold) {
+        completeChunked( new FileInputStream(file))
+      } else { // not compressed and small enough - send as strict
+        complete( StatusCodes.OK, HttpEntity.Strict( contentType, ByteString.fromArrayUnsafe(FileUtils.fileContentsAsBytes(file).get)))
+      }
+
+    } else {
+      complete(StatusCodes.NotFound, reqPath)
     }
   }
 

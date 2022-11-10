@@ -18,7 +18,7 @@ addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.9")
 //addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "1.2.0")
 
 // document site generation with Laika: https://github.com/planet42/Laika
-addSbtPlugin("org.planet42" % "laika-sbt" % "0.18.2")
+addSbtPlugin("org.planet42" % "laika-sbt" % "0.17.1")
 
 // find latest versions of dependencies
 addSbtPlugin("org.jmotor.sbt" % "sbt-dependency-updates" % "1.2.2")

@@ -412,6 +412,9 @@ object FileUtils {
 
   def filename(path: String) = (new File(path)).getName
 
+  def size (file: File): Long = Files.size(file.toPath)
+  def size (path: String): Long = Files.size(Path.of(path))
+
   def deleteRecursively(f: File): Unit = {
     if (f.isDirectory) {
       f.listFiles.foreach(deleteRecursively)
