@@ -1,3 +1,7 @@
+ // reg test for ui_data.js - run by executing
+ //   cd race/race-client-ui/src/test/javascript
+ //   node test_treenode.js
+ 
  import { TreeNode, ExpandableTreeNode } from '../../main/resources/gov/nasa/race/ui/ui_data.js';
  import assert from 'assert/strict';
 
@@ -55,15 +59,14 @@ function testOrderedTreeConstruction() {
    let items = [
        { pathName: "infrastruct/powerlines/ca" },
        { pathName: "infrastruct/celltowers/ca"},
+       { pathName: "emergency/hospitals/ca"}, // note that still preserves order on each level
        { pathName: "infrastruct/substations/ca"},
-       { pathName: "emergency/hospitals/ca"},
        { pathName: "emergency/firestations/ca"},
        { pathName: "local/plan" }
    ];
    let root = ExpandableTreeNode.fromPreOrdered(items);
-
-   //root.depthFirstChildren(showNode);
-   root.expandedDescendants().forEach(showNode);
+   root.expandAll()
+   root.forEach(showNode);
 }
 
  testTreeNode();

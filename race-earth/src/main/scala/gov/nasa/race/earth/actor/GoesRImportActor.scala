@@ -154,7 +154,6 @@ class GoesRImportActor (val config: Config) extends PublishingRaceActor {
 
   def createGoesRProduct(cfg: Config) = {
     val reader = cfg.getOptionalConfig("reader").flatMap( configurable[GoesRDataReader])
-
     GoesRProduct(cfg.getString("name"), cfg.getString("bucket"), reader)
   }
 

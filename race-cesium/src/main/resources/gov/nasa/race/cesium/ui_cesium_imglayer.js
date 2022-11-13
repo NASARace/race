@@ -23,7 +23,7 @@ ui.registerLoadFunction(function initialize() {
     initImgLayers();
     initImgSliders();
 
-    let srcTree = ExpandableTreeNode.from( sources, e=> e.pathName);
+    let srcTree = ExpandableTreeNode.fromPreOrdered( sources, e=> e.pathName);
     ui.setTree( sourceView, srcTree);
 
     ui.registerThemeChangeHandler(themeChanged);

@@ -113,6 +113,7 @@ export class TreeNode {
             this.firstChild = newNode;
         }
         newNode.parent = this;
+        return newNode;
     }
 
     addSibling (newNode) {
@@ -124,6 +125,12 @@ export class TreeNode {
             this.nextSibling = newNode;
         }
         newNode.parent = this.parent;
+        return newNode;
+    }
+
+    addToParent (newParentNode) {
+        newParentNode.addChild(this);
+        return newParentNode;
     }
 
     // TODO - add insert and remove functions
@@ -221,30 +228,40 @@ export class ExpandableTreeNode extends TreeNode {
         return root;
     }
 
-    
+    sortInPathName(pathName, newData=null, expand=false) {
+        let path = pathName.split('/');
+        let newNode = new ExpandableTreeNode( path[path.length-1], newData, expand);
+        this.#insert(0,path,newNode);
+    }
 
-    static _fromPreOrdered (items, pathExtractor = o=>o.pathName, expansionLevel=1) {
+    static fromPreOrdered (items, pathExtractor = o=>o.pathName, expansionLevel=1) {
         let root = ExpandableTreeNode.newRoot();
 
         items.forEach( data=> {
             let pathName = pathExtractor(data);
-            let path = pathSeq(pathName).reverse();
-
-            for (let i=0; i<paths.length; i++) {
-
-            }
+            let path = pathName.split("/").reverse();
+            root.addPath(path, data);
         });
 
         root.expandToLevel(expansionLevel);
         return root;
     }
 
-    
+    addPath(path, newData) {
+        let p = path[path.length-1]; // path is in reverse order, from leaf to root
 
-    sortInPathName(pathName, newData=null, expand=false) {
-        let path = pathName.split('/');
-        let newNode = new ExpandableTreeNode( path[path.length-1], newData, expand);
-        this.#insert(0,path,newNode);
+        for (let c=this.firstChild; c; c = c.nextSibling) {
+            if (c.name == p) {
+                path.pop();
+                c.addPath(path, newData);
+                return;
+            }
+        }
+
+        let node = new ExpandableTreeNode(path[0], newData, false);
+        path.splice(0,1);
+        node = path.reduce( (prev,n) => prev.addToParent( new ExpandableTreeNode(n,null,false)), node);
+        this.addChild(node);
     }
 
     expandToLevel (l) {
@@ -731,13 +748,4 @@ for (let i = 0; i < 15; i++) _rand(); // warm up shuffle
 // this is a drop-in replacement for math.random() which is non-seedable
 export function pseudoRandom() {
     return _rand();
-}
-
-function pathSeq (path) {
-    let a = [];
-    for (let i = path.indexOf('/'); i>= 0; i = path.indexOf('/',i+1)) {
-        a.push( path.substring(0,i));
-    }
-    a.push(path);
-    return a;
 }

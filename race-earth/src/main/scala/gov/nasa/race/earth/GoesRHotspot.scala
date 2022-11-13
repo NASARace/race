@@ -77,7 +77,7 @@ case class GoesRHotspot (
                           pixelSize: Length = Meters(2000),
                         ) extends Hotspot {
 
-  def this (satId: Int, date: DateTime, pix: Pix, src: String) = {
+  def this (satId: Int, date: DateTime, pix: GoesRPixel, src: String) = {
     this(satId, date, pix.center, pix.dqf, pix.mask, pix.temp, pix.frp, pix.area, pix.bounds.toSeq, src)
   }
 
@@ -110,7 +110,7 @@ case class GoesRHotspot (
   def _frp: String = if (frp.isUndefined)   "      " else f"${frp.toMegaWatt}%6.2f"
   def _area: String = if (area.isUndefined) "         " else f"${area.toSquareMeters}%8.0f}"
   def _pos: String = f"{ ${position.latDeg}%+9.5f, ${position.lonDeg}%+10.5f }"
-  override def toString: String = s"{src: $source, pos: ${_pos}, temp: ${_temp}, frp: ${_frp}, area: ${_area}, mask: $mask"
+  override def toString: String = s"{src: $source, date: $date, pos: ${_pos}, temp: ${_temp}, frp: ${_frp}, area: ${_area}, mask: $mask"
 }
 
 /**

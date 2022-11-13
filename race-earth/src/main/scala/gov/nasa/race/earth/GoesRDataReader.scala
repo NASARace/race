@@ -16,7 +16,9 @@
  */
 package gov.nasa.race.earth
 
+import com.typesafe.config.Config
 import gov.nasa.race.common.{LogWriter, Sparse2DGrid}
+import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.uom.Area.{SquareMeters, UndefinedArea}
 import gov.nasa.race.uom.Power.{MegaWatt, UndefinedPower}
@@ -31,15 +33,30 @@ import java.io.File
 import java.util.zip.ZipException
 import scala.util.{Failure, Success, Try}
 
+object GoesR {
+  val GoesWestId = 43226
+  val GoesEastId = 41866
+
+  def satelliteName(id:Int): Option[String] = {
+    id match {
+      case GoesWestId => Some("G17")
+      case GoesEastId => Some("G16")
+      case _ => None
+    }
+  }
+}
+
 /**
-  * spec for a Goes-R data product
-  */
+ * spec for a Goes-R data product
+ *
+ * name has to be a valid product name such as "ABI-L2-FDCC"
+ */
 case class GoesRProduct (name: String, bucket: String, reader: Option[GoesRDataReader])
 
 /**
   * data for Goes-R data product
   */
-case class GoesRData(satId: Int, file: File, product: GoesRProduct, date: DateTime)
+case class GoesRData (satId: Int, file: File, product: GoesRProduct, date: DateTime)
 
 /**
   * some object that can read files that contain Goes-R data products
@@ -49,11 +66,11 @@ trait GoesRDataReader {
 }
 
 // we need mutability while we collect the data
-class Pix (val x: Int, val y: Int,
-           var center: GeoPosition = GeoPosition.undefinedPos, var bounds: Array[GeoPosition] = Array.empty,
-           var temp: Temperature=UndefinedTemperature, var frp: Power=UndefinedPower, var area: Area=UndefinedArea,
-           var dqf: Int= GoesRHotspot.DQF_UNKNOWN,
-           var mask: Int= -1
+class GoesRPixel(val x: Int, val y: Int,
+                 var center: GeoPosition = GeoPosition.undefinedPos, var bounds: Array[GeoPosition] = Array.empty,
+                 var temp: Temperature=UndefinedTemperature, var frp: Power=UndefinedPower, var area: Area=UndefinedArea,
+                 var dqf: Int= GoesRHotspot.DQF_UNKNOWN,
+                 var mask: Int= -1
           ) {
   def hasData: Boolean = (temp.isDefined || frp.isDefined || area.isDefined)
 
@@ -81,7 +98,7 @@ class Pix (val x: Int, val y: Int,
   */
 class AbiHotspotReader extends GoesRDataReader with LogWriter {
 
-  val hs = new Sparse2DGrid[Pix]
+  val hs = new Sparse2DGrid[GoesRPixel]
 
   def read (data: GoesRData): Option[Any] = {
     if (data.product.name == "ABI-L2-FDCC") {
@@ -129,7 +146,7 @@ class AbiHotspotReader extends GoesRDataReader with LogWriter {
   }
 
   // we populate the Pix map from good DQF values
-  def getFirePixels (nMax: Int, grid: GeoGrid, hs: Sparse2DGrid[Pix]): Unit = {
+  def getFirePixels (nMax: Int, grid: GeoGrid, hs: Sparse2DGrid[GoesRPixel]): Unit = {
     val maxY = grid.getDimension(0).getLength
     val maxX = grid.getDimension(1).getLength
     var n = 0
@@ -141,7 +158,7 @@ class AbiHotspotReader extends GoesRDataReader with LogWriter {
         for (x <- 0 until maxX) {
           val mask = scanline(x)
           if (GoesRHotspot.isValidFirePixel(mask)) {
-            val h = new Pix(x, y)
+            val h = new GoesRPixel(x, y)
             h.mask = mask
             setCoordinates(x, y, grid, h)
             hs(x, y) = h
@@ -158,7 +175,7 @@ class AbiHotspotReader extends GoesRDataReader with LogWriter {
     }
   }
 
-  def readData (nMax: Int, grid: GeoGrid, hs: Sparse2DGrid[Pix], op: (Pix,Float)=>Unit ): Unit = {
+  def readData (nMax: Int, grid: GeoGrid, hs: Sparse2DGrid[GoesRPixel], op: (GoesRPixel,Float)=>Unit ): Unit = {
     val maxY = grid.getDimension(0).getLength
     val maxX = grid.getDimension(1).getLength
     var n = 0
@@ -169,7 +186,7 @@ class AbiHotspotReader extends GoesRDataReader with LogWriter {
       for (x <- 0 until maxX) {
         val v = scanline(x)
         if (!v.isNaN){
-          val h = hs.getOrElseUpdate(x, y, new Pix(x,y))
+          val h = hs.getOrElseUpdate(x, y, new GoesRPixel(x,y))
           op(h,v)
           if (!h.center.isDefined) setCoordinates( x, y, grid, h)
 
@@ -182,7 +199,7 @@ class AbiHotspotReader extends GoesRDataReader with LogWriter {
 
   @inline final def gpos (lp: LatLonPoint): GeoPosition = GeoPosition.fromDegrees( lp.getLatitude, lp.getLongitude)
 
-  def setCoordinates (x: Int, y: Int, grid: GeoGrid, h: Pix): Unit = {
+  def setCoordinates (x: Int, y: Int, grid: GeoGrid, h: GoesRPixel): Unit = {
     val gcs = grid.getCoordinateSystem
     val p = gcs.getLatLon(x,y)  // the datapoint center
     h.center = gpos( p)

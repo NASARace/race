@@ -65,6 +65,12 @@ object DateTime {
     new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) * 1000 + ms)
   }
 
+  def apply(year: Int, dayOfYear: Int, hour: Int, minutes: Int, sec: Int, msec: Int): DateTime = {
+    val doyMillis = (dayOfYear * DateTime.MsecPerDay) - DateTime.MsecPerDay // DOY is 1-based
+    val zdt = ZonedDateTime.of( year, 1, 1, hour, minutes, sec,0, DateTime.utcId)
+    new DateTime(zdt.getLong(ChronoField.INSTANT_SECONDS) * 1000 + doyMillis + msec)
+  }
+
   @inline def max (a: DateTime, b: DateTime): DateTime = {
     if (a.millis > b.millis) a else b
   }

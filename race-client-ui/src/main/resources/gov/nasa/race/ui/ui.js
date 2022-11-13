@@ -854,20 +854,23 @@ function _updateClock(e, t) {
         e._uiW0 = t;
 
         let date = new Date(t);
+        let doy = util.dayOfYear(date);
         e._uiDate = date;
-        e.children[0].innerText = e._uiDateFmt.format(date);
+        e.children[0].innerText = e._uiDateFmt.format(date).replaceAll("/","-") + " : " + doy;
         e.children[1].innerText = e._uiTimeFmt.format(date);
 
     } else {
         if (e._uiW0 == 0) { // first time init with previous uiSetClock
             e._uiW0 = t;
+
         } else if (_isShowing(e)) {
             let s = e._uiS0 + (t - e._uiW0) * e._uiTimeScale;
             let date = new Date(s);
             e._uiDate = date;
             let day = s / MILLIS_IN_DAY;
             if (day != e._uiSday) {
-                e.children[0].innerText = e._uiDateFmt.format(date);
+                let doy = util.dayOfYear(date);
+                e.children[0].innerText = e._uiDateFmt.format(date).replaceAll("/","-") + " : " + doy;
                 e._uiLastDay = day;
             }
             e.children[1].innerText = e._uiTimeFmt.format(date);

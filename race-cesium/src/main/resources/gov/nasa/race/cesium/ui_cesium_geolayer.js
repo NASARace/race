@@ -103,7 +103,7 @@ function handleGeoLayersMessage(geoLayers) {
     // TODO - needs to handle updates differently from init
     sources = geoLayers.map( src=> new SourceEntry(src));
     
-    let srcTree = ExpandableTreeNode.from( sources, e=> e.source.pathName);
+    let srcTree = ExpandableTreeNode.fromPreOrdered( sources, e=> e.source.pathName);
     ui.setTree( sourceView, srcTree);
 
     sources.forEach( e=> {

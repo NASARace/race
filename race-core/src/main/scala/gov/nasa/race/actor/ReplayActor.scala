@@ -58,7 +58,7 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
   final val SchedulerThresholdMillis: Long = 30
 
   val rebaseDates = config.getBooleanOrElse("rebase-dates", false) // rebase dates with respect to sim time
-  val counterThreshold = config.getIntOrElse("break-after", 20) // reschedule after at most N published messages
+  val counterThreshold = config.getIntOrElse("break-after", 1000) // reschedule after at most N published messages - NOTE this can break monotonicity
   val skipThresholdMillis = config.getIntOrElse("skip-millis", 1000) // skip until current sim time - replay time is within limit
   val maxSkip = config.getIntOrElse("max-skip", 1000) // stop replay if we hit more than max-skip consecutive malformed entries
 
@@ -118,8 +118,7 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
       nScheduled -= 1
       val dtMillis = toWallTimeMillis(-updateElapsedSimTimeMillisSince(date)) //date.toEpochMillis - updatedSimTimeMillis
       if (dtMillis < SchedulerThresholdMillis) { // this includes times that already have passed
-        debug(f"publishing scheduled: $msg%30.30s.. ")
-        publishFiltered(msg)
+        replay(msg)
         scheduleNext(0)
 
       } else { // we were paused or scaled down since schedule
@@ -135,6 +134,12 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
       }
 
     case ScheduleNext => if (!isStopped) scheduleNext(0)
+  }
+
+  // override if we have to do any pre-processing before publishing
+  protected def replay (msg: Any): Unit = {
+    debug(f"publishing $msg%30.30s.. ")
+    publishFiltered(msg)
   }
 
   def replayMessageLater(msg: Any, dtMillis: Long, date: DateTime) = {
@@ -154,8 +159,7 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
 
   def replayMessageNow(msg: Any, date: DateTime): Boolean = {
     if (incCounter) {
-      debug(f"publishing now: $msg%50.50s.. ")
-      publishFiltered(msg)
+      replay(msg)
       true // caller should do scheduleNext
 
     } else { // avoid starvation by re-scheduling after a max counter has been reached

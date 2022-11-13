@@ -393,6 +393,11 @@ export function isUndefinedDateTime(d) {
     return d == Number.MIN_SAFE_INTEGER;
 }
 
+export function dayOfYear (d) {
+    let date = (typeof d === "object") ? d : new Date(d);
+    return (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 24 / 60 / 60 / 1000;
+}
+
 //--- string interning support
 
 const _uiInterned = new Map();

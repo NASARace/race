@@ -190,7 +190,7 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with RaceDataCli
         uiList("goesr.satellites", 3, "main.selectGoesrSatellite(event)")
       ),
       uiPanel("hotspots", true)(
-        uiList("goesr.hotspots", maxRows=15, selectAction = "main.selectGoesrHotspot(event)", dblClickAction = "main.zoomToGoesrHotspot(event)"),
+        uiList("goesr.hotspots", maxRows=10, selectAction = "main.selectGoesrHotspot(event)", dblClickAction = "main.zoomToGoesrHotspot(event)"),
         uiRowContainer()(
           uiRadio("good", "main.setGoesrGoodPixels(event)", "goesr.good"),
           uiRadio("probable", "main.setGoesrProbablePixels(event)", "goesr.probable"),
