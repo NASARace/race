@@ -127,22 +127,27 @@ package object ui {
     img(mods: _*)
   }
 
-  def uiRowContainer (align: String="", eid: UiID=NoId): Text.TypedTag[String] = {
-    var classes = "ui_container row"
-    if (align == "align_center") classes += " align_center"
+  def uiContainer (layout: String, align: String="", eid: UiID=NoId, title: String="", bordered: Boolean=false): Text.TypedTag[String] = {
+    var classes = s"ui_container $layout"
+    if (title.nonEmpty) classes += " titled"
+    if (bordered) classes += " bordered"
+
+    if (align == "align_left") classes += " align_left"
+    else if (align == "align_right") classes += " align_right"
+    else if (align == "align_center") classes += " align_center"
 
     var mods = List(cls:=classes)
     if (eid.nonEmpty) mods = (id:=eid) :: mods
+    if (title.nonEmpty) mods = (data("title"):=title) :: mods
     div(mods: _*)
   }
 
-  def uiColumnContainer (align: String="", eid: UiID=NoId): Text.TypedTag[String] = {
-    var classes = "ui_container column"
-    if (align == "align_right") classes += " align_right"
+  def uiColumnContainer (align: String="", eid: UiID=NoId, title: String="", bordered: Boolean=false): Text.TypedTag[String] = {
+    uiContainer("column", align, eid, title, bordered)
+  }
 
-    var mods = List(cls:=classes)
-    if (eid.nonEmpty) mods = (id:=eid) :: mods
-    div(mods: _*)
+  def uiRowContainer (align: String="", eid: UiID=NoId, title: String="", bordered: Boolean=false): Text.TypedTag[String] = {
+    uiContainer("row", align, eid, title, bordered)
   }
 
   def uiTabbedContainer (eid: UiID=NoId, width: String=NoWidth): Text.TypedTag[String] = {

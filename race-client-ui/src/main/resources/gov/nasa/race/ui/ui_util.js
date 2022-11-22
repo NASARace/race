@@ -552,3 +552,26 @@ export function filterIterator(it,f) {
 export function isWithin(x,lower,upper) {
     return (x >= lower) && (x <=upper);
 }
+
+export function getLatLonArrayBoundingRect(pts) {
+    let w = Number.MAX_SAFE_INTEGER;
+    let s = Number.MAX_SAFE_INTEGER;
+    let e = Number.MIN_SAFE_INTEGER;
+    let n = Number.MIN_SAFE_INTEGER;
+
+    pts.forEach( p=> {
+        let lat = p[0];
+        let lon = p[1];
+        if (lon < w) w = lon;
+        if (lat < s) s = lat;
+        if (lon > e) e = lon;
+        if (lat > n) n = lat;
+    });
+    return { west: w, south: s, east: e, north: n };
+}
+
+export function getRectCenter (rect) {
+    let x = (rect.west + rect.east)/2;
+    let y = (rect.north + rect.south)/2;
+    return { lat: y, lon: x};
+}

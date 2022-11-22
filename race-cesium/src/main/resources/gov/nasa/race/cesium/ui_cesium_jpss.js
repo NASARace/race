@@ -52,14 +52,12 @@ class SatelliteEntry {
         this.descr = sat.description;
 
         this.show = sat.show; // can be changed interactively
-        this.region = [];  // set by jpssRegion messages
 
         this.prev = 0; // overpass times updated by clock
         this.next = 0;
-    }
 
-    showRegion (cond) {
-        console.log("show region for " + this.satId + " = " + cond);
+        this.region = [];  // set by jpssRegion messages
+        this.regionAsset = undefined;
     }
 }
 
@@ -152,6 +150,7 @@ function initSatelliteView() {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
             { name: "show", tip: "show/hide satellite", width: "3rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSatellite) },
             { name: "sat", tip: "satellite name", width: "3rem", attrs: [], map: e => e.satName },
+            { name: "rgn", tip: "show/hide region", width: "3rem", attrs: [], map: e => ui.createCheckBox(e.showRegion, toggleShowSatelliteRegion) },
             { name: "next", tip: "next upcoming overpass (local)", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.next) },
             { name: "last", tip: "most recent overpass (local)", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.prev) }
 
@@ -166,7 +165,7 @@ function initUpcomingView() {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
             { name: "swt", tip: "show swath/ground track", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.swathEntity, toggleShowUpcomingSwath) },
             { name: "sat", tip: "satellite name", width: "3rem", attrs: [], map: e => satName(e.satId) },
-            { name: "cover", tip: "coverage of region [0-1]", width: "2rem", attrs: ["fixed", "alignRight"], map: e => util.f_1.format(e.coverage) },
+            { name: "cvr", tip: "coverage of region [0-1]", width: "2rem", attrs: ["fixed", "alignRight"], map: e => util.f_1.format(e.coverage) },
             { name: "next date", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.lastDate) }
         ]);
     }
@@ -239,6 +238,23 @@ function toggleShowSatellite(event) {
             updateHotspots();
             showPixels();
         }
+    }
+}
+
+function toggleShowSatelliteRegion(event) {
+    let cb = ui.getCheckBox(event.target);
+    if (cb) {
+        let se = ui.getListItemOfElement(cb);
+        if (se) {
+            if (se.regionAsset) {
+                dataSource.entities.remove(se.regionAsset);
+                se.regionAsset = undefined;
+            } else {
+                se.regionAsset = createRegionEntity(se);
+                dataSource.entities.add(se.regionAsset);
+            }
+        }
+        uiCesium.requestRender();
     }
 }
 
@@ -572,17 +588,32 @@ function createPixelAssets(pixels) {
     uiCesium.requestRender();
 }
 
-function mapToTerrain(pix) {
-    if (!pix.xyzPos) {
-        uiCesium.withSampledTerrain([pix.pos], 11, ps=> {
-            pix.xyzPos = Cesium.Cartographic.toCartesian(ps[0]);
+function createRegionEntity (se) {
+    if (se.region.length > 0) {
+        let cfg = config.jpss;
+        let pts = se.region.map( p=> Cesium.Cartesian3.fromDegrees(p[1], p[0]));
+        let br = util.getLatLonArrayBoundingRect(se.region);
+        let center = util.getRectCenter(br);
+        let pos = Cesium.Cartesian3.fromDegrees(center.lon,center.lat);
+
+        return new Cesium.Entity({
+            position: pos,
+            polygon: {
+                hierarchy: pts,
+                fill: false,
+                outline: true,
+                outlineColor: cfg.regionColor,
+                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            },
+            label: {
+                text: satName(se.satId),
+                font: cfg.font,
+                fillColor: cfg.regionColor,
+                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+            }
         });
 
-        let vertices = pix.bounds.map(p => Cesium.Cartographic.fromDegrees(p[1], p[0]));
-        uiCesium.withSampledTerrain( vertices, 11, ps=> {
-            pix.xyzBounds = ps;
-        });
-    }
+    } else return undefined;
 }
 
 function getPixelColor(pixel, refDate) {
@@ -800,10 +831,12 @@ ui.exportToMain(function clearJpssBounds(event) {
 
 ui.exportToMain(function zoomToJpssBounds(event) {
     if (area) {
-        let lon = (area.west + area.east) / 2;
-        let lat = (area.south + area.north) / 2;
-        let cameraPos = Cesium.Cartesian3.fromDegrees(lon, lat, 140000);
-        //let cameraPos = uiCesium.viewer.camera.getRectangleCameraCoordinates(area); // Cesium BUG - rectangle center lon is wrong
+        //let lon = (area.west + area.east) / 2;
+        //let lat = (area.south + area.north) / 2;
+        //let cameraPos = Cesium.Cartesian3.fromDegrees(lon, lat, 140000);
+
+        let rect = Cesium.Rectangle.fromDegrees( area.west, area.south, area.east, area.north);
+        let cameraPos = uiCesium.viewer.camera.getRectangleCameraCoordinates(rect);
         uiCesium.zoomTo(cameraPos);
     }
 });

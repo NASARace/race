@@ -975,6 +975,21 @@ div.align_right {
     align-items: flex-end;
 }
 
+div.ui_container_wrapper {
+    display: block;
+    background: transparent;
+}
+
+div.ui_container_title {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    font: var(--container-title-font);
+    color: var(--container-title-color);
+    border-bottom: var(--container-title-border);
+}
+
 div.icon_box {
     position: absolute;
     margin: var(--icon-box-margin);

@@ -71,6 +71,10 @@
     --panel-header-margin-bottom: 0.2rem;
     --panel-border-top: 1px solid var(--border-color);
     --panel-background: var(--background);
+    --container-title-font: var(--font);
+    --container-title-color: var(--color);
+    --container-title-border: 1px solid var(--border-color); 
+    --container-border: var(--border);
     --scrollbar-track-width: 0.6rem;
     --scrollbar-track-color: rgb(44, 44, 44);
     --scrollbar-thumb-width: 0.5rem;

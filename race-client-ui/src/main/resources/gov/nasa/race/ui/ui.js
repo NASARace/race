@@ -47,6 +47,7 @@ registerLoadFunction(function initialize() {
     _initializeIcons();
     _initializeWindows();
     _initializePanels();
+    _initializeContainers();
     _initializeTabbedContainers();
     _initializeFields();
     _initializeChoices();
@@ -400,6 +401,23 @@ function clickTab(event) {
             tc.classList.add("show");
             tc._uiTab.classList.add("show");
             tcw._uiShowing = tc;
+        }
+    }
+}
+
+//--- containers
+
+function _initializeContainers() {
+    for (let e of document.getElementsByClassName("ui_container")) {
+        let pe = e.parentElement;
+        if (e.dataset.title && !_containsClass(pe, "ui_container_wrapper")) {
+            let title = e.dataset.title;
+            let cwe = _createElement("DIV","ui_container_wrapper");
+            let te = _createElement("DIV", "ui_container_title");
+            te.setHTML(title);
+            cwe.appendChild(te);
+            pe.replaceChild(cwe,e);
+            cwe.appendChild(e);
         }
     }
 }

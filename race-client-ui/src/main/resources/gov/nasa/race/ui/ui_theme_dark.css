@@ -80,6 +80,11 @@
     --panel-header-margin-bottom: 0;
     --panel-border-top: 1px solid var(--border-color);
     --panel-background: var(--background);
+    /* containers */
+    --container-title-font: var(--font);
+    --container-title-color: var(--color);
+    --container-title-border: 1px solid var(--border-color); 
+    --container-border: var(--border);
     /* scrollbars */
     --scrollbar-track-width: 0.7rem;
     --scrollbar-track-color: rgb(44, 44, 44);

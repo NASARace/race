@@ -113,10 +113,7 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
     uiWindow(title,"jpss", icon)(
       cesiumLayerPanel("jpss", "main.toggleShowJpss(event)"),
       uiPanel("satellites", true)(
-        uiRowContainer()(
-          uiList("jpss.satellites", 4, "main.selectJpssSatellite(event)"),
-          uiCheckBox("show region", "main.toggleJpssShowRegion(event)")
-        ),
+        uiList("jpss.satellites", 4, "main.selectJpssSatellite(event)"),
         uiRowContainer()(
           uiColumnContainer()(
             uiTextInput("area","jpss.bounds", "main.setJpssBounds(event)", "enter lat,lon bounds (WSEN order)", width="20rem"),
@@ -129,9 +126,13 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
       ),
       uiPanel("overpasses:")(
         uiRowContainer()(
-          uiList("jpss.upcoming", 5),
+          uiRowContainer(title="upcoming overpasses")(
+            uiList("jpss.upcoming", 5)
+          ),
           uiHorizontalSpacer(0.5),
-          uiList("jpss.past", 5, "main.selectJpssPast(event)")
+          uiRowContainer(title="completed overpasses")(
+            uiList("jpss.past", 5, "main.selectJpssPast(event)")
+          )
         ),
         uiRowContainer()(
           uiCheckBox("show history", "main.toggleJpssShowPastHistory(event)", "jpss.show_history"),
@@ -185,6 +186,7 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
   swathColor: ${cesiumColor(cfg, "swath-color", "#ff000040")},
   trackColor: ${cesiumColor(cfg, "track-color", "#ff0000ff")},
   labelColor: ${cesiumColor(cfg, "label-color", "#ffff00ff")},
+  regionColor: ${cesiumColor(cfg, "region-color", "#00ffffff")},
   font: '${cfg.getStringOrElse("font", "bold 14px monospace")}',
   swathDC: new Cesium.DistanceDisplayCondition( ${cfg.getIntOrElse("swath-dist", 150000)}, Number.MAX_VALUE)
 };
