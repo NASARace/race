@@ -104,14 +104,8 @@ class JpssReplayActor (val config: Config) extends JpssActor with Replayer with 
   override def onStartRaceActor(originator: ActorRef): Boolean = {
     super.onStartRaceActor(originator) && {
       publish( OverpassRegion( satId, satName, overpassBounds.toSeq))
-      pastOverpasses.foreach { ops =>
-        setSwathWidth(ops)
-        publish(ops)
-      }
-      overpasses.foreach{ ops=>
-        setSwathWidth(ops)
-        publish(ops)
-      }
+      pastOverpasses.foreach(publish)
+      overpasses.foreach(publish)
       true
     }
   }
@@ -119,10 +113,7 @@ class JpssReplayActor (val config: Config) extends JpssActor with Replayer with 
   override protected def readNextEntry(): Option[ArchiveEntry] = {
     if (overpasses.isEmpty) { // get next sequence of overpasses (if any)
       val nextOverpasses = getUpcomingOverpasses(Days(1))
-      nextOverpasses.foreach { ops=>
-        setSwathWidth(ops)
-        publish(ops)
-      }
+      nextOverpasses.foreach(publish)
       overpasses ++= nextOverpasses
     }
 
@@ -166,7 +157,7 @@ class JpssReplayActor (val config: Config) extends JpssActor with Replayer with 
       var d = startDate
       while (d < endDate) {
         findClosestTLE(satId, d) match {
-          case Some(tle) => list ++= computeOverpasses( tle, d, DayDuration)
+          case Some(tle) => list ++= getOverpasses( tle, d, DayDuration)
           case None => warning(s"no suitable TLE for satellite $satId on $d")
         }
 
@@ -180,14 +171,8 @@ class JpssReplayActor (val config: Config) extends JpssActor with Replayer with 
   def getUpcomingOverpasses(dur: Time): Array[OverpassSeq] = {
     val startDate = currentSimTime
     findClosestTLE(satId, startDate) match {
-      case Some(tle) => computeOverpasses( tle, startDate, dur)
+      case Some(tle) => getOverpasses( tle, startDate, dur)
       case None => warning(s"no suitable TLE for satellite $satId on $startDate"); Array.empty
     }
-  }
-
-  def computeOverpasses (tle: TLE, startDate: DateTime, dur: Time): Array[OverpassSeq] = {
-    val opss = OreKit.computeOverpassPeriods(tle, startDate, dur, overpassBounds, maxScanAngle)
-    opss.foreach( ops=> ops.trajectory = Some(getOverpassSeqTrajectory(tle,ops)))
-    opss
   }
 }

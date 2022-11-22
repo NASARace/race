@@ -79,7 +79,7 @@ trait JpssActor extends PublishingRaceActor with ContinuousTimeRaceActor {
         val startDate = currentSimTime - Days(backDays)
         val dur = Days(backDays + 1) // compute overpasses from history start to next 24h
         val opss = OreKit.computeOverpassPeriods( tle, startDate, dur, overpassBounds, maxScanAngle)
-        opss.foreach( ops=> ops.trajectory = Some(getOverpassSeqTrajectory(tle,ops)))
+        opss.foreach(setOverpassOptionals(tle,_))
         opss
 
       case None =>
@@ -88,23 +88,21 @@ trait JpssActor extends PublishingRaceActor with ContinuousTimeRaceActor {
     }
   }
 
+  def getOverpasses(tle: TLE, startDate: DateTime, dur: Time): Array[OverpassSeq] = {
+    val opss = OreKit.computeOverpassPeriods(tle, startDate, dur, overpassBounds, maxScanAngle)
+    opss.foreach(setOverpassOptionals(tle,_))
+    opss
+  }
+
+  def setOverpassOptionals( tle: TLE, ops: OverpassSeq): Unit = {
+    ops.trajectory = Some(getOverpassSeqTrajectory(tle,ops))
+    ops.swathWidth = ops.approximateSwathWidth(maxScanAngle)
+  }
+
   def getOverpassSeqTrajectory (tle: TLE, ops: OverpassSeq): Trajectory = {
     val start = ops.firstDate.toPrecedingMinute - overpassMargin
     val end = ops.lastDate.toFollowingMinute + overpassMargin
     OreKit.computeOrbit( tle, start, trajectoryTimeStep, end)
-  }
-
-  // TODO - we should check TLE epoch here (history might be too long for current)
-  def getOverpassTrajectories: Array[Trajectory] = {
-    val trjs = new ArrayBuffer[Trajectory]( overpasses.size)
-    overpasses.foreach { os=>
-      // give it some leeway as archived hotspots sometime are timed slightly outside overpass
-      val start = os.firstDate.toPrecedingMinute - overpassMargin
-      val end = os.lastDate.toFollowingMinute + overpassMargin
-      trjs += OreKit.computeOrbit( tle.get, start, trajectoryTimeStep, end)
-
-    }
-    trjs.toArray
   }
 
   def nextOverpassDate: Option[DateTime] = {
@@ -124,10 +122,6 @@ trait JpssActor extends PublishingRaceActor with ContinuousTimeRaceActor {
 
   def setHotspotBounds (hs: ViirsHotspot): Unit = {
     hs.bounds = computeHotspotBounds(hs.date, hs.position, hs.scan, hs.track)
-  }
-
-  def setSwathWidth (ops: OverpassSeq): Unit = {
-    ops.swathWidth = ops.approximateSwathWidth(maxScanAngle)
   }
 
   // TODO - this is inefficient. Use quaternions or Rodriguez' rotation in ecef

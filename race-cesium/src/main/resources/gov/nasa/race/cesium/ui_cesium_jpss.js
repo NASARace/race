@@ -150,7 +150,7 @@ function initSatelliteView() {
     let view = ui.getList("jpss.satellites");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
-            { name: "show", tip: "show/hide satellite", width: "3rem", attrs: [], map: e => ui.createCheckBox(e.showSwath, toggleShowSatellite) },
+            { name: "show", tip: "show/hide satellite", width: "3rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSatellite) },
             { name: "sat", tip: "satellite name", width: "3rem", attrs: [], map: e => e.satName },
             { name: "next", tip: "next upcoming overpass (local)", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.next) },
             { name: "last", tip: "most recent overpass (local)", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.prev) }
