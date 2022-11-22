@@ -16,9 +16,13 @@
  */
 package gov.nasa.race.space
 
-import gov.nasa.race.Dated
-import gov.nasa.race.common.{JsonSerializable, JsonWriter}
-import gov.nasa.race.geo.{GeoPosition, GreatCircle}
+import gov.nasa.race.common.ConstAsciiSlice.asc
+import gov.nasa.race.{Dated, ifSome}
+import gov.nasa.race.common.{FMT_3_5, JsonSerializable, JsonWriter, squareRoot, squared}
+import gov.nasa.race.geo.{GeoPosition, GreatCircle, MeanEarthRadius}
+import gov.nasa.race.trajectory.{MutTrajectoryPoint, Trajectory}
+import gov.nasa.race.uom.Angle.{Asin, Cos, Sin}
+import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.uom.{Angle, DateTime, Length, Time}
 import org.orekit.propagation.SpacecraftState
 
@@ -53,11 +57,39 @@ case class Overpass (date: DateTime, state: SpacecraftState, elev: Angle, scan: 
   }
 }
 
+object OverpassSeq {
+  val TIME = asc("time")
+  val LAT = asc("lat")
+  val LON = asc("lon")
+  val ALT = asc("alt")
+
+  /**
+   * compute swath width for given height above ground and max scan angle of instrument, approximating earth as a sphere
+   */
+  def computeApproximateSwathWidth (alt: Length, maxScanAngle: Angle): Length = {
+    val r = MeanEarthRadius.toMeters
+    val d = r + alt.toMeters
+
+    val c0 = Sin(maxScanAngle) / r
+    val c1 = squared(r) - squared(d)
+    val c2 = d * Cos(maxScanAngle)
+
+    val a = c2 - squareRoot( squared(c2) + c1 )
+    val alpha = Math.asin(c0 * a)
+
+    Meters( r * alpha)
+  }
+}
+import OverpassSeq._
+
 /**
  * a time-ordered sequence of overpasses of the same satellite over a (sub-)set of ground positions
  * we keep the ground positions in here so that we can check which ones are covered by a single overpass
  */
 case class OverpassSeq (satId: Int, overpasses: Array[Overpass], groundPositions: Array[GeoPosition]) extends JsonSerializable {
+
+  var trajectory: Option[Trajectory] = None
+  var swathWidth: Option[Length] = None
 
   //--- computed values
   val firstDate = overpasses.head.date.toPrecedingMinute
@@ -69,12 +101,36 @@ case class OverpassSeq (satId: Int, overpasses: Array[Overpass], groundPositions
   def iterator: Iterator[Overpass] = overpasses.iterator
   def foreach (f: Overpass=>Unit): Unit = overpasses.foreach(f)
 
-  override def serializeMembersTo(writer: JsonWriter): Unit = {
-    writer.writeIntMember("satId", satId)
-    writer.writeDateTimeMember("firstDate", firstDate)
-    writer.writeDateTimeMember("lastDate", lastDate)
-    writer.writeDoubleMember("coverage", coverage)
+  def approximateSwathWidth (maxScanAngle: Angle): Option[Length] = {
+    trajectory.map( trj => computeApproximateSwathWidth( trj.getAverageAltitude, maxScanAngle))
   }
 
-  override def toString: String =s"Overpass(${firstDate.format_yMd_Hms_z}-${lastDate.format_Hms_z})"
+  override def serializeMembersTo(writer: JsonWriter): Unit = {
+    writer
+      .writeIntMember("satId", satId)
+      .writeDateTimeMember("firstDate", firstDate)
+      .writeDateTimeMember("lastDate", lastDate)
+      .writeDoubleMember("coverage", coverage)
+
+    ifSome(trajectory) { trj=> writer.writeArrayMember("trajectory")(serializeTrajectoryTo) }
+    ifSome(swathWidth) { sw=> writer.writeDoubleMember("swath", sw.toMeters) }
+  }
+
+  def serializeTrajectoryTo (writer: JsonWriter): Unit = {
+    trajectory.foreach { trj=>
+      val tp = new MutTrajectoryPoint()
+      trj.foreach(tp) {p=>
+        val pos = p.position
+        writer.writeObject { w=>
+          w.writeDateTimeMember(TIME, p.date)
+          w.writeDoubleMember(LAT,pos.latDeg, FMT_3_5)
+          w.writeDoubleMember(LON, pos.lonDeg, FMT_3_5)
+          w.writeLongMember(ALT, pos.altMeters.round)
+        }
+      }
+
+    }
+  }
+
+  override def toString: String =s"Overpass(${firstDate.format_yMd_Hms_z}-${lastDate.format_Hms_z}, ${trajectory.map(_.size).getOrElse(0)}tps)"
 }

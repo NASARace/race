@@ -34,7 +34,8 @@ import scala.concurrent.duration.DurationInt
   * Hotspot replay actors are a bit different in that they accumulate older entries that still fall into the
   * configured history duration, i.e. the first entry might have more data
   */
-class InTimeHotspotReplayActor (val config: Config) extends Replayer[ViirsHotspotArchiveReader]{
+class InTimeHotspotReplayActor (val config: Config) extends Replayer {
+  type R = ViirsHotspotArchiveReader
   override def createReader = new ViirsHotspotArchiveReader(config)
 
   // how far we reach back for the first entry

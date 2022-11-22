@@ -16,13 +16,19 @@
  */
 package gov.nasa.race.earth
 
-import gov.nasa.race.Dated
+import com.typesafe.config.Config
+import gov.nasa.race.{Dated, Failure, ResultValue, SuccessValue, ifSome}
+import gov.nasa.race.archive.{ArchiveEntry, StreamArchiveReader}
+import gov.nasa.race.common.ConfigurableStreamCreator.{configuredPathName, createInputStream}
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{AssocSeq, JsonSerializable, JsonWriter}
-import gov.nasa.race.geo.{GeoPosition, GeoPositioned}
+import gov.nasa.race.common.{AssocSeq, JsonSerializable, JsonWriter, LineBuffer, Utf8CsvPullParser}
+import gov.nasa.race.config.ConfigUtils.ConfigWrapper
+import gov.nasa.race.geo.{GeoPosition, GeoPositionFilter, GeoPositioned}
 import gov.nasa.race.uom.{DateTime, Length, Power, Temperature}
 
+import java.io.InputStream
 import java.text.DecimalFormat
+import scala.collection.mutable.ArrayBuffer
 
 object Hotspot {
   //--- constants
@@ -35,7 +41,7 @@ object Hotspot {
   val DATE = asc("date")
   val LAT = asc("lat")
   val LON = asc("lon")
-  val TEMP = asc("temp")
+  val BRIGHT = asc("bright")
   val FRP = asc("frp")
   val AREA = asc("area")
   val BOUNDS = asc("bounds")
@@ -55,7 +61,7 @@ import Hotspot._
 /**
   * abstract type of fire detection observations
   */
-trait Hotspot extends Dated with GeoPositioned with JsonSerializable {
+trait Hotspot extends AnyRef with Dated with GeoPositioned with JsonSerializable {
   // means we have a date and a position
 
   // general hotspot data
@@ -63,9 +69,8 @@ trait Hotspot extends Dated with GeoPositioned with JsonSerializable {
   def source: String  // satellite name, ground station etc.
   def sensor: String  // sensor that produced the hotspot (VIIRS, MODIS, ABI etc.)
 
-  def temp: Temperature  // fire pixel brightness
+  def bright: Temperature  // fire pixel brightness
   def frp: Power         // fire radiative power
-  def pixelSize: Length  // rough estimate of resolution
 
   // data quality / confidence classification (TODO - should we extend this?)
   def isGoodPixel: Boolean
@@ -92,21 +97,81 @@ trait Hotspots [T <: Hotspot] extends Seq[T] with JsonSerializable with Dated {
   val satId: Int
   val date: DateTime
   val src: String
-  val elems: Seq[T]
+  val data: Seq[T]
 
   def serializeMembersTo (writer: JsonWriter): Unit = {
     writer
       .writeIntMember(SAT_ID, satId)
       .writeStringMember(SOURCE, src)
       .writeDateTimeMember(DATE, date)
-      .writeArrayMember(HOTSPOTS){ w=> elems.foreach( _.serializeTo(w)) }
+      .writeArrayMember(HOTSPOTS){ w=> data.foreach( _.serializeTo(w)) }
   }
 
-  override def apply(i: Int): T = elems(i)
-  override def length: Int = elems.length
-  override def iterator: Iterator[T] = elems.iterator
+  override def apply(i: Int): T = data(i)
+  override def length: Int = data.length
+  override def iterator: Iterator[T] = data.iterator
 
-  override def toString: String = elems.mkString("[\n  ", ",\n  ", "\n]")
+  override def toString: String = data.mkString("[\n  ", ",\n  ", "\n]")
 }
 
+/**
+ * ArchiveReader root type that reads CSV archives containing a sequence of hotspot records that should be reported
+ * as batched Hotspots collections
+ */
+abstract class HotspotArchiveReader[T<:Hotspot] (val satId: Int, val iStream: InputStream, val pathName: String="<unknown>", bufLen: Int,
+                                 geoFilter: Option[GeoPositionFilter] = None) extends StreamArchiveReader with Utf8CsvPullParser {
 
+  def this(conf: Config) = this( conf.getInt("satellite"), createInputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096),
+    GeoPositionFilter.fromOptionalConfig(conf, "bounds"))
+
+  val lineBuffer = new LineBuffer(iStream,bufLen)
+  val hs = ArrayBuffer.empty[T]
+
+  protected var prev: Option[T] = None
+  protected var date = DateTime.UndefinedDateTime
+  protected var src = ""
+
+  lineBuffer.nextLine() // skip the header line of the archive
+
+  def parseHotspot(): ResultValue[T]
+  def batchProduct: Hotspots[T]
+
+  override def readNextEntry(): Option[ArchiveEntry] = {
+    src = ""
+    hs.clear()
+
+    def result: Option[ArchiveEntry] = if (hs.isEmpty) None else archiveEntry(date, batchProduct)
+
+    ifSome(prev) { h =>
+      date = h.date
+      hs += h
+      prev = None
+    }
+
+    while (lineBuffer.nextLine()) {
+      if (initialize(lineBuffer)) {
+        parseHotspot() match {
+          case SuccessValue(hotspot) =>
+            src = if (src.isEmpty) hotspot.source else if (src != hotspot.source) "multiple" else src
+
+            if (geoFilter.isEmpty || geoFilter.get.pass(hotspot.position)) {
+              if (date.isUndefined) {
+                date = hotspot.date
+                hs += hotspot
+              } else {
+                if (hotspot.date == date) { // note that we break on every date change (also backjumps)
+                  hs += hotspot
+                } else {
+                  prev = Some(hotspot)
+                  return result
+                }
+              }
+            }
+
+          case Failure(_) => None // did not parse
+        }
+      }
+    }
+    result
+  }
+}

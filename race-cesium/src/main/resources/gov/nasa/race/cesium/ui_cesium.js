@@ -30,6 +30,7 @@ class LayerEntry {
 export var viewer = undefined;
 
 var cameraSpec = undefined;
+var lastCamera = undefined; // saved last position & orientation
 
 var requestRenderMode = false;
 var targetFrameRate = -1;
@@ -172,6 +173,11 @@ function setCanvasSize() {
     viewer.canvas.height = window.innerHeight;
 }
 
+export function setDoubleClickHandler (action) {
+    let selHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    selHandler.setInputAction(action, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+}
+
 export function setEntitySelectionHandler(onSelect) {
     let selHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
     selHandler.setInputAction(onSelect, Cesium.ScreenSpaceEventType.LEFT_CLICK);
@@ -256,6 +262,7 @@ function handleSetClock(setClock) {
 function updateCamera() {
     let pos = viewer.camera.positionCartographic;
     ui.setField("view.altitude", Math.round(pos.height).toString());
+    //saveCamera();
 }
 
 //--- mouse event handlers
@@ -309,14 +316,30 @@ function updateMouseLocation(e) {
 
 //--- user control 
 
+export function saveCamera() {
+    let camera = viewer.camera;
+    lastCamera = {
+        destination: camera.positionWC,
+        orientation: {
+            heading: camera.heading,
+            pitch: camera.pitch,
+            roll: camera.roll
+        }
+    };
+}
+
+const centerOrientation = {
+    heading: Cesium.Math.toRadians(0.0),
+    pitch: Cesium.Math.toRadians(-90.0),
+    roll: Cesium.Math.toRadians(0.0)
+}
+
 export function zoomTo(cameraPos) {
+    saveCamera()
+
     viewer.camera.flyTo({
         destination: cameraPos,
-        orientation: {
-            heading: Cesium.Math.toRadians(0.0),
-            pitch: Cesium.Math.toRadians(-90.0),
-            roll: Cesium.Math.toRadians(0.0)
-        }
+        orientation: centerOrientation
     });
 }
 
@@ -325,26 +348,41 @@ export function setHomeView() {
     viewer.trackedEntity = undefined;
     viewer.camera.flyTo({
         destination: Cesium.Cartesian3.fromDegrees(cameraSpec.lon, cameraSpec.lat, cameraSpec.alt),
-        orientation: {
-            heading: Cesium.Math.toRadians(0.0),
-            pitch: Cesium.Math.toRadians(-90.0),
-            roll: Cesium.Math.toRadians(0.0)
-        }
+        orientation: centerOrientation
     });
 }
 ui.exportToMain(setHomeView);
 
+var minCameraHeight = 50000;
+
 export function setDownView() {
+
+    // use the position we are looking at, not the current camera position
+    const canvas = viewer.scene.canvas;
+    const center = new Cesium.Cartesian2(canvas.clientWidth / 2.0, canvas.clientHeight / 2.0);
+    const ellipsoid = viewer.scene.globe.ellipsoid;
+    let wc = viewer.camera.pickEllipsoid(center,ellipsoid);
+    let pos = Cesium.Cartographic.fromCartesian(wc);
+
+    //let pos = viewer.camera.positionCartographic;
+    if (pos.height < minCameraHeight) pos = new Cesium.Cartographic(pos.longitude,pos.latitude,minCameraHeight);
+
+    viewer.trackedEntity = undefined;
+
     viewer.camera.flyTo({
-        destination: viewer.camera.positionWC,
-        orientation: {
-            heading: Cesium.Math.toRadians(0.0),
-            pitch: Cesium.Math.toRadians(-90.0),
-            roll: Cesium.Math.toRadians(0.0)
-        }
+        destination: Cesium.Cartographic.toCartesian(pos),
+        orientation: centerOrientation
     });
 }
 ui.exportToMain(setDownView);
+
+export function restoreCamera() {
+    if (lastCamera) {
+        viewer.trackedEntity = undefined;
+        viewer.camera.flyTo(lastCamera);
+    }
+}
+ui.exportToMain(restoreCamera);
 
 export function toggleFullScreen(event) {
     ui.toggleFullScreen();

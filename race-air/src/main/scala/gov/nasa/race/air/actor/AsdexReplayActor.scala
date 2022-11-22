@@ -27,8 +27,8 @@ import gov.nasa.race.core.AccumulatingTopicIdProvider
 /**
   * a ReplayActor for ASDE-X
   */
-class AsdexReplayActor(val config: Config) extends Replayer[ArchiveReader]
-                    with AccumulatingTopicIdProvider with AirportTopicMapper {
+class AsdexReplayActor(val config: Config) extends Replayer with AccumulatingTopicIdProvider with AirportTopicMapper {
+  type R = ArchiveReader
 
   class FilteringAsdexMsgParser extends FullAsdexMsgParser {
     override protected def filterAirport (airportId: String) = {

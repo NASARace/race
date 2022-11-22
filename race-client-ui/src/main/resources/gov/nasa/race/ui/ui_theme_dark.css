@@ -7,7 +7,7 @@
     --theme: "dark";
     /* basic values */
     --color: rgb(200, 200, 200);
-    --darker-color: rgb(170,170,170);
+    --darker-color: rgb(127, 127, 127);
     --dim-color: rgb(80,80,80);
     --data-color: #01ff01;
     /* rgb(0,255,0); */
@@ -111,7 +111,7 @@
     --choice-value-color: var(--input-data-color);
     --choice-field-background: var(--data-background);
     /* pushbuttons */
-    --button-height: 2.2rem;
+    --button-height: 2rem;
     --button-color: rgb(200, 200, 200);
     --button-hover-color: rgb(230, 230, 230);
     --button-background: rgb(62, 59, 122);

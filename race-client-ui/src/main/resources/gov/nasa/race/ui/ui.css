@@ -259,7 +259,7 @@ div.ui_tab_header {
 
 div.ui_tab {
     display: inline-block;
-    margin: 0 0 -1px 0.8rem;
+    margin: 0 0 -1px 0.3rem;
     padding: var(--padding);
 	border: 1px solid var(--border-color);
 	border-radius: 8px 8px 0 0;
@@ -311,6 +311,28 @@ div.ui_label {
 div.ui_label.permanent {
     height: var(--field-height);
     line-height: var(--field-height);
+}
+
+textarea.ui_textarea {
+    resize: none;
+    font: var(--font);
+    background: var(--data-background);
+    color: var(--input-data-color);
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: scroll;  
+}
+
+textarea.ui_textarea.vresize {
+    resize: vertical;
+}
+
+textarea.ui_textarea.readonly {
+    color: var(--data-color);
+}
+
+textarea.ui_textarea.fixed {
+    font: var(--mono-font);
 }
 
 /* fields (label + display) */
@@ -857,6 +879,18 @@ table.ui_kvtable tr:last-child td {
 
 table.ui_kvtable tr td:last-child {
     border-right: 0;
+}
+
+/* list controls */
+
+div.ui_listcontrols {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    /* padding: var(--container-padding); */
+    margin: var(--container-margin);
+    gap: var(--container-gap);
+    background: transparent;
 }
 
 /* popup menus */

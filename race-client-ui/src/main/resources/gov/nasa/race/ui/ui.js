@@ -53,6 +53,7 @@ registerLoadFunction(function initialize() {
     _initializeCheckboxes();
     _initializeRadios();
     _initializeLists();
+    _initializeListControls();
     _initializeKvTables();
     _initializeTimeWidgets();
     _initializeSliderWidgets();
@@ -675,6 +676,28 @@ export function getText(o) {
         return e;
     }
     throw "not a text";
+}
+
+export function getTextArea(o) {
+    let e = _elementOf(o);
+    if (e && e.classList.contains("ui_textarea")) {
+        return e;
+    }
+    return undefined;
+}
+
+export function setTextAreaContent(o,text) {
+    let v = getTextArea(o);
+    if (v) {
+        v.value = text;
+    }
+}
+
+export function getTextAreaContent(o) {
+    let v = getTextArea(o);
+    if (v) {
+        return v.value;
+    }
 }
 
 //--- time & date widgets
@@ -1338,6 +1361,11 @@ export function setCheckBox(o, check = true) {
     }
 }
 
+export function getCheckBoxLabel (o) {
+    let e = getCheckBox(o);
+    return e ? e.dataset.label : undefined;
+}
+
 export function getCheckBox(o) {
     let e = _elementOf(o);
     if (e) {
@@ -1452,6 +1480,11 @@ export function getRadio(o) {
     return undefined;
 }
 
+export function getRadioLabel(o) {
+    let e = getRadio(o);
+    return e ? e.dataset.label : undefined;
+}
+
 export function isRadio(o) {
     let e = _elementOf(o);
     return (e && e.classList.contains("ui_radio"));
@@ -1509,6 +1542,11 @@ export function isSelectorDisabled(o) {
 
 export function setSelectorDisabled(o, isDisabled) {
     _setDisabled(getSelector(o), isDisabled);
+}
+
+export function getSelectorLabel(o) {
+    let e = getSelector(o);
+    return e ? e.dataset.label : undefined;
 }
 
 //--- key-value tables (2 column lists, first column contains right aligned labels)
@@ -1899,7 +1937,7 @@ export function getTreeList (o) {
 function selectAndShow(e, ie) {
     if (ie) {
         _setSelectedItemElement(e, ie);
-        ie.scrollIntoView();
+        ie.scrollIntoView({behavior: "smooth", block: "center"});
     }
 }
 
@@ -2107,6 +2145,33 @@ export function getList(o) {
     }
 
     return undefined;
+}
+
+//--- list controls (first,up,down,last,clear buttons)
+
+function _initializeListControls() {
+    for (let e of document.getElementsByClassName('ui_listcontrols')) {
+        if (e.tagName == "DIV" && _hasNoChildElements(e)) {
+            let le = getList( e.dataset.listid);
+            if (le) {
+                e.appendChild( createListControlButton("⊼", e.dataset.first ? e.dataset.first : ()=>selectFirstListItem(le)));
+                e.appendChild( createListControlButton("⋀︎", e.dataset.up ? e.dataset.up :()=>selectPrevListItem(le)));
+                e.appendChild( createListControlButton("⋁︎", e.dataset.down ? e.dataset.down :()=>selectNextListItem(le)));
+                e.appendChild( createListControlButton("⊻", e.dataset.last ? e.dataset.last :()=>selectLastListItem(le)));
+                e.appendChild( createListControlButton("⌫", e.dataset.clear ? e.dataset.clear :()=>clearSelectedListItem(le)));
+            }
+        }
+    }
+}
+
+function createListControlButton ( text, onClickAction) {
+    let e = _createElement("INPUT", "ui_button");
+    e.type = "button"
+    e.value = text;
+
+    e.onclick = onClickAction;
+
+    return e;
 }
 
 //--- tooltips

@@ -43,6 +43,7 @@ class OpenSkyReader (val iStream: InputStream, val pathName: String="<unknown>",
 /**
   * specialized ReplayActor for opensky-network tagged text archives
   */
-class OpenSkyReplayActor (val config: Config) extends Replayer[OpenSkyReader] {
+class OpenSkyReplayActor (val config: Config) extends Replayer {
+  type R = OpenSkyReader
   override def createReader = new OpenSkyReader(config)
 }

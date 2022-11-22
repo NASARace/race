@@ -29,8 +29,8 @@ import gov.nasa.race.track.TrackCompleted
 /**
   * specialized Replayer for SFDPS tagged archives
   */
-class SfdpsReplayActor(val config: Config) extends Replayer[ArchiveReader]
-                                               with AccumulatingTopicIdProvider with ARTCCTopicIdMapper {
+class SfdpsReplayActor(val config: Config) extends Replayer with AccumulatingTopicIdProvider with ARTCCTopicIdMapper {
+  type R = ArchiveReader
   val publishCompleted: Boolean = config.getBooleanOrElse("publish-completed", false)
 
   class FilteringMessageCollectionParser extends MessageCollectionParser {

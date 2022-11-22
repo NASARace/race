@@ -195,16 +195,17 @@ export const cesium = {
   def uiViewWindow(title: String="View"): Text.TypedTag[String] = {
     uiWindow(title, "view", "view-icon.svg")(
       uiFieldGroup()(
-        uiNumField("lat", "view.latitude"),
-        uiNumField("lon", "view.longitude"),
-        uiNumField("alt", "view.altitude")
+        uiNumField("lat [°]", "view.latitude"),
+        uiNumField("lon [°]", "view.longitude"),
+        uiNumField("alt [m]", "view.altitude")
       ),
       uiRowContainer()(
         uiCheckBox("fullscreen", "main.toggleFullScreen(event)"),
         uiButton("Home", "main.setHomeView()"),
-        uiButton("Down", "main.setDownView()")
+        uiButton("Down", "main.setDownView()"),
+        uiButton( "Back", "main.restoreCamera()")
       ),
-      uiColumnContainer("align_right")(
+      uiPanel("view parameters", false)(
         uiCheckBox("render on-demand", "main.toggleRequestRenderMode()", "view.rm"),
         uiSlider("frame rate", "view.fr", "main.setFrameRate(event)")
       )

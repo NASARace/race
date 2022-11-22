@@ -116,7 +116,7 @@ trait PushWSRaceRoute extends WSRaceRoute with SourceQueueOwner[Message] {
         }
 
       case Failure(e) =>
-        error(s"failed to push message $m to $remoteAddr: $e")
+        error(s"failed to push message \"${m.toString.substring(0,55)}...\" to $remoteAddr: $e")
           //println("@@@ FAILURE: ${m.toString.substring(0,55)} => $e")
     }
   }

@@ -30,7 +30,7 @@ export function initialize() {
                     handleServerMessage(msg);
                 } catch (error) {
                     console.log(error);
-                    //console.log(evt.data.toString());
+                    console.log(evt.data.toString());
                 }
             };
 
@@ -69,8 +69,6 @@ function handleServerMessage(msg) {
     for (let i = 0; i < wsHandlers.length; i++) {
         if (wsHandlers[i](msgType, msg)) return;
     }
-
-
     // if we get here the message was ignored
 }
 

@@ -27,8 +27,8 @@ import gov.nasa.race.core.AccumulatingTopicIdProvider
 /**
   * specialized Replayer for TAIS tagged archives
   */
-class TaisReplayActor(val config: Config) extends Replayer[ArchiveReader]
-                    with AccumulatingTopicIdProvider with TRACONTopicIdMapper {
+class TaisReplayActor(val config: Config) extends Replayer with AccumulatingTopicIdProvider with TRACONTopicIdMapper {
+  type R = ArchiveReader
 
   class FilteringTATrackAndFlightPlanParser extends TATrackAndFlightPlanParser {
     override protected def filterSrc (traconId: String) = {

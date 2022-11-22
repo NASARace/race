@@ -6,24 +6,20 @@ import gov.nasa.race.actor.Replayer
 import gov.nasa.race.archive.{ArchiveEntry, ArchiveReader}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.config.SubConfigurable
-import gov.nasa.race.earth.{GoesRData, GoesRDataReader, GoesRDirReader, GoesRHotspots, GoesRProduct}
-import gov.nasa.race.ifSome
+import gov.nasa.race.earth._
 import gov.nasa.race.uom.Time.Seconds
 import gov.nasa.race.uom.{DateTime, Time}
-import gov.nasa.race.util.FileUtils
+import gov.nasa.race.util.{FileUtils, ThreadUtils}
 
 import java.util.concurrent.LinkedBlockingQueue
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import scala.util.{Failure, Success, Try}
 
 /**
  * the "archive" is just a directory that contains GOES-R data sets (*.nc files)
  * (see GoesRDirReader for filename format)
  * (replay) date is part of the filename
  */
-class GoesRDataArchiveReader (val config: Config) extends ArchiveReader with GoesRDirReader with SubConfigurable {
+class GoesrNcArchiveReader(val config: Config) extends ArchiveReader with GoesrDirReader with SubConfigurable {
   val satId = config.getInt("satellite")
   val dataDir = FileUtils.ensureDir(config.getString("data-dir")).get
   val products: Seq[GoesRProduct] = config.getConfigSeq("products").map( createGoesRProduct )
@@ -37,7 +33,7 @@ class GoesRDataArchiveReader (val config: Config) extends ArchiveReader with Goe
   override def close(): Unit = {} // nothing to close
 
   def createGoesRProduct(cfg: Config) = {
-    val reader = cfg.getOptionalConfig("reader").flatMap( configurable[GoesRDataReader])
+    val reader = cfg.getOptionalConfig("reader").flatMap( configurable[GoesrDataReader])
     GoesRProduct(cfg.getString("name"), cfg.getString("bucket"), reader)
   }
 }
@@ -46,8 +42,12 @@ class GoesRDataArchiveReader (val config: Config) extends ArchiveReader with Goe
  * Replay actor that replays GOES-R data files stored in an archive directory
  * "archives" are just directories with *.nc data files. Note that processing these can be expensive and
  * hence should not block the actor
+ * We could speed up considerably if we process data sets in parallel but we still do have to publish them sequentially
+ * and this is only a bottleneck during init of replays with a long history. Processing this in parallel could also consume
+ * considerable resources by NedCDF
  */
-class GoesRReplayActor (val config: Config) extends Replayer[ArchiveReader] {
+class GoesrNcReplayActor(val config: Config) extends Replayer {
+  type R = ArchiveReader
 
   class DataThread extends Thread {
     setDaemon(true)
@@ -62,7 +62,7 @@ class GoesRReplayActor (val config: Config) extends Replayer[ArchiveReader] {
           if (data.date >= dLast) {  // make sure we don't replay out-of-order
             processData(data)
             dLast = data.date
-            Thread.yield() // make sure we don't starve everybody
+            ThreadUtils.yieldExecution() // make sure we don't starve everybody
           } else warning(s"ignoring out of order data set $data")
         } catch {
           case _: InterruptedException => // just a breaker
@@ -73,7 +73,7 @@ class GoesRReplayActor (val config: Config) extends Replayer[ArchiveReader] {
     def processData (data: GoesRData): Unit = {
       for ( reader <- data.product.reader; result <- reader.read(data) ) {
         result match {
-          case hs:GoesRHotspots => if (hs.nonEmpty) publish(hs)
+          case hs:GoesrHotspots => if (hs.nonEmpty) publish(hs)
           case other => publish(other)
         }
       }
@@ -85,7 +85,7 @@ class GoesRReplayActor (val config: Config) extends Replayer[ArchiveReader] {
     }
   }
 
-  override def createReader = new GoesRDataArchiveReader(config) // watch out - executed before we enter this ctor
+  override def createReader = new GoesrNcArchiveReader(config) // watch out - executed before we enter this ctor
 
   val hotspotHistory: Time = Seconds(config.getFiniteDurationOrElse("history", 7.days).toSeconds)
   val startDate = currentSimTime - hotspotHistory

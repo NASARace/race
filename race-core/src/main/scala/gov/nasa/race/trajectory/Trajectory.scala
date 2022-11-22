@@ -148,6 +148,17 @@ trait Trajectory extends TDataSource[N3,TDP3] {
     if (size < 2) Time.UndefinedTime else getLastDate.timeSince(getFirstDate) / size
   }
 
+  def getAverageAltitude: Length = {
+    val tdp3 = new TDP3
+    var n=1
+    var m=0.0
+    foreach (tdp3) { p=>
+      m += (p.altMeters - m) / n
+      n += 1
+    }
+    Meters(m)
+  }
+
   def newDataPoint: TDP3 = new TDP3(0,0,0,0)  // TDataSource interface
 
   /**

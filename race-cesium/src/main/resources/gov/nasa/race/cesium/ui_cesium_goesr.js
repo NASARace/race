@@ -4,156 +4,6 @@ import * as util from "./ui_util.js";
 import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
-class SatelliteEntry {
-    constructor(sat) {
-        this.show = sat.show; // can be changed interactively
-        this.hotspotEntries = undefined; // updated through goesrHotspots messages
-        this.sat = sat;
-
-        this.nTotal = 0;
-        this.nGood = 0;
-        this.nProbable = 0;
-        this.date = 0;
-    }
-
-    setStats(hs) {
-        this.nTotal = hs.nTotal;
-        this.nGood = hs.nGood;
-        this.nProbable = hs.nProbable;
-        this.date = hs.date;
-    }
-}
-
-class HotspotEntry {
-    constructor(satId, satName, lastSatDate, h) {
-        this.hotspot = h;
-
-        this.id = `${h.lat},${h.lon}`;
-        this.satId = satId;
-        this.satName = satName;
-        this.lastSatDate = lastSatDate;
-        this.date = h.history[0].date;
-        this.mask = h.history[0].mask;
-        this.missingMin = Math.round((this.lastSatDate - this.date) / 60000);
-        this.nGood = util.countMatching(h.history, r => r.mask == 10 || r.mask == 30);
-        this.nTotal = h.history.length;
-
-        this.asset = undefined;
-        this.createAssets();
-    }
-
-    isGoodPixel() {
-        return (this.mask == 10 || this.mask == 30);
-    }
-
-    isSaturatedPixel() {
-        return (this.mask == 11 || this.mask == 31);
-    }
-
-    isCloudPixel() {
-        return (this.mask == 12 || this.mask == 32);
-    }
-
-    isProbablePixel() {
-        return (this.mask == 13 || this.mask == 14 || this.mask == 33 || this.mask == 34);
-    }
-
-    hadAnyGoodPixel() {
-        return this.hotspot.history.find(h => h.mask == 10 || h.mask == 30);
-    }
-
-    classifier() {
-        if (this.missingMin == 0) {
-            if (this.isGoodPixel()) return ui.createImage("goesr-asset/fire");
-            else if (this.isProbablePixel()) return " ⚠︎";
-            else return "";
-        } else {
-            return `-${this.missingMin}m`;
-        }
-    }
-
-    polygon() {
-        let vertices = this.hotspot.history[0].bounds.map(p => new Cesium.Cartesian3.fromDegrees(p[1], p[0]));
-        return new Cesium.PolygonHierarchy(vertices);
-    }
-
-    polygonMaterial() { // those should be translucent
-        if (this.isGoodPixel()) return config.goesr.goodFillColor;
-        else if (this.isProbablePixel()) return config.goesr.probableFillColor;
-        else return config.goesr.otherFillColor;
-    }
-
-    color() {
-        if (this.isGoodPixel() || ((this.isCloudPixel() || this.isSaturatedPixel()) && this.hadAnyGoodPixel())) return config.goesr.goodColor;
-        else if (this.isProbablePixel()) return config.goesr.probableColor;
-        else if (this.isSaturatedPixel()) return config.goesr.saturatedColor;
-        else if (this.isCloudPixel()) return config.goesr.cloudColor;
-        else return config.goesr.otherColor;
-    }
-
-    outlineColor() {
-        if (this.missingMin) {
-            return Cesium.Color.BLUE;
-            //return config.goesr.missingColor;
-        } else {
-            if (this.isGoodPixel()) return config.goesr.goodOutlineColor;
-            else if (this.isCloudPixel()) return config.goesr.cloudColor;
-            else if (this.isSaturatedPixel()) return config.goesr.saturatedColor;
-            else if (this.isProbablePixel()) return config.goesr.probableOutlineColor;
-            else return config.goesr.otherColor;
-        }
-    }
-
-    outlineWidth() {
-        if (this.isGoodPixel()) return config.goesr.strongOutlineWidth; // make this more prominent
-        else return config.goesr.outlineWidth;
-    }
-
-
-    createAssets() {
-        let lat = this.hotspot.history[0].lat;
-        let lon = this.hotspot.history[0].lon;
-        let pos = Cesium.Cartesian3.fromDegrees(lon, lat);
-        let clr = this.color();
-        let isShowing = this.show && uiCesium.isLayerShowing(config.goesr.layer.name);
-
-        this.asset = new Cesium.Entity({
-            id: this.id,
-            show: isShowing,
-            position: pos,
-            point: {
-                pixelSize: config.goesr.pointSize,
-                color: clr,
-                outlineColor: this.outlineColor(),
-                outlineWidth: this.outlineWidth(),
-                distanceDisplayCondition: config.goesr.pointDC,
-                disableDepthTestDistance: Number.NEGATIVE_INFINITY
-            },
-            polygon: {
-                hierarchy: this.polygon(),
-                fill: true,
-                material: this.polygonMaterial(),
-                outline: true,
-                outlineColor: clr,
-                outlineWidth: this.outlineWidth(),
-                distanceDisplayCondition: config.goesr.boundsDC,
-                height: 0
-                    //zIndex: 1
-            },
-            _uiGoesrEntry: this // backlink for selection
-        });
-    }
-
-    addAssets(dataSource) {
-        dataSource.entities.add(this.asset);
-    }
-
-    show(cond) {
-        this.show = cond;
-        this.asset.show = cond;
-    }
-}
-
 const maskDesc = new Map();
 maskDesc
     .set( 10, "good_fire_pixel")
@@ -169,8 +19,21 @@ maskDesc
     .set( 34, "temporally_filtered_medium_probability_fire_pixel")
     .set( 35, "temporally_filtered_low_probability_fire_pixel");
 
-var satelliteEntries = [];
-var satelliteView = undefined;
+
+function isGoodPixel(mask) { return (mask == 10 || mask == 30); }
+function isSaturatedPixel(mask) { return (mask == 11 || mask == 31); }
+function isCloudPixel(mask) { return (mask == 12 || mask == 32); }
+function isHighPixel(mask) { return (mask == 13 || mask == 33); }
+function isProbablePixel(mask) { return (mask == 13 || mask == 14 || mask == 33 || mask == 34); }
+
+
+
+var satellites = [];
+var satNames = new Map();
+
+var dataSets = [];
+var dataSetView = undefined;
+var selectedDataSet = undefined;
 
 var hotspots = [];
 var hotspotView = undefined;
@@ -179,21 +42,41 @@ var selectedHotspot = undefined;
 var historyView = undefined; // for selected hotspot
 var maskLabel = undefined;
 
-var pixelLevel = undefined;
-var latestOnly = false; // do we just show pixels reported in the last batch
+var pixelLevel = "all";  // high, probable, all
+var latestOnly = true; // do we just show pixels reported in the last batch
+var followLatest = true;
 
-var goesrDataSource = new Cesium.CustomDataSource("goesr");
+var refDate = Number.MAX_INTEGER;
+
+//--- display params we can change
+var pointSize = config.goesr.pointSize;
+var maxMissingMin = config.goesr.maxMissingMin;
+
+function getSatelliteWithName (satName) {
+    return satellites.find( sat=> sat.name == satName);
+}
+
+function getSatelliteWithId (satId) {
+    return satellites.find( sat=> sat.satId == satId);
+}
+
+function getSatelliteIndex (satId) {
+    for (let i=0; i<satellites.length; i++) {
+        if (satellites[i].satId == satId) return i;
+    }
+    return -1;
+}
 
 ui.registerLoadFunction(function initialize() {
-    uiCesium.addDataSource(goesrDataSource);
-
-    satelliteView = initSatelliteView();
+    dataSetView = initDataSetView();
     hotspotView = initHotspotView();
     historyView = initHistoryView();
     maskLabel = ui.getLabel("goesr.mask");
 
-    setPixelLevel(config.goesr.pixelLevel);
-    setLatestOnly(config.goesr.latestOnly);
+    ui.setCheckBox("goesr.followLatest", followLatest);
+    ui.setCheckBox("goesr.latestOnly",config.goesr.latestOnly);
+    ui.selectRadio( "goesr.level.all");
+    initSliders();
 
     uiCesium.setEntitySelectionHandler(goesrSelection);
     ws.addWsHandler(config.wsUrl, handleWsGoesrMessages);
@@ -202,16 +85,16 @@ ui.registerLoadFunction(function initialize() {
     console.log("ui_cesium_goesr initialized");
 });
 
-function initSatelliteView() {
-    let view = ui.getList("goesr.satellites");
+function initDataSetView() {
+    let view = ui.getList("goesr.dataSets");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
-            { name: "show", tip: "toggle visibility", width: "2.5rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSatellite) },
-            { name: "sat", tip: "name of satellite", width: "4rem", attrs: [], map: e => e.sat.name },
-            { name: "good", tip: "number of good fire pixels", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nGood },
-            { name: "prob", tip: "number of probable fire pixels", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nProbable },
-            { name: "all", tip: "number of all fire pixels", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nTotal },
-            { name: "time", tip: "last report", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalHMTimeString(e.date) }
+            { name: "sat", tip: "name of satellite", width: "3rem", attrs: [], map: e => e.sat.name },
+            { name: "good", tip: "number of good pixels", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nGood },
+            { name: "high", tip: "number of high probability fire pixels", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nHigh },
+            { name: "med", tip: "number of medium probability fire pixels", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nMedium },
+            { name: "low", tip: "number of low probability fire pixels", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nLow },
+            { name: "date", tip: "last report", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.date) }
         ]);
     }
     return view;
@@ -221,71 +104,285 @@ function initHotspotView() {
     let view = ui.getList("goesr.hotspots");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
-            { name: "class", tip: "classification of fire pixel", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.classifier() },
+            { name: "class", tip: "classification of fire pixel", width: "3rem", attrs: ["fixed", "alignRight"], map: e => hotspotClass(e) },
             ui.listItemSpacerColumn(),
-            { name: "sat", tip: "name of satellite", width: "4rem", attrs: [], map: e => e.satName },
-            { name: "good", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.nGood },
-            { name: "all", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.nTotal },
-            { name: "lat", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.f_4.format(e.hotspot.lat) },
-            { name: "lon", width: "7rem", attrs: ["fixed", "alignRight"], map: e => util.f_4.format(e.hotspot.lon) },
+            { name: "sat", tip: "name of satellite", width: "4rem", attrs: [], map: e => satNames[e.satId] },
+            { name: "lat", width: "6rem", attrs: ["fixed", "alignRight"], map: e => util.f_4.format(e.lat) },
+            { name: "lon", width: "6.5rem", attrs: ["fixed", "alignRight"], map: e => util.f_4.format(e.lon) },
         ]);
     }
     return view;
+}
+
+function initSliders() {
+    let e = ui.getSlider('goesr.maxMissing');
+    ui.setSliderRange(e, 0, 120, 10, util.f_0);
+    ui.setSliderValue(e, maxMissingMin);
+
+    e = ui.getSlider('goesr.pointSize');
+    ui.setSliderRange(e, 3, 5, 1, util.f_0);
+    ui.setSliderValue(e, pointSize);
+}
+
+function hotspotClass (hs) {
+    let missingMin = getMissingMin(hs);
+    if (missingMin) {
+        return `-${missingMin}m`;
+    } else {
+        switch (hs.probability) {
+            case "high": return ui.createImage("goesr-asset/fire");
+            case "medium": return " ⚠︎";
+            case "low": return " ?";
+            default: return "";
+        }
+    }
 }
 
 function initHistoryView() {
     let view = ui.getList("goesr.history");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
+            { name: "dqf", tip: "pixel quality flag []", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.dqf },
             { name: "mask", tip: "fire pixel classification code", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.mask },
-            { name: "temp", tip: "pixel temperature [K]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.temp) ? "-" : util.f_0.format(e.temp) },
-            { name: "frp", tip: "fire radiative power [MW]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.frp) ? "-" : util.f_0.format(e.frp) },
-            { name: "area", tip: "surface area [ac]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.area) ? "-" : util.f_0.format(util.squareMetersToAcres(e.area)) },
+            { name: "temp", tip: "pixel temperature [K]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.temp) ? "-" : Math.round(e.temp) },
+            { name: "frp", tip: "fire radiative power [MW]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.frp) ? "-" : Math.round(e.frp) },
+            { name: "area", tip: "surface area [ac]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.area) ? "-" : util.f_1.format(util.squareMetersToAcres(e.area)) },
             { name: "time", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalHMTimeString(e.date) },
         ]);
     }
     return view;
 }
 
+ui.exportToMain(function selectGoesrDataSet(event) {
+    let ds = event.detail.curSelection;
+    if (ds) {
+        selectedDataSet = ds;
+        refDate = ds.date;
+        updateHotspots();
+
+        if (ds != dataSets[0]) { // if we explicitly select an earlier element we disable followLatest
+            followLatest = false;
+            ui.setCheckBox("goesr.followLatest", false);
+        }
+    }
+});
+
+function updateHotspots() {
+    let hotspots = getHotspots();
+    setEntities( hotspots);
+    ui.setListItems( hotspotView, hotspots);
+}
+
+function getHotspots () {
+    let hsList = [];
+    let cutoff = latestOnly ? 0 : maxMissingMin * 60000; // duration in millis
+
+    if (selectedDataSet) {
+        let hsMaps = satellites.map( sat=> new Map());
+        let processed = 0;
+
+        for (let i=0; i<dataSets.length; i++) {
+            let ds = dataSets[i];
+            let satIdx = ds.sat.satIdx;
+
+            if (ds.date > refDate) continue; // newer than selected date
+            if (ds.date < (refDate - cutoff)) {
+                if (++processed == satellites.length) break; // done
+            }
+
+            let hsMap = hsMaps[satIdx];
+            if (hsMap.size == 0) { // first dataset for this sat
+                ds.hotspots.forEach( hs=> {
+                    if (filterPixel(hs)) hsMap.set(hs.center, hs)
+                });
+            } else {
+                ds.hotspots.forEach( hs=> {
+                    if (filterPixel(hs)) {
+                        if (!hsMap.has(hs.center)) hsMap.set(hs.center, hs) 
+                    }
+                });
+            }
+        }
+
+        hsMaps.forEach( hsMap=> hsMap.forEach( (hs,key)=> hsList.push(hs)));
+        hsList.sort( sortHotspots); // cluster approximation over all satellites
+    }
+
+    return hsList;
+}
+
+// approximation of a cluster function 
+function sortHotspots(a, b) {
+    let x = a.lat + a.lon;
+    let y = b.lat + b.lon;
+    return (x < y) ? -1 : 1;
+}
+
+function setEntities (hotspots) {
+    //satellites.forEach( sat=> sat.dataSource.entities.removeAll());
+    let now = Date.now();
+
+    hotspots.forEach( hs=> {
+        let satIdx = getSatelliteIndex(hs.satId);
+        let dataSource = satellites[satIdx].dataSource;
+
+        let e = dataSource.entities.getById(hs.center);
+        if (e) { 
+            updateHotspotEntity( e, hs);
+            e._timeStamp = now;
+        } else {
+            let e = createHotspotEntity(hs);
+            e._timeStamp = now;
+            dataSource.entities.add( e);
+        }
+    });
+
+    // clean up obsolete entities
+    satellites.forEach( sat=> {
+        let ec = sat.dataSource.entities;
+        util.filterIterator(ec.values, e=> e._timeStamp != now).forEach( e=> ec.remove(e));
+    });
+
+    uiCesium.requestRender();
+}
+
+function clearEntities() {
+    satellites.forEach( sat=> sat.dataSource.entities.removeAll());
+}
+
+// we only call this on same location entities, no need to update pos or polygon vertices
+function updateHotspotEntity (e, hs) {
+    let clr = color(hs);
+
+    let point = e.point;
+    point.pixelSize = pointSize;
+    point.color = clr;
+    point.outlineColor = outlineColor(hs);
+    point.outlineWidth = outlineWidth(hs);
+
+    let polygon = e.polygon;
+    polygon.material = polygonMaterial(hs);
+    polygon.outlineColor = clr;
+    polygon.outlineWidth = outlineWidth(hs);
+
+    e._hotspot = hs;
+}
+
+function createHotspotEntity (hs) {
+    let clr = color(hs);
+
+    let e = new Cesium.Entity({
+        id: hs.center,
+        position: Cesium.Cartesian3.fromDegrees( hs.lon, hs.lat),
+        point: {
+            pixelSize: pointSize,
+            color: clr,
+            outlineColor: outlineColor(hs),
+            outlineWidth: outlineWidth(hs),
+            distanceDisplayCondition: config.goesr.pointDC,
+            disableDepthTestDistance: Number.NEGATIVE_INFINITY
+        },
+        polygon: {
+            hierarchy: polygon(hs),
+            fill: true,
+            material: polygonMaterial(hs),
+            outline: true,
+            outlineColor: clr,
+            outlineWidth: outlineWidth(hs),
+            distanceDisplayCondition: config.goesr.boundsDC,
+            height: 0
+                //zIndex: 1
+        },
+    });
+
+    e._hotspot = hs;
+    return e;
+}
+
+function color(hs) {
+    let mask = hs.mask;
+    if (isGoodPixel(mask) || ((isCloudPixel(mask) || isSaturatedPixel(mask)))) return config.goesr.goodColor;
+    else if (isProbablePixel(mask)) return config.goesr.probableColor;
+    else if (isSaturatedPixel(mask)) return config.goesr.saturatedColor;
+    else if (isCloudPixel(mask)) return config.goesr.cloudColor;
+    else return config.goesr.otherColor;
+}
+
+function polygonMaterial(hs) { // those should be translucent
+    let mask = hs.mask;
+    if (isGoodPixel(mask)) return config.goesr.goodFillColor;
+    else if (isProbablePixel(mask)) return config.goesr.probableFillColor;
+    else return config.goesr.otherFillColor;
+}
+
+function outlineColor(hs) {
+    let mask = hs.mask;
+    if (getMissingMin(hs)) {
+        return config.goesr.missingColor;
+    } else {
+        if (isGoodPixel(mask)) return config.goesr.goodOutlineColor;
+        else if (isCloudPixel(mask)) return config.goesr.cloudColor;
+        else if (isSaturatedPixel(mask)) return config.goesr.saturatedColor;
+        else if (isProbablePixel(mask)) return config.goesr.probableOutlineColor;
+        else return config.goesr.otherColor;
+    }
+}
+
+function getMissingMin(hs) {
+    let diffMin = Math.round((refDate - hs.date) / 60000); // diff in minutes since last update 
+    return (diffMin < 5) ? 0 : Math.round(diffMin / 5) * 5; // report in 5min steps (update interval)
+}
+
+function outlineWidth(hs) {
+    if (isGoodPixel(hs.mask)) return config.goesr.strongOutlineWidth; // make this more prominent
+    else return config.goesr.outlineWidth;
+}
+
+function polygon (hs) {
+    let vertices = hs.bounds.map(p => new Cesium.Cartesian3.fromDegrees(p[1], p[0]));
+    return new Cesium.PolygonHierarchy(vertices);
+}
+
+function getHotspotHistory (hs) {
+    let center = hs.center;
+    let hist = [];
+    dataSets.forEach( ds=> {
+        if (ds.sat.satId == hs.satId && ds.date <= hs.date) {
+            ds.hotspots.forEach( h=> {
+                if (h.center == center) hist.push(h);
+            })
+        }
+    });
+    return hist;
+}
+
+ui.exportToMain(function toggleGoesrLatestOnly(event) {
+    let cb = ui.getCheckBox(event.target);
+    if (cb) {
+        latestOnly = ui.isCheckBoxSelected(cb);
+        updateHotspots();
+    }
+});
+
 function goesrSelection() {
     let sel = uiCesium.getSelectedEntity();
-    if (sel && sel._uiGoesrEntry) {
-        let he = sel._uiGoesrEntry;
-        if (selectedHotspot != he) {
-            ui.setSelectedListItem(hotspotView, he);
+    if (sel && sel._hotspot) {
+        let hs = sel._hotspot;
+        if (selectedHotspot != hs) {
+            ui.setSelectedListItem(hotspotView, hs);
         }
     }
 }
 
-function setPixelLevel(newLevel) {
-    let eid = "goesr." + newLevel;
-    let e = ui.getRadio(eid);
-    if (e) {
-        ui.selectRadio(e);
-        pixelLevel = newLevel;
-        updateHotspotList();
-    }
-}
-
-function setLatestOnly(cond) {
-    latestOnly = cond;
-
-    let eid = "goesr.latest";
-    let e = ui.getCheckBox(eid);
-    if (e) {
-        ui.setCheckBox(e, latestOnly);
-    }
-
-    updateHotspotList();
-}
+//--- data messages
 
 function handleWsGoesrMessages(msgType, msg) {
     switch (msgType) {
         case "goesrSatellites":
             handleGoesrSatellites(msg.goesrSatellites);
             return true;
-        case "goesrHotspots":
-            handleGoesrHotspots(msg.goesrHotspots);
+        case "goesrDataSet":
+            handleGoesrDataSet(msg.goesrDataSet);
             return true;
         default:
             return false;
@@ -293,82 +390,49 @@ function handleWsGoesrMessages(msgType, msg) {
 }
 
 function handleGoesrSatellites(goesrSatellites) {
-    satelliteEntries = goesrSatellites.map(s => new SatelliteEntry(s));
-    ui.setListItems(satelliteView, satelliteEntries);
-}
-
-function handleGoesrHotspots(goesrHotspots) {
-    goesrHotspots.forEach(hs => {
-        let e = satelliteEntries.find(se => hs.satId === se.sat.satId);
-        if (e) { // a satellite we know about
-            e.setStats(hs);
-            e.hotspotEntries = hs.hotspots.map(h => new HotspotEntry(hs.satId, e.sat.name, hs.date, h));
-            ui.updateListItem(satelliteView, e);
-        }
+    satellites = goesrSatellites;
+    var idx = 0;
+    satellites.forEach( sat=> {
+        ui.setCheckBox("goesr." + sat.name, sat.show);
+        satNames[sat.satId] = sat.name;
+        sat.satIdx = idx++;
+        sat.dataSource = new Cesium.CustomDataSource("goesr-" + sat.name);
+        uiCesium.addDataSource(sat.dataSource);
     });
-    updateHotspotList();
 }
 
-function filterPixelLevel(he) {
-    return (pixelLevel == "all" ||
-        (pixelLevel == "good" && he.isGoodPixel()) ||
-        (pixelLevel == "probable" && he.isProbablePixel()));
-}
+function handleGoesrDataSet (dataSet) {
+    dataSet.sat = getSatelliteWithId(dataSet.satId);
+    if (dataSet.sat) {
+        dataSets.unshift(dataSet); // not very efficient during large history init
+        ui.setListItems(dataSetView, dataSets); 
 
-function updateHotspotList() {
-    // TODO - we should make an attempt to keep selections
-
-    let lastSel = selectedHotspot;
-    let a = [];
-    satelliteEntries.forEach(se => {
-        if (se.show && se.hotspotEntries) {
-            se.hotspotEntries.forEach(he => {
-                if (!latestOnly || he.date == se.date) {
-                    if (filterPixelLevel(he)) {
-                        a.push(he);
-                    }
-                }
-            });
-        }
-    });
-    a.sort(sortHotspots);
-
-    hotspots = a;
-    selectedHotspot = null;
-
-    ui.setListItems(hotspotView, hotspots);
-    ui.setListItems(historyView, null);
-    ui.setLabelText(maskLabel, null);
-
-    goesrDataSource.entities.removeAll();
-    hotspots.forEach(he => {
-        he.addAssets(goesrDataSource);
-        if (lastSel && lastSel.id == he.id) {
-            selectedHotspot = he;
-            ui.setSelectedListItem(hotspotView, he);
-        }
-    });
-
-    uiCesium.requestRender();
-}
-
-// approximation of a cluster function 
-function sortHotspots(a, b) {
-    let x = a.hotspot.lat + a.hotspot.lon;
-    let y = b.hotspot.lat + b.hotspot.lon;
-    return (x < y) ? -1 : 1;
-}
-
-function toggleShowSatellite(event) {
-    let cb = ui.getCheckBox(event.target);
-    if (cb) {
-        let se = ui.getListItemOfElement(cb);
-        if (se) {
-            se.show = ui.isCheckBoxSelected(cb);
-            updateHotspotList();
+        let now = ui.getClockEpochMillis("time.utc");
+        if (followLatest && Math.abs(now - dataSet.date) < 30000) {
+            ui.selectFirstListItem(dataSetView);
         }
     }
 }
+
+
+
+function filterPixel(hs) {
+    return (pixelLevel == "all" ||
+        (pixelLevel == "high" && isHighPixel(hs.mask)) ||
+        (pixelLevel == "probable" && isProbablePixel(hs.mask)));
+}
+
+ui.exportToMain(function toggleShowSatellite(event) {
+    let cb = ui.getCheckBox(event.target);
+    if (cb) {
+        let satName = ui.getCheckBoxLabel(cb);
+        let se = ui.getListItemOfElement(cb);
+        if (se) {
+            se.show = ui.isCheckBoxSelected(cb);
+            updateHotspots();
+        }
+    }
+});
 
 function showGoesr(cond) {
     // we don't want to change the hotspotEntry show, just make the assets disappear
@@ -376,47 +440,25 @@ function showGoesr(cond) {
     uiCesium.requestRender();
 }
 
-ui.exportToMain(function selectGoesrSatellite(event) {});
-
-ui.exportToMain(function setGoesrGoodPixels(event) {
-    pixelLevel = "good";
-    updateHotspotList();
-});
-
-ui.exportToMain(function setGoesrProbablePixels(event) {
-    pixelLevel = "probable";
-    updateHotspotList();
-});
-
-ui.exportToMain(function setGoesrAllPixels(event) {
-    pixelLevel = "all";
-    updateHotspotList();
-});
-
-ui.exportToMain(function toggleGoesrLatestPixelsOnly(event) {
-    let cb = ui.getCheckBox(event.target);
-    if (cb) {
-        latestOnly = ui.isCheckBoxSelected(cb);
-        updateHotspotList();
-    }
+ui.exportToMain(function setGoesrPixelLevel(event) {
+    pixelLevel = ui.getRadioLabel(event.target);  // high, probable, all
+    clearEntities();
+    updateHotspots();
 });
 
 ui.exportToMain(function selectGoesrHotspot(event) {
-    let he = event.detail.curSelection;
-    if (he) {
-        selectedHotspot = he;
-        uiCesium.setSelectedEntity(he.asset);
-        ui.setListItems(historyView, he.hotspot.history);
-        ui.setLabelText(maskLabel, null);
+    let hs = event.detail.curSelection;
+    if (hs) {
+        ui.setListItems(historyView, getHotspotHistory(hs));
+    } else {
+        ui.clearList(historyView);
     }
-    uiCesium.requestRender();
+    ui.setLabelText(maskLabel, null);
 });
 
 ui.exportToMain(function selectGoesrHistory(event) {
-    if (selectedHotspot) {
-        let h = event.detail.curSelection;
-        ui.setLabelText(maskLabel, h ? getMaskDescription(h.mask) : null);
-    }
+    let hs = event.detail.curSelection;
+    ui.setLabelText(maskLabel, hs ? getMaskDescription(hs.mask) : null);
 });
 
 function getMaskDescription(mask) {
@@ -427,10 +469,22 @@ function getMaskDescription(mask) {
 ui.exportToMain(function zoomToGoesrHotspot(event) {
     let lv = ui.getList(event);
     if (lv) {
-        let he = ui.getSelectedListItem(lv);
-        if (he) {
-            let h = he.hotspot.history[0];
-            uiCesium.zoomTo(Cesium.Cartesian3.fromDegrees(h.lon, h.lat, config.goesr.zoomHeight));
+        let hs = ui.getSelectedListItem(lv);
+        if (hs) {
+            uiCesium.zoomTo(Cesium.Cartesian3.fromDegrees(hs.lon, hs.lat, config.goesr.zoomHeight));
         }
+    }
+});
+
+ui.exportToMain(function setGoesrMaxMissing(event) {
+});
+
+ui.exportToMain(function setGoesrPointSize(event) {
+});
+
+ui.exportToMain(function toggleGoesrFollowLatest(event) {
+    followLatest = ui.isCheckBoxSelected(event.target);
+    if (followLatest && ui.getSelectedListItemIndex(dataSetView) != 0) {
+        ui.selectFirstListItem(dataSetView);
     }
 });

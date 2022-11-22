@@ -37,6 +37,8 @@ object Time {
   final val MillisInHour: Long = MillisInMinute * 60
   final val MillisInDay: Long = MillisInHour * 24
 
+  final val DayDuration = new Time(MillisInDay)
+
   //--- unit constructors
   @inline def Milliseconds(l: Long): Time = new Time(l)
   @inline def Milliseconds(d: Double): Time = new Time(d.round)

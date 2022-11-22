@@ -212,7 +212,10 @@ class TleImportActor (val config: Config) extends SubscribingRaceActor with Http
             if (lines.length == 3) {
               self ! DataResponse(req, resp, TLE( Some(lines(0)), lines(1), lines(2))) // get back into the actor thread
 
-            } else warning(s"ignore invalid 3LE data format for ${req.satId}: $lines")
+            } else {
+              warning(s"ignore invalid 3LE data format for ${req.satId}")
+              lines.foreach(println)
+            }
           case Failure(x) => warning(s"failed to retrieve data for ${req.satId}")
         }
       case Failure(x) => warning(s"failed to obtain TLE for ${req.satId}")

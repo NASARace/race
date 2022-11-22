@@ -49,8 +49,9 @@ import scala.language.postfixOps
   * A Replayer is a potential ClockAdjuster, i.e. if enabled the global sim clock can be reset to the first
   * message time encountered. The user has to make sure there is no force-fight in the configuration of several ReplayActors
   */
-trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
-                                with FilteringPublisher with Counter with ClockAdjuster {
+trait Replayer extends ContinuousTimeRaceActor with FilteringPublisher with Counter with ClockAdjuster {
+  type R <: ArchiveReader // make this a type member so that concrete Replayers can use inner classes
+
   case class Replay (msg: Any, date: DateTime)
   case object ScheduleNext
 
@@ -64,14 +65,14 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
 
   val flatten: Boolean = config.getBooleanOrElse("flatten", false) // do we publish collection results separately
 
-  val reader: T = createReader
+  val reader: R = createReader
   var noMoreData = !reader.hasMoreArchivedData
 
   var isFirst = true // we haven't scheduled or replayed anything yet
   val pendingMsgs = new ListBuffer[Replay]  // replay messages received in stopped state  that have to be re-scheduled
   var nScheduled = 0
 
-  def createReader: T  // to be provided by concrete type
+  def createReader: R  // to be provided by concrete type
 
   if (noMoreData) {
     warning(s"no data for ${reader.pathName}")
@@ -175,9 +176,13 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
     noMoreData = true
   }
 
-  @tailrec final def scheduleFirst (skipped: Int): Boolean = {
+  // override if we need to initialize the reader before calling readNextEntry()
+  protected def readNextEntry(): Option[ArchiveEntry] = {
+    reader.readNextEntry()
+  }
 
-    reader.readNextEntry() match {
+  @tailrec final def scheduleFirst (skipped: Int): Boolean = {
+    readNextEntry() match {
       case Some(e) =>
         val date = e.date
         val msg = e.msg
@@ -227,7 +232,7 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
   // this should only be called after publishing the previous entry to guarantee that we process entries in order
   @tailrec final def scheduleNext (skipped: Int=0): Unit = {
     if (!noMoreData) {
-      reader.readNextEntry() match {
+      readNextEntry() match {
         case Some(e) =>
           val date = e.date
           val msg = e.msg
@@ -272,6 +277,7 @@ trait Replayer [T <: ArchiveReader] extends ContinuousTimeRaceActor
 /**
   * generic Replayer that gets configured with an ArchiveReader
   */
-class ReplayActor (val config: Config) extends Replayer[ArchiveReader] {
+class ReplayActor (val config: Config) extends Replayer {
+  type R = ArchiveReader
   override def createReader: ArchiveReader = getConfigurable[ArchiveReader]("reader") // note 2.12.3 can't infer type arg
 }

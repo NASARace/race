@@ -22,8 +22,8 @@ import gov.nasa.race.air.translator.ItwsMsgParser
 import gov.nasa.race.archive.{ArchiveReader, ConfiguredTAReader}
 import gov.nasa.race.core.AccumulatingTopicIdProvider
 
-class ItwsReplayActor (val config: Config) extends Replayer[ArchiveReader]
-                                                  with AccumulatingTopicIdProvider with ItwsTopicMapper {
+class ItwsReplayActor (val config: Config) extends Replayer with AccumulatingTopicIdProvider with ItwsTopicMapper {
+  type R = ArchiveReader
 
   class FilteringItwsMsgParser extends ItwsMsgParser {
     override def filterProduct(prodId: String): Boolean = !matchesAnyServedTopicId(prodId)

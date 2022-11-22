@@ -50,7 +50,7 @@ object CesiumHotspotRoute {
     HotspotTimeStep( 36, "#ad000066")
   )
 
-  val defaultTempThreshold = TempThreshold(310,"#ffff00")
+  val defaultTempThreshold = BrightThreshold(310,"#ffff00")
   val defaultFrpThreshold = FrpThreshold(10, "#000000")
 }
 import CesiumHotspotRoute._
@@ -73,7 +73,7 @@ trait CesiumHotspotRoute extends CesiumRoute with PushWSRaceRoute with Continuou
 
   private val timeSteps = getHotspotTimeSteps()
   private val tempThreshold = config.getOptionalConfig("hotspot.temp").map { c =>
-    TempThreshold( c.getInt("threshold"), c.getString("color"))
+    BrightThreshold( c.getInt("threshold"), c.getString("color"))
   }.getOrElse(defaultTempThreshold)
   private val frpThreshold = config.getOptionalConfig("hotspot.frp").map { c=>
     FrpThreshold( c.getInt("threshold"), c.getString("color"))

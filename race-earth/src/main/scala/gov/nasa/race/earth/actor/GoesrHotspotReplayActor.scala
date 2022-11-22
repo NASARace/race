@@ -18,12 +18,26 @@ package gov.nasa.race.earth.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.Replayer
-import gov.nasa.race.earth.{GpsPos, GpsPosArchiveReader}
+import gov.nasa.race.archive.ArchiveEntry
+import gov.nasa.race.config.ConfigUtils.ConfigWrapper
+import gov.nasa.race.earth.GoesrHotspotArchiveReader
+import gov.nasa.race.uom.Time
+import gov.nasa.race.uom.Time.Seconds
+
+import scala.concurrent.duration.DurationInt
 
 /**
-  * actor to replay archived GpsPos messages
-  */
-class GpsPosReplayActor (val config: Config) extends Replayer {
-  type R = GpsPosArchiveReader
-  override def createReader = new GpsPosArchiveReader(config)
+ * replay actor for GOES-R CVS archives
+ */
+class GoesrHotspotReplayActor (val config: Config) extends Replayer {
+  type R = GoesrHotspotArchiveReader
+
+  override def createReader = new GoesrHotspotArchiveReader(config)
+
+  // how far we reach back for the first entry
+  val hotspotHistory: Time = Seconds(config.getFiniteDurationOrElse("history", 3.days).toSeconds)
+
+  override protected def skipEntry (e: ArchiveEntry): Boolean = {
+    e.date < baseSimTime - hotspotHistory
+  }
 }

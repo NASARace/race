@@ -23,25 +23,30 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
+import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.JsonProducer
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{BusEvent, ParentActor, RaceDataClient}
-import gov.nasa.race.earth.GoesRHotspot.{N_GOOD, N_PROBABLE, N_TOTAL}
+import gov.nasa.race.earth.GoesrHotspot.{N_GOOD, N_PROBABLE, N_TOTAL}
 import gov.nasa.race.earth.Hotspot._
-import gov.nasa.race.earth.{GoesRHotspot, GoesRHotspots, HotspotMap}
-import gov.nasa.race.http.{DocumentRoute, PushWSRaceRoute, WSContext}
+import gov.nasa.race.earth.{GoesrHotspot, GoesrHotspots, HotspotMap}
+import gov.nasa.race.http.{ContinuousTimeRaceRoute, DocumentRoute, PushWSRaceRoute, WSContext}
 import gov.nasa.race.space.SatelliteInfo
 import gov.nasa.race.ui._
+import gov.nasa.race.uom.Time
 import gov.nasa.race.uom.Time._
 import scalatags.Text
 
 import java.net.InetSocketAddress
+import scala.collection.immutable.{ArraySeq, Queue}
 import scala.collection.mutable
 import scala.concurrent.duration.DurationInt
 
 object CesiumGoesrRoute {
   val jsModule = "ui_cesium_goesr.js"
   val icon = "geo-sat-icon.svg"
+
+  val GOESR_DATASET = asc("goesrDataSet")
 }
 import gov.nasa.race.cesium.CesiumGoesrRoute._
 
@@ -49,21 +54,14 @@ import gov.nasa.race.cesium.CesiumGoesrRoute._
   * a Cesium RaceRouteInfo that uses a collection of geostationary and polar-orbiter satellites to detect
   * fire hotspots
   */
-trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with RaceDataClient with JsonProducer {
+trait CesiumGoesrRoute extends CesiumRoute with ContinuousTimeRaceRoute with PushWSRaceRoute with RaceDataClient with JsonProducer {
 
   val goesrSatellites = config.getConfigArray("goes-r.satellites").map(c=> new SatelliteInfo(c))
   val goesrAssets = getSymbolicAssetMap("goesr.assets", config, Seq(("fire","fire.png")))
 
-  //--- the (gridded) data we send
-
-  val goesrHotspots = mutable.Map.empty[Int, HotspotMap[GoesRHotspot]] // satId -> HotspotMap
-
-  def createHotspotMap = new HotspotMap[GoesRHotspot](
-    config.getIntOrElse("goes-r.decimals", 4),   // 4 decimals are <10m apart
-    config.getIntOrElse("goes-r.max-history", 20),
-    Milliseconds( config.getFiniteDurationOrElse("goes-r.max-age", 3.hours).toMillis),
-    Milliseconds(config.getFiniteDurationOrElse("goes-r.max-missing", 1.hour).toMillis)
-  )
+  // our data
+  private var hotspots = Queue.empty[GoesrHotspots]
+  private val maxHistory = Time.fromFiniteDuration( config.getFiniteDurationOrElse("max-history", 7.days))
 
   //--- route
 
@@ -91,7 +89,9 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with RaceDataCli
   def initializeGoesrConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
     synchronized {
       pushTo( ctx.remoteAddress, queue, TextMessage.Strict( serializeGoesrSatellites))
-      pushTo( ctx.remoteAddress, queue, TextMessage.Strict( serializeHotspots(true)))
+      hotspots.foreach { hs =>
+        pushTo(ctx.remoteAddress, queue, TextMessage.Strict(serializeGoesrHotspots(hs)))
+      }
     }
   }
 
@@ -105,68 +105,20 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with RaceDataCli
     }
   }
 
+  def serializeGoesrHotspots (hs: GoesrHotspots): String = {
+    toNewJson { w=>
+      w.writeObject(_.writeObjectMember(GOESR_DATASET)(hs.serializeMembersTo))
+    }
+  }
+
   // notification from bus actor that we have new data
   override def receiveData: Receive = receiveGoesrData.orElse(super.receiveData)
 
   def receiveGoesrData: Receive = {
-    case BusEvent(channel,hs:GoesRHotspots,sender) =>
-      if (hs.nonEmpty) {
-        synchronized {
-          purgeOldHotspots() // do this on the fly to minimize number of pushed messages
-          hs.foreach( h => goesrHotspots.getOrElseUpdate(h.satId,createHotspotMap).updateWith(h))
-          pushChangedHotspots()
-        }
-      }
-  }
-
-  def pushChangedHotspots(): Unit = {
-    val msg = serializeHotspots(false)
-    if (msg.nonEmpty) push(TextMessage.Strict(msg))
-    goesrHotspots.foreach(e=> e._2.resetChanged())
-  }
-
-  def purgeOldHotspots(): Boolean = {
-    val now = dateTime
-    var changed = false
-    goesrHotspots.foreach { e=>
-      val hs = e._2
-      changed |= hs.purgeOldHotspots(now)
-    }
-    changed
-  }
-
-  def serializeHotspots (serializeAll: Boolean): String = {
-    toNewJson { w=>
-      w.writeObject { w =>
-        w.writeArrayMember("goesrHotspots") { w =>
-          goesrHotspots.foreach { e =>
-            val satId = e._1
-            val hs = e._2
-
-            if (serializeAll || hs.hasChanged) {
-              w.writeObject { w => // per satellite
-                w.writeIntMember(SAT_ID, satId)
-                w.writeDateTimeMember(DATE, hs.getLastDate)
-                w.writeIntMember(N_TOTAL, hs.getLastUpdateCount)
-                w.writeIntMember(N_GOOD, hs.getLastGoodCount)
-                w.writeIntMember(N_PROBABLE, hs.getLastProbableCount)
-                w.writeArrayMember(HOTSPOTS) { w =>
-                  hs.foreachLatLon { (latDeg, lonDeg, hs) =>
-                    w.writeObject { w =>
-                      w.writeDoubleMember(LAT, latDeg) // those are rounded
-                      w.writeDoubleMember(LON, lonDeg)
-                      w.writeArrayMember(HISTORY) { w =>
-                        hs.foreach(_.serializeTo(w))
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+    case BusEvent(channel,hs:GoesrHotspots,sender) =>
+      val cutOff = simClock.dateTime - maxHistory
+      hotspots = hotspots.dropWhile( e=> e.date < cutOff).enqueue(hs)
+      push( TextMessage.Strict(serializeGoesrHotspots(hs)))
   }
 
   //--- document content
@@ -186,22 +138,31 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with RaceDataCli
   def uiGoesrWindow(title: String="GOES-R Satellites"): Text.TypedTag[String] = {
     uiWindow(title,"goesr", icon)(
       cesiumLayerPanel("goesr", "main.toggleShowGoesr(event)"),
-      uiPanel("satellites", true)(
-        uiList("goesr.satellites", 3, "main.selectGoesrSatellite(event)")
+      uiPanel("data sets", true)(
+        uiRowContainer()(
+          goesrSatellites.map( sat=> uiCheckBox( sat.name, "main.toggleGoesrShowSatellite(event)", s"goesr.${sat.name}")).foldLeft(
+            Seq( uiCheckBox("follow latest", "main.toggleGoesrFollowLatest(event)", "goesr.followLatest"))
+          )( (acc,e)=> e +: acc).reverse:_*
+        ),
+        uiList("goesr.dataSets", 6, "main.selectGoesrDataSet(event)"),
+        uiListControls("goesr.dataSets")
       ),
       uiPanel("hotspots", true)(
-        uiList("goesr.hotspots", maxRows=10, selectAction = "main.selectGoesrHotspot(event)", dblClickAction = "main.zoomToGoesrHotspot(event)"),
+        uiList("goesr.hotspots", maxRows=8, selectAction = "main.selectGoesrHotspot(event)", dblClickAction = "main.zoomToGoesrHotspot(event)"),
         uiRowContainer()(
-          uiRadio("good", "main.setGoesrGoodPixels(event)", "goesr.good"),
-          uiRadio("probable", "main.setGoesrProbablePixels(event)", "goesr.probable"),
-          uiRadio( "all", "main.setGoesrAllPixels(event)", "goesr.all"),
-          uiHorizontalSpacer(2),
-          uiCheckBox("latest only", "main.toggleGoesrLatestPixelsOnly(event)", "goesr.latest")
+          uiRadio("high", "main.setGoesrPixelLevel(event)", "goesr.level.high"),
+          uiRadio("probable", "main.setGoesrPixelLevel(event)", "goesr.level.probable"),
+          uiRadio( "all", "main.setGoesrPixelLevel(event)", "goesr.level.all"),
+          uiCheckBox("latest only", "main.toggleGoesrLatestOnly(event)", "goesr.latestOnly")
         )
       ),
       uiPanel("hotspot history", true)(
-        uiList("goesr.history", 10, selectAction = "main.selectGoesrHistory(event)"),
+        uiList("goesr.history", 8, selectAction = "main.selectGoesrHistory(event)"),
         uiLabel("goesr.mask")
+      ),
+      uiPanel("layer parameters", false)(
+        uiSlider("max missing [min]", "goesr.maxMissing", "main.setGoesrMaxMissing(event)"),
+        uiSlider("size [pix]", "goesr.pointSize", "main.setGoesrPointSize(event)")
       )
     )
   }
@@ -214,6 +175,7 @@ trait CesiumGoesrRoute extends CesiumRoute with PushWSRaceRoute with RaceDataCli
     val cfg = config.getConfig("goes-r")
     s"""export const goesr = {
   ${cesiumLayerConfig(cfg, "/fire/detection/GOES-R", "GOES-R ABI Fire / Hotspot Characterization")},
+  maxMissingMin: ${cfg.getFiniteDurationOrElse("max-missing", 15.minutes).toMinutes},
   pixelLevel: '${cfg.getStringOrElse("pixel-level", "all")}',
   latestOnly: ${cfg.getBooleanOrElse("latest-only", true)},
   pointSize: ${cfg.getIntOrElse("point-size", 6)},

@@ -98,7 +98,8 @@ class SBSReader (val iStream: InputStream, val pathName: String="<unknown>", buf
 /**
   * specialized ReplayActor for SBS text archives
   */
-class SbsReplayActor(val config: Config) extends Replayer[SBSReader] with PeriodicRaceActor with SbsImporter {
+class SbsReplayActor(val config: Config) extends Replayer with PeriodicRaceActor with SbsImporter {
+  type R = SBSReader
 
   class DropCheckSBSReader (conf: Config) extends SBSReader(config) {
     override def dropTrack (id: String, cs: String, date: DateTime, inactive: Time): Unit = {

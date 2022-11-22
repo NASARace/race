@@ -51,7 +51,7 @@ object CesiumJpssRoute {
     HotspotTimeStep( 36, "#ad000066")
   )
 
-  val defaultTempThreshold = TempThreshold(310,"#ffff00")
+  val defaultTempThreshold = BrightThreshold(310,"#ffff00")
   val defaultFrpThreshold = FrpThreshold(10, "#000000")
 
   val jsModule = "ui_cesium_jpss.js"
@@ -116,16 +116,15 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
         uiRowContainer()(
           uiList("jpss.satellites", 4, "main.selectJpssSatellite(event)"),
           uiCheckBox("show region", "main.toggleJpssShowRegion(event)")
-        )
-      ),
-      uiPanel( "area")(
+        ),
         uiRowContainer()(
           uiColumnContainer()(
-            uiTextInput("bounds","jpss.bounds", "main.setJpssArea(event)", "enter lat,lon bounds (WSEN order)", width="20rem"),
+            uiTextInput("area","jpss.bounds", "main.setJpssBounds(event)", "enter lat,lon bounds (WSEN order)", width="20rem"),
             uiLabel("jpss.bounds-info")
           ),
-          uiButton("pick", "main.pickJpssArea()"),
-          uiButton("clear", "main.clearJpssArea()")
+          uiButton("pick", "main.pickJpssBounds()"),
+          uiButton("clear", "main.clearJpssBounds()"),
+          uiButton( "zoom", "main.zoomToJpssBounds()")
         )
       ),
       uiPanel("overpasses:")(
@@ -137,11 +136,7 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
         uiRowContainer()(
           uiCheckBox("show history", "main.toggleJpssShowPastHistory(event)", "jpss.show_history"),
           uiHorizontalSpacer(2),
-          uiButton("⊼", "main.latestJpssPastTime()"),
-          uiButton("⋀︎", "main.laterJpssPastTime()"),
-          uiButton("⋁︎", "main.earlierJpssPastTime()"),
-          uiButton("⊻", "main.earliestJpssPastTime()"),
-          uiButton("clear", "main.clearJpssHotspots()")
+          uiListControls("jpss.past")
         )
       ),
       uiPanel("hotspots", false)(
@@ -151,11 +146,12 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
         uiRowContainer()(
           uiColumnContainer("align_right")(
             uiSlider("history [d]", "jpss.history", "main.setJpssHistory(event)"),
-            uiSlider("temp [K]", "jpss.temp", "main.setJpssTempThreshold(event)"),
-            uiSlider("FRP [MW]", "jpss.frp", "main.setJpssFrpThreshold(event)")
+            uiSlider("bright [K]", "jpss.bright", "main.setJpssBrightThreshold(event)"),
+            uiSlider("frp [MW]", "jpss.frp", "main.setJpssFrpThreshold(event)")
           ),
           uiColumnContainer("align_right")(
             uiSlider("size [pix]", "jpss.pixsize", "main.setJpssPixelSize(event)"),
+            uiSlider("outline [pix]", "jpss.outline", "main.setJpssOutlineWidth(event)"),
             uiSlider("grid [°]", "jpss.resolution", "main.setJpssResolution(event)")
           )
         )
@@ -172,24 +168,32 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
     val latLonResolution = cfg.getDoubleOrElse("grid-resolution", 0.0) // 0.0001 is about 10m in conus
     val pixelSize = cfg.getIntOrElse("pixel-size", 3)
     val timeSteps = getHotspotTimeSteps(cfg)
-    val tempThreshold = getTempThreshold(cfg)
+    val brightThreshold = getBrightThreshold(cfg)
     val frpThreshold = getFrpThreshold(cfg)
+
+    // TODO - add frpScale: new Cesium.Cesium.NearFarScalar(nearDist, nearScaleValue, farDist, farScaleValue)
 
     s"""export const jpss = {
   ${cesiumLayerConfig(cfg, "/fire/tracking/JPSS", "active fire detection using polar orbiting satellites")},
   history: ${hotspotMaxAge.toHours/24},
   timeSteps: ${StringUtils.mkString(timeSteps,"[\n    ", ",\n    ", "  ]")(_.toConfigString())},
-  temp: ${tempThreshold.toConfigString()},
+  bright: ${brightThreshold.toConfigString()},
   frp: ${frpThreshold.toConfigString()},
   pixelSize: $pixelSize,
-  resolution: $latLonResolution
+  outlineWidth: ${cfg.getIntOrElse("outline-width", 1)},
+  resolution: $latLonResolution,
+  swathColor: ${cesiumColor(cfg, "swath-color", "#ff000040")},
+  trackColor: ${cesiumColor(cfg, "track-color", "#ff0000ff")},
+  labelColor: ${cesiumColor(cfg, "label-color", "#ffff00ff")},
+  font: '${cfg.getStringOrElse("font", "bold 14px monospace")}',
+  swathDC: new Cesium.DistanceDisplayCondition( ${cfg.getIntOrElse("swath-dist", 150000)}, Number.MAX_VALUE)
 };
 """
   }
 
-  def getTempThreshold (conf: Config): TempThreshold = {
-    conf.getOptionalConfig("temp").map { c =>
-      TempThreshold( c.getInt("threshold"), c.getString("color"))
+  def getBrightThreshold(conf: Config): BrightThreshold = {
+    conf.getOptionalConfig("bright").map { c =>
+      BrightThreshold( c.getInt("threshold"), c.getString("color"))
     }.getOrElse(defaultTempThreshold)
   }
 

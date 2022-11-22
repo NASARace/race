@@ -389,6 +389,12 @@ export function toLocalMDHMString(d) {
     } else return "-";
 }
 
+export function toLocalMDHMSString(d) {
+    if (d) {
+        return defaultLocalMDDateFormat.format(d) + " " + defaultLocalTimeFormat.format(d);
+    } else return "-";
+}
+
 export function isUndefinedDateTime(d) {
     return d == Number.MIN_SAFE_INTEGER;
 }
@@ -533,4 +539,16 @@ export function haveEqualElements (array1, array2) {
 
 export function mkString(array, sep) {
     return array.reduce( (acc,e) =>  (acc.length == 0) ? e.toString() : acc + sep + e.toString(), "");
+}
+
+export function filterIterator(it,f) {
+    let matching = [];
+    it.forEach( e=> {
+        if (f(e)) matching.push(e);
+    });
+    return matching;
+}
+
+export function isWithin(x,lower,upper) {
+    return (x >= lower) && (x <=upper);
 }

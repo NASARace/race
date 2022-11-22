@@ -160,6 +160,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
     if (i0 + maxLen < limit) s = s + "..."
     s
   }
+
   def remainingDataAsString: String = new String(data,idx,limit-idx)
 
   def getLastResult: JsonParseResult = lastResult
@@ -1005,6 +1006,12 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   }
 
   @inline def skipToEndOfCurrentLevel() = skipToEndOfLevel(env.size)
+
+  def readTextOfCurrentLevel(): String = {
+    val i0 = idx
+    skipToEndOfCurrentLevel()
+    new String(data, i0, idx-i0)
+  }
 
   @inline def skipToEndOfParentLevel(): Unit = {
     if (level > 0) skipToEndOfLevel(level-1) else skipToEndOfLevel(level)

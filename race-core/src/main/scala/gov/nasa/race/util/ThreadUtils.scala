@@ -60,6 +60,8 @@ object ThreadUtils {
     }
   }
 
+  def yieldExecution(): Unit = Thread.`yield`()
+
   def sleep(duration: FiniteDuration) = Thread.sleep(duration.toMillis)
 
   def sleepInterruptible (duration: FiniteDuration): Unit = {

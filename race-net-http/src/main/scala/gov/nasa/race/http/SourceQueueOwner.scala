@@ -34,7 +34,7 @@ trait SourceQueueOwner[T] {
   val config: Config
   implicit val materializer: Materializer
 
-  val srcBufSize = config.getIntOrElse("source-queue", 256)
+  val srcBufSize = config.getIntOrElse("source-queue", 4096) // we can get quite a lot of initial messages during connects
 
   val srcPolicy = config.getStringOrElse( "source-policy", "fail") match {
     case "dropHead" => OverflowStrategy.dropHead

@@ -9,10 +9,10 @@ var satelliteView = undefined;
 var selSat = undefined;
 var selSatOnly = false;
 
-var upcoming = [];  // upcoming overpasses
+var upcoming = [];  // upcoming overpasses (sorted in ascending time, earliest on top)
 var upcomingView = undefined;
 
-var pastEntries = [];  // past overpass data
+var pastEntries = [];  // past overpass data (sorted in descending time, latest on top)
 var displayPastEntries = [];  // the pastEntries shown
 var pastView = undefined;
 var selPast = undefined;
@@ -28,16 +28,19 @@ var areaInfoLabel = undefined;
 var history = 7; // in days
 var resolution = 0.0002; // lat/lon resultion to match pixel positions (in degrees)
 var pixelSize = 3;
+var outlineWidth = 1;
 var timeSteps = undefined;
-var tempThreshold = undefined;
-var tempThresholdColor = Cesium.Color.YELLOW;
+var brightThreshold = undefined;
+var brightThresholdColor = Cesium.Color.YELLOW;
 var frpThreshold = undefined;
 var frpThresholdColor = Cesium.Color.BLACK;
 var zoomHeight = 20000;
 
 // the Cesium assets to display fire pixels
-var pixelPrimitive = undefined;  // the surface footprint of fire pixels
-var tempPrimitive = undefined;   // the temp/frp points
+var hsFootprintPrimitive = undefined;  // the surface footprint of fire pixels
+var hsPointPrimitive = undefined;   // the brightness/frp points
+
+var dataSource = undefined; // for areas etc
 
 var utcClock = undefined;
 var now = 0;
@@ -111,6 +114,9 @@ ui.registerLoadFunction(function initialize() {
     pastView = initPastView();
     hotspotView = initHotspotView();
 
+    dataSource = new Cesium.CustomDataSource("jpss");
+    uiCesium.addDataSource(dataSource);
+
     areaInfoLabel = ui.getLabel("jpss.bounds-info");
     areaInfoLabel.classList.add( "align_right");
 
@@ -118,12 +124,13 @@ ui.registerLoadFunction(function initialize() {
 
     history = config.jpss.history;
     timeSteps = config.jpss.timeSteps;
-    tempThreshold = config.jpss.temp.value;
-    tempThresholdColor = config.jpss.temp.color;
+    brightThreshold = config.jpss.bright.value;
+    brightThresholdColor = config.jpss.bright.color;
     frpThreshold = config.jpss.frp.value;
     frpThresholdColor = config.jpss.frp.color;
     resolution = config.jpss.resolution;
     pixelSize = config.jpss.pixelSize;
+    outlineWidth = config.jpss.outlineWidth;
     initSliders();
 
     ui.setCheckBox("jpss.sel_sat", selSatOnly);
@@ -143,10 +150,10 @@ function initSatelliteView() {
     let view = ui.getList("jpss.satellites");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
-            { name: "", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSatellite) },
-            { name: "sat", width: "3rem", attrs: [], map: e => e.satName },
-            { name: "next", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalHMTimeString(e.next) },
-            { name: "last", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalHMTimeString(e.prev) }
+            { name: "show", tip: "show/hide satellite", width: "3rem", attrs: [], map: e => ui.createCheckBox(e.showSwath, toggleShowSatellite) },
+            { name: "sat", tip: "satellite name", width: "3rem", attrs: [], map: e => e.satName },
+            { name: "next", tip: "next upcoming overpass (local)", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.next) },
+            { name: "last", tip: "most recent overpass (local)", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.prev) }
 
         ]);
     }
@@ -157,8 +164,9 @@ function initUpcomingView() {
     let view = ui.getList("jpss.upcoming");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
-            { name: "sat", width: "3rem", attrs: [], map: e => satName(e.satId) },
-            { name: "cover", width: "3rem", attrs: ["fixed", "alignRight"], map: e => util.f_1.format(e.coverage) },
+            { name: "swt", tip: "show swath/ground track", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.swathEntity, toggleShowUpcomingSwath) },
+            { name: "sat", tip: "satellite name", width: "3rem", attrs: [], map: e => satName(e.satId) },
+            { name: "cover", tip: "coverage of region [0-1]", width: "2rem", attrs: ["fixed", "alignRight"], map: e => util.f_1.format(e.coverage) },
             { name: "next date", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.lastDate) }
         ]);
     }
@@ -169,9 +177,10 @@ function initPastView() {
     let view = ui.getList("jpss.past");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
-            { name: "sat", width: "3rem", attrs: [], map: e => satName(e.satId) },
-            { name: "urt", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nURT },
-            { name: "all", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nTotal },
+            { name: "swt", tip: "show swath/ground track", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.ops && e.ops.swathEntity, toggleShowPastSwath) },
+            { name: "sat", tip: "satellite name", width: "3rem", attrs: [], map: e => satName(e.satId) },
+            { name: "urt", tip: "number of ultra-realtime hotspots", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.nURT },
+            { name: "all", tip: "number of all hotspots", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.nTotal },
             { name: "last date", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.date) }
         ]);
     }
@@ -181,13 +190,13 @@ function initPastView() {
 function initHotspotView() {
     let view = ui.getList("jpss.hotspots");
     if (view) {
-        ui.setListItemDisplayColumns(view, ["fit"], [
-            { name: "sat", width: "3rem", attrs: [], map: e => satName(e.satId) },
-            { name: "conf", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.conf },
-            { name: "temp", width: "4rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.temp) },
-            { name: "frp", width: "4rem", attrs: ["fixed", "alignRight"], map: e => util.f_2.format(e.frp) },
-            { name: "pos", width:  "11rem", attrs: ["fixed", "alignRight"], map: e => util.formatLatLon(e.lat,e.lon,3)},
-            { name: "date", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.date) }
+        ui.setListItemDisplayColumns(view, ["fit", "header"], [
+            { name: "sat", tip: "satellite name", width: "3rem", attrs: [], map: e => satName(e.satId) },
+            { name: "conf", tip: "hotspot confidence [0:low,1:med,2:high]", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.conf },
+            { name: "bright", tip: "hotspot brightness [K]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => util.f_0.format(e.bright) },
+            { name: "frp", tip: "hotspot fire radiative power [MW]", width: "4.5rem", attrs: ["fixed", "alignRight"], map: e => util.f_2.format(e.frp) },
+            { name: "pos", tip: "position", width:  "11rem", attrs: ["fixed", "alignRight"], map: e => util.formatLatLon(e.lat,e.lon,3)},
+            { name: "date", tip: "date of scan", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.date) }
         ]);
     }
     return view;
@@ -199,19 +208,23 @@ function initSliders() {
     ui.setSliderValue(e, history);
 
     e = ui.getSlider('jpss.resolution');
-    ui.setSliderRange(e, 0.0000, 0.01, 0.0005, util.fmax_4);
+    ui.setSliderRange(e, 0.0000, 0.01, 0.0008, util.fmax_4);
     ui.setSliderValue(e, resolution);
 
     e = ui.getSlider('jpss.pixsize');
-    ui.setSliderRange(e, 3, 8, 1, util.fmax_0);
+    ui.setSliderRange(e, 0, 8, 1, util.fmax_0);
     ui.setSliderValue(e, pixelSize);
 
-    e = ui.getSlider('jpss.temp');
-    ui.setSliderRange(e, 100, 400, 10, util.fmax_0);
-    ui.setSliderValue(e, tempThreshold);
+    e = ui.getSlider('jpss.outline');
+    ui.setSliderRange(e, 0, 3, 0.5, util.fmax_1);
+    ui.setSliderValue(e, outlineWidth);
+
+    e = ui.getSlider('jpss.bright');
+    ui.setSliderRange(e, 0, 400, 25, util.fmax_0);
+    ui.setSliderValue(e, brightThreshold);
 
     e = ui.getSlider('jpss.frp');
-    ui.setSliderRange(e, 0, 200, 5, util.fmax_0);
+    ui.setSliderRange(e, 0, 300, 25, util.fmax_0);
     ui.setSliderValue(e, frpThreshold);
 }
 
@@ -229,6 +242,33 @@ function toggleShowSatellite(event) {
     }
 }
 
+function toggleShowUpcomingSwath (event) {
+    let cb = ui.getCheckBox(event.target);
+    if (cb) toggleShowSwath(ui.getListItemOfElement(cb));
+}
+
+function toggleShowPastSwath (event) {
+    let cb = ui.getCheckBox(event.target);
+    if (cb) {
+        let pe = ui.getListItemOfElement(cb);
+        if (pe && pe.ops) toggleShowSwath(pe.ops);
+    }
+}
+
+function toggleShowSwath (ops) {
+    if (ops.swathEntity) {
+        dataSource.entities.remove(ops.swathEntity)
+        ops.swathEntity = undefined;
+    } else {
+        let e = createSwathEntity(ops)
+        if (e) {
+            dataSource.entities.add( e);
+            ops.swathEntity = e;
+        }
+    }
+    uiCesium.requestRender();
+}
+
 function satEntry(satId) {
     return satelliteEntries.find( e=> e.satId == satId);
 }
@@ -243,26 +283,49 @@ function satName(satId) {
     return se ? se.satName : undefined;
 }
 
-function updateNow() {
+function updateNow() { // periodic upcoming cleanup (if we didn't get matching hotspots)
+    let timeMargin = 5000; // before we remove orphan upcomings (for which we didn't get hotspots)
     let nShift = 0;
     now = ui.getClockEpochMillis(utcClock);
 
-    while (upcoming.length > 0 && upcoming[0].lastDate < now) {
-        let past = upcoming.shift();
-        let se = satEntry(past.satId);
-        if (se) {
-            se.prev = past.lastDate;
-            let nextUpcoming = upcoming.find( ops=> se.satId == ops.satId);
-            if (nextUpcoming) {
-                se.next = nextUpcoming.lastDate;
-                ui.updateListItem(satelliteView, se);
-            }
-        }
+    while (upcoming.length > 0 && (upcoming[0].lastDate + timeMargin) < now) {
+        let head = upcoming.shift();
+        updateSatEntryNext(head);
         nShift ++;
     }
 
     if (nShift > 0) {
         updateUpcoming();
+    }
+}
+
+function updateSatEntryNext (satId) {
+    let se = satEntry(satId);
+    if (se) {
+        let nextUp = upcoming.find(e => e.satId == satId);
+        se.next = nextUp.lastDate;
+        ui.updateListItem(satelliteView, se);
+    }
+}
+
+function updateSatEntryLast (satId) {
+    let se = satEntry(satId);
+    if (se) {
+        let last = pastEntries.find( e=> e.satId == satId);
+        se.prev = last.date;
+        ui.updateListItem(satelliteView, se);
+    }
+}
+
+function linkUpcoming (pe) {
+    let i = upcoming.findIndex( e=> e.satId == pe.satId && util.isWithin(pe.date, e.firstDate, e.lastDate));
+    if (i >= 0){
+        let ops = upcoming[i];
+        pe.ops = ops;
+
+        upcoming.splice(i,1);
+        updateUpcoming();
+        updateSatEntryNext(ops.satId);
     }
 }
 
@@ -359,47 +422,33 @@ function handleRegionMessage(jpssRegion) {
 }
 
 function handleOverpassMessage(ops) {
-    //console.log("overpass: " + JSON.stringify(ops));
-    if (ops.lastDate > now) { // only interested in future overpasses
-        let idx = upcoming.findIndex( e=> e.lastDate > ops.lastDate); // earliest first order
-        if (idx < 0) {
-            upcoming.push(ops);
-        } else {
-            upcoming.splice(idx,0,ops);
-        }
-        updateUpcoming();
-
-        let se = satEntry(ops.satId);
-        if (se && !se.next || ops.lastDate < se.next) {
-            se.next = ops.lastDate;
-            ui.updateListItem(satelliteView, se);
-        }
-    }
+    upcoming.push(ops); // earliest upcoming on top
+    upcoming.sort( (a,b) => (a,b) => a.lastDate - b.lastDate);
+    updateUpcoming();
+    updateSatEntryNext(ops.satId);
 }
 
 function handleHotspotMessage(hs) {
-    let he = new PastEntry(hs);
+    let pe = new PastEntry(hs);
 
-    let idx = pastEntries.findIndex( e=> e.date < he.date);  // latest first order
-    if (idx < 0) {
-        pastEntries.push( he); // append
-    } else {
-        if ((pastEntries[idx].date == hs.date) && (pastEntries[idx].satId == hs.satId)) pastEntries[idx] = he; // replace, corrected version
-        else pastEntries.splice(idx, 0, he); // insert
+    let i = pastEntries.findIndex( e=> e.date == pe.date);  // replace ? could be any past entry
+    if (i >= 0) {
+        pastEntries[i] = pe;  // replaced (corrected) version
+    } else { // sort in
+        i = 0;
+        while (i < pastEntries.length && pastEntries[i].date > pe.date) i++;
+        pastEntries.splice(i, 0, pe); // insert
 
-        let se = satEntry(he.satId);
-        if (se && se.prev < he.date) { 
-            se.prev = he.date;
-            ui.updateListItem(satelliteView, se);
-        }
+        let pFirst = pastEntries.find( e=> e.satId == pe.satId);
+        if (pFirst === pe) updateSatEntryLast(pe.satId);
+        linkUpcoming(pe);
     }
-    // upcoming is updated by timer
+
     updatePast();
     updateHotspots();
 
-    he.setPixelGrid(resolution);
-    he.setPositions();
-    // we can't fill in terrain height yet as that would block initial globe rendering
+    pe.setPixelGrid(resolution);
+    pe.setPositions();
 }
 
 
@@ -418,14 +467,16 @@ function computeHotspotPixels() {
             let hs = e.hotspots;
             for (var j = 0; j < hs.length; j++) {
                 let pix = hs[j];
-                let k = pix.id; // computed from gridded pixel position
-                if (k) {
-                    if (!seen.has(k)) {
-                        seen.add(k);
+                if (isInArea(pix.lat,pix.lon)) {
+                    let k = pix.id; // computed from gridded pixel position
+                    if (k) {
+                        if (!seen.has(k)) {
+                            seen.add(k);
+                            pixels.push(pix);
+                        }
+                    } else { // no grid, just add pixel
                         pixels.push(pix);
                     }
-                } else { // no grid, just add pixel
-                    pixels.push(pix);
                 }
             }
         } else { // pixel too old
@@ -476,15 +527,16 @@ function createPixelAssets(pixels) {
                 geoms.push(geom);
             }
 
-            if (isLastOverpass && pix.temp >= tempThreshold) {
+            if (isLastOverpass && pix.bright >= brightThreshold) {
                 let point = {
                     position: pix.xyzPos,
                     pixelSize: pixelSize,
-                    color: tempThresholdColor
+                    color: brightThresholdColor
                 };
                 if (pix.frp >= frpThreshold) {
-                    point.outlineWidth = 1.0;
+                    point.outlineWidth = outlineWidth;
                     point.outlineColor = frpThresholdColor;
+                    // point.scaleByDistance = config.jpss.frpScale // use Cesium.NearFar(nearCameraDist,nearScale,farCameraDist,farScale)
                 }
                 points.push(point);
             }
@@ -493,7 +545,7 @@ function createPixelAssets(pixels) {
     }
 
     if (geoms.length > 0) {
-        pixelPrimitive = new Cesium.Primitive({
+        hsFootprintPrimitive = new Cesium.Primitive({
             geometryInstances: geoms,
             allowPicking: false,
             asynchronous: true,
@@ -506,15 +558,15 @@ function createPixelAssets(pixels) {
                 //renderState: { depthTest: { enabled: false, } }, // this makes it appear always on top but translucent
             }),
         });        
-        uiCesium.addPrimitive(pixelPrimitive);
+        uiCesium.addPrimitive(hsFootprintPrimitive);
     }
 
     if (points.length > 0) {
-        tempPrimitive = new Cesium.PointPrimitiveCollection({
+        hsPointPrimitive = new Cesium.PointPrimitiveCollection({
             blendOption: Cesium.BlendOption.OPAQUE
         });
-        points.forEach( p=> tempPrimitive.add(p));
-        uiCesium.addPrimitive(tempPrimitive);
+        points.forEach( p=> hsPointPrimitive.add(p));
+        uiCesium.addPrimitive(hsPointPrimitive);
     }
 
     uiCesium.requestRender();
@@ -545,27 +597,60 @@ function getPixelColor(pixel, refDate) {
     return timeSteps[timeSteps.length - 1].color; // TODO - shall we use the last as the catch-all?
 }
 
+function createSwathEntity (ops) {
+    let cfg = config.jpss;
+    let trj = ops.trajectory;
+    let pts = trj.map( tp=> Cesium.Cartesian3.fromDegrees(tp.lon, tp.lat));
+    let cp = pts[Math.round(pts.length/2)];
+    let info = `${satName(ops.satId)}\n${util.toLocalDateString(ops.lastDate)}\n${util.toLocalHMTimeString(ops.firstDate)} - ${util.toLocalHMTimeString(ops.lastDate)}`;
+
+    return new Cesium.Entity( {
+        position: cp,
+        corridor: {
+            positions: pts,
+            width: 2*ops.swath,
+            height: 1,  // Cesium BUG? without Cesium clips (part of) the interior against the ellipsoid surface 
+            cornerType: Cesium.CornerType.MITERED,
+            material: cfg.swathColor,
+            //distanceDisplayCondition: cfg.swathDC // Cesium BUG ? does not work correctly
+        },
+        polyline: {
+            positions: pts,
+            material: cfg.trackColor,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            //distanceDisplayCondition: cfg.swathDC
+        },
+        label: {
+            text: info,
+            font: cfg.font,
+            fillColor: cfg.labelColor,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            //distanceDisplayCondition: cfg.swathDC
+        }
+    });
+}
+
 function clearPrimitives() {
-    if  (pixelPrimitive || tempPrimitive){
-        if (pixelPrimitive) uiCesium.removePrimitive(pixelPrimitive);
-        pixelPrimitive = undefined;
+    if  (hsFootprintPrimitive || hsPointPrimitive){
+        if (hsFootprintPrimitive) uiCesium.removePrimitive(hsFootprintPrimitive);
+        hsFootprintPrimitive = undefined;
     
-        if (tempPrimitive) uiCesium.removePrimitive(tempPrimitive);
-        tempPrimitive = undefined;
+        if (hsPointPrimitive) uiCesium.removePrimitive(hsPointPrimitive);
+        hsPointPrimitive = undefined;
 
         uiCesium.requestRender();
     }
 }
 
 function showPrimitives(isVisible) {
-    if (tempPrimitive) tempPrimitive.show = isVisible;
-    if (pixelPrimitive) pixelPrimitive.show = isVisible;
+    if (hsPointPrimitive) hsPointPrimitive.show = isVisible;
+    if (hsFootprintPrimitive) hsFootprintPrimitive.show = isVisible;
     uiCesium.requestRender();
 }
 
 function showJpss(cond) {
-   if (tempPrimitive) tempPrimitive.show = cond;
-   if (pixelPrimitive) pixelPrimitive.show = cond;
+   if (hsPointPrimitive) hsPointPrimitive.show = cond;
+   if (hsFootprintPrimitive) hsFootprintPrimitive.show = cond;
    if (areaAsset) areaAsset.show = cond;
    uiCesium.requestRender();
 }
@@ -590,7 +675,7 @@ ui.exportToMain(function clearHotspots() {
 
 ui.exportToMain(function resetDisplayParams() {
     timeSteps = structuredClone(config.jpss.timeSteps);
-    tempThreshold = structuredClone(config.jpss.temp);
+    brightThreshold = structuredClone(config.jpss.bright);
     frpThreshold = structuredClone(config.jpss.frp);
 });
 
@@ -626,24 +711,12 @@ ui.exportToMain(function toggleShowJpssRegion(event) {
 
 ui.exportToMain(function selectJpssPast(event) {
     selPast = ui.getSelectedListItem(pastView);
-    if (selPast) showPixels(); else clearPrimitives();
+    if (selPast) {
+        showPixels();
+    } else {
+        clearPrimitives();
+    }
     updateHotspots();
-});
-
-ui.exportToMain(function earliestJpssPastTime(event) {
-    ui.selectLastListItem(pastView);
-});
-
-ui.exportToMain(function earlierJpssPastTime(event) {
-    ui.selectNextListItem(pastView);
-});
-
-ui.exportToMain(function laterJpssPastTime(event) {
-    ui.selectPrevListItem(pastView);
-});
-
-ui.exportToMain(function latestJpssPastTime(event) {
-    ui.selectFirstListItem(pastView);
 });
 
 ui.exportToMain(function clearJpssHotspots(event) {
@@ -680,41 +753,59 @@ function clearArea() {
         areaAsset = undefined;
     }
     ui.setLabelText(areaInfoLabel, null);
+    updateHotspots();
+    showPixels();
     uiCesium.requestRender();
 }
 
-ui.exportToMain(function pickJpssArea(event) {
-    clearArea();
-
-    uiCesium.pickSurfaceRectangle( rect => {
-        area = rect;
-        ui.setField("jpss.bounds", util.degreesToString([rect.west, rect.south, rect.east, rect.north], util.fmax_3));
-
-        let du = util.distanceBetweenGeoPos( rect.north,rect.west, rect.north,rect.east);
-        let dv = util.distanceBetweenGeoPos( rect.north,rect.west, rect.south,rect.west);
-        let sqAcres = util.fmax_0.format(util.squareMetersToAcres( du * dv));
-        let duMi = util.fmax_1.format(util.metersToUsMiles(du));
-        let dvMi = util.fmax_1.format(util.metersToUsMiles(dv));
-        ui.setLabelText(areaInfoLabel, `${duMi} × ${dvMi} miles, ${sqAcres} acres`);
-
-        areaAsset = new Cesium.Entity({
-            polyline: {
-                positions: uiCesium.cartesian3ArrayFromDegreesRect(rect),
-                clampToGround: true,
-                width: 1,
-                material: Cesium.Color.YELLOW
-            },
-            selectable: false
-        });
-        uiCesium.addEntity(areaAsset);
-
-        // TODO - filter overpasses
-        updateHotspots();
-    });
+ui.exportToMain(function pickJpssBounds(event) { // mouse selection
+    uiCesium.pickSurfaceRectangle( setJpssArea);
 });
 
-ui.exportToMain(function clearJpssArea(event) {
+ui.exportToMain(function setJpssBounds(event) { // text field input (WSEN)
+    // TBD
+});
+
+function setJpssArea (rect) {
     clearArea();
+
+    area = rect;
+    ui.setField("jpss.bounds", util.degreesToString([rect.west, rect.south, rect.east, rect.north], util.fmax_3));
+
+    let du = util.distanceBetweenGeoPos( rect.north,rect.west, rect.north,rect.east);
+    let dv = util.distanceBetweenGeoPos( rect.north,rect.west, rect.south,rect.west);
+    let sqAcres = util.fmax_0.format(util.squareMetersToAcres( du * dv));
+    let duMi = util.fmax_1.format(util.metersToUsMiles(du));
+    let dvMi = util.fmax_1.format(util.metersToUsMiles(dv));
+    ui.setLabelText(areaInfoLabel, `${duMi} × ${dvMi} miles, ${sqAcres} acres`);
+
+    areaAsset = new Cesium.Entity({
+        polyline: {
+            positions: uiCesium.cartesian3ArrayFromDegreesRect(rect),
+            clampToGround: true,
+            width: 1,
+            material: Cesium.Color.YELLOW
+        },
+        selectable: false
+    });
+    uiCesium.addEntity(areaAsset);
+
+    updatePast();
+    updateHotspots();
+}
+
+ui.exportToMain(function clearJpssBounds(event) {
+    clearArea();
+});
+
+ui.exportToMain(function zoomToJpssBounds(event) {
+    if (area) {
+        let lon = (area.west + area.east) / 2;
+        let lat = (area.south + area.north) / 2;
+        let cameraPos = Cesium.Cartesian3.fromDegrees(lon, lat, 140000);
+        //let cameraPos = uiCesium.viewer.camera.getRectangleCameraCoordinates(area); // Cesium BUG - rectangle center lon is wrong
+        uiCesium.zoomTo(cameraPos);
+    }
 });
 
 //--- layer parameters
@@ -724,31 +815,42 @@ ui.exportToMain(function setJpssResolution(event) {
     resolution = v;
     pastEntries.forEach(e => e.setPixelGrid(resolution));
 
-    if (pixelPrimitive) {
+    if (hsFootprintPrimitive) {
         showPixels(ui.getSelectedListItemIndex(pastView));
     }
 });
 
-ui.exportToMain(function setJpssTempThreshold(event) {
-    tempThreshold = ui.getSliderValue(event.target);
-    if (tempPrimitive) {
+ui.exportToMain(function setJpssBrightThreshold(event) {
+    brightThreshold = ui.getSliderValue(event.target);
+    if (hsPointPrimitive) {
         showPixels(ui.getSelectedListItemIndex(pastView));
     }
 });
 
 ui.exportToMain(function setJpssFrpThreshold(event) {
     frpThreshold = ui.getSliderValue(event.target);
-    if (tempPrimitive) {
+    if (hsPointPrimitive) {
         showPixels(ui.getSelectedListItemIndex(pastView));
     }
 });
 
 ui.exportToMain(function setJpssPixelSize(event) {
     pixelSize = ui.getSliderValue(event.target);
-    if (tempPrimitive) {
-        const len = tempPrimitive.length;
+    if (hsPointPrimitive) {
+        const len = hsPointPrimitive.length;
         for (let i = 0; i < len; ++i) {
-            tempPrimitive.get(i).pixelSize = pixelSize;
+            hsPointPrimitive.get(i).pixelSize = pixelSize;
+        }
+        uiCesium.requestRender();
+    }
+});
+
+ui.exportToMain(function setJpssOutlineWidth(event) {
+    outlineWidth = ui.getSliderValue(event.target);
+    if (hsPointPrimitive) {
+        const len = hsPointPrimitive.length;
+        for (let i = 0; i < len; ++i) {
+            hsPointPrimitive.get(i).outlineWidth = outlineWidth;
         }
         uiCesium.requestRender();
     }
@@ -756,7 +858,7 @@ ui.exportToMain(function setJpssPixelSize(event) {
 
 ui.exportToMain(function setJpssHistory(event) {
     history = ui.getSliderValue(event.target);
-    if (pixelPrimitive && showPastHistory) {
+    if (hsFootprintPrimitive && showPastHistory) {
         showPixels(ui.getSelectedListItemIndex(pastView));
     }
 });

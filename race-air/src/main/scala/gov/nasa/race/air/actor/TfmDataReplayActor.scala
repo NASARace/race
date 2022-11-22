@@ -27,7 +27,8 @@ import gov.nasa.race.archive.{ArchiveReader, ConfiguredTAReader}
 /**
   * a ReplayActor for TFM-DATA
   */
-class TfmDataReplayActor (val config: Config) extends Replayer[ArchiveReader] {
+class TfmDataReplayActor (val config: Config) extends Replayer {
+  type R = ArchiveReader
 
   class TfmDataServiceReader (conf: Config) extends ConfiguredTAReader(conf) {
     val parser = new TfmDataServiceParser

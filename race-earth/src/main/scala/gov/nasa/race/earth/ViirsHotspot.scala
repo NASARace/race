@@ -40,14 +40,10 @@ import scala.collection.mutable.ArrayBuffer
   * represents a fire pixel as reported by the VIIRS Active Fire product
   * see https://viirsland.gsfc.nasa.gov/PDF/VIIRS_activefire_User_Guide.pdf
   */
-class ViirsHotspot (
-                     val satId: Int,
-
-                     //--- fields parsed from external source (CSV file)
+class ViirsHotspot ( val satId: Int,
                      val date: DateTime,
                      val position: GeoPosition, // geo center of pixel
                      val source: String, // N: Suomi NPP, 1: JPSS-1, A: Aqua, T: Terra
-
                      val brightness: Temperature, // pixel temp in K
                      val brightness1: Double, // secondary channel pixel temp in K
                      val frp: Power, // pixel-integrated fire radiated power in MW
@@ -57,14 +53,11 @@ class ViirsHotspot (
                      val confidence: Int,
                      val version: String,
                      val isDay: Boolean,
-
-                     //--- computed fields
-                     val bounds: Seq[GeoPosition] = Seq.empty, // pixel bounds
-
-                     val pixelSize: Length = Meters(375) // TODO - remove, use real bounds based on overpass azimuth
                    ) extends Hotspot {
 
-  override def temp: Temperature = brightness
+  var bounds: Seq[GeoPosition] = Seq.empty  // can be added by context object
+
+  override def bright: Temperature = brightness
 
   override def isGoodPixel: Boolean = confidence == HIGH_CONFIDENCE
 
@@ -76,7 +69,7 @@ class ViirsHotspot (
       .writeDateTimeMember(DATE,date)
       .writeDoubleMember(LAT, position.latDeg,FMT_3_5)
       .writeDoubleMember(LON, position.lonDeg,FMT_3_5)
-      .writeDoubleMember(TEMP, temp.toKelvin,FMT_3_1)
+      .writeDoubleMember(BRIGHT, brightness.toKelvin,FMT_3_1)
       .writeDoubleMember(FRP, frp.toMegaWatt,FMT_1_1)
       .writeDoubleMember(SCAN, scan.toKilometers,FMT_1_2)
       .writeDoubleMember(TRACK, track.toKilometers,FMT_1_2)
@@ -84,8 +77,8 @@ class ViirsHotspot (
       .writeStringMember(VERSION, version)
       .writeIntMember(CONF, confidence)
       .writeBooleanMember(DAY, isDay)
-      .writeArrayMember(BOUNDS)(serializeBoundsTo)
-      .writeIntMember(SIZE, pixelSize.toRoundedMeters.toInt)
+
+      if (bounds.nonEmpty) writer.writeArrayMember(BOUNDS)(serializeBoundsTo)
   }
 
   override def toString: String = s"ViirsHotspot($date, ${position.toLatLonString(5)}, $source, $version, $brightness, $frp, $scan, $track)"
@@ -143,8 +136,8 @@ object ViirsHotspots {
   }
 }
 
-case class ViirsHotspots (date: DateTime, satId: Int, src: String, elems: Seq[ViirsHotspot]) extends Hotspots[ViirsHotspot] {
-  override def toString(): String = s"ViirsHotspots(${date},$satId,$src,${elems.size})"
+case class ViirsHotspots (date: DateTime, satId: Int, src: String, data: Seq[ViirsHotspot]) extends Hotspots[ViirsHotspot] {
+  override def toString(): String = s"ViirsHotspots(${date},$satId,$src,${data.size})"
 }
 
 /**
@@ -200,14 +193,7 @@ trait ViirsHotspotParser extends Utf8CsvPullParser {
     if (confidence < 0) return Failure("unknown confidence")
 
     val pos = GeoPosition(lat,lon)
-    val bounds = computeBounds(date,pos,scan,track)
-
-    SuccessValue( new ViirsHotspot(satId, date,pos,src,brightness,brightness1,frp,scan,track,sensor,confidence,version, isDay, bounds))
-  }
-
-  // override if we have a satellite position for the pixel date so that we can compute the pixel projection on the ellipsoid
-  protected def computeBounds (date: DateTime, pos: GeoPosition, scan: Length, track: Length): Seq[GeoPosition] = {
-    Seq.empty
+    SuccessValue( new ViirsHotspot(satId, date,pos,src,brightness,brightness1,frp,scan,track,sensor,confidence,version,isDay))
   }
 }
 
@@ -222,56 +208,15 @@ trait ViirsHotspotParser extends Utf8CsvPullParser {
   * Note that FIRMS hotspot archives are *not* monotone in time, i.e. there are strings of hotspots interspersed
   * that can jump back in acquisition time.
   */
-class ViirsHotspotArchiveReader (val satId: Int, val iStream: InputStream, val pathName: String="<unknown>", bufLen: Int,
-                                 geoFilter: Option[GeoPositionFilter] = None) extends StreamArchiveReader with ViirsHotspotParser {
+class ViirsHotspotArchiveReader (satId: Int, iStream: InputStream, pathName: String="<unknown>", bufLen: Int,
+                                 geoFilter: Option[GeoPositionFilter] = None)
+         extends HotspotArchiveReader[ViirsHotspot](satId,iStream,pathName,bufLen,geoFilter) with ViirsHotspotParser {
 
-  def this(conf: Config) = this( conf.getInt("satellite"), createInputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096),
+  def this(conf: Config) = this( conf.getInt("satellite"),
+                                 createInputStream(conf), configuredPathName(conf),
+                                 conf.getIntOrElse("buffer-size",4096),
                                  GeoPositionFilter.fromOptionalConfig(conf, "bounds"))
 
-  val lineBuffer = new LineBuffer(iStream,bufLen)
-  val hs = ArrayBuffer.empty[ViirsHotspot]
-
-  protected var prev: ViirsHotspot = null
-  protected var date = DateTime.UndefinedDateTime
-
-  lineBuffer.nextLine() // skip the header line of the archive
-
-  override def readNextEntry(): Option[ArchiveEntry] = {
-    var src: String = ""
-    hs.clear()
-
-    def result: Option[ArchiveEntry] = if (hs.isEmpty) None else archiveEntry(date, ViirsHotspots(date, satId, src, hs.toSeq))
-
-    if (prev != null) { // we have a leftover from our previous invocation
-      date = prev.date
-      hs += prev
-      prev = null
-    }
-
-    while (lineBuffer.nextLine()) {
-      if (initialize(lineBuffer)) {
-        parseHotspot(satId) match {
-          case SuccessValue(hotspot) =>
-            src = if (src.isEmpty) hotspot.source else if (src != hotspot.source) "multiple" else src
-
-            if (geoFilter.isEmpty || geoFilter.get.pass(hotspot.position)) {
-              if (date.isUndefined) {
-                date = hotspot.date
-                hs += hotspot
-              } else {
-                if (hotspot.date == date) { // note that we break on every date change (also backjumps)
-                  hs += hotspot
-                } else {
-                  prev = hotspot
-                  return result
-                }
-              }
-            }
-
-          case Failure(_) => None // did not parse
-        }
-      }
-    }
-    result
-  }
+  def parseHotspot(): ResultValue[ViirsHotspot] = parseHotspot(satId)
+  def batchProduct: Hotspots[ViirsHotspot] = ViirsHotspots(date, satId, src, hs.toSeq)
 }

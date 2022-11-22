@@ -11,7 +11,8 @@ import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 
 import java.io.InputStream
 
-class IffTrackReplayActor (val config: Config) extends Replayer[IffTrackArchiveReader]{
+class IffTrackReplayActor (val config: Config) extends Replayer {
+  type R = IffTrackArchiveReader
   override def createReader = new IffTrackArchiveReader(config)
 }
 

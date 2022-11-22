@@ -25,7 +25,7 @@ abstract class ColorThreshold (val valueUnit: String, val v: Int, color: String)
 
 case class HotspotTimeStep (h: Int, clr: String) extends ColorThreshold("hours", h, clr)
 
-case class TempThreshold(k: Int, clr: String) extends ColorThreshold("kelvin", k, clr)
+case class BrightThreshold(k: Int, clr: String) extends ColorThreshold("kelvin", k, clr)
 
 case class FrpThreshold (mw: Int, clr: String) extends ColorThreshold("megawatts", mw, clr)
 

@@ -21,7 +21,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.{ActorDataAcquisitionThread, PollingDataAcquisitionThread}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{PublishingRaceActor, RaceContext}
-import gov.nasa.race.earth.{GoesRData, GoesRDataReader, GoesRProduct}
+import gov.nasa.race.earth.{GoesRData, GoesrDataReader, GoesRProduct}
 import gov.nasa.race.uom.Time.Milliseconds
 import gov.nasa.race.uom.{DateTime, Time}
 import gov.nasa.race.util.FileUtils
@@ -43,12 +43,12 @@ import scala.util.{Success, Failure, Try}
   * the data acquisition thread that downloads the latest S3Objects
   * note this only retrieves the data sets as files but does not parse/process the data yet
   */
-class GoesRDataAcquisitionThread (val actorRef: ActorRef,
-                                  val satId: Int,
-                                  val pollingInterval: Time,
-                                  val s3Client: S3Client,
-                                  val products: Seq[GoesRProduct],
-                                  val dataDir: File
+class GoesrDataAcquisitionThread(val actorRef: ActorRef,
+                                 val satId: Int,
+                                 val pollingInterval: Time,
+                                 val s3Client: S3Client,
+                                 val products: Seq[GoesRProduct],
+                                 val dataDir: File
                                  ) extends ActorDataAcquisitionThread(actorRef) with PollingDataAcquisitionThread {
 
   protected var latestObjs = Map.empty[String,S3Object]
@@ -139,7 +139,7 @@ class GoesRDataAcquisitionThread (val actorRef: ActorRef,
 /**
   * actor to import most recent GOES-16/17/18 data (*.nc files) from S3 buckets
   */
-class GoesRImportActor (val config: Config) extends PublishingRaceActor {
+class GoesrImportActor(val config: Config) extends PublishingRaceActor {
 
   val interval = Milliseconds(config.getDuration("polling-interval").toMillis)
   val satId = config.getInt("satellite")
@@ -150,16 +150,16 @@ class GoesRImportActor (val config: Config) extends PublishingRaceActor {
   val keepFiles = config.getBooleanOrElse("keep-files", false)
   val keepEmpty = config.getBooleanOrElse("keep-empty", false) // do we keep data sets without valid fire pixels
 
-  var dataAcquisitionThread: Option[GoesRDataAcquisitionThread]  = None
+  var dataAcquisitionThread: Option[GoesrDataAcquisitionThread]  = None
 
   def createGoesRProduct(cfg: Config) = {
-    val reader = cfg.getOptionalConfig("reader").flatMap( configurable[GoesRDataReader])
+    val reader = cfg.getOptionalConfig("reader").flatMap( configurable[GoesrDataReader])
     GoesRProduct(cfg.getString("name"), cfg.getString("bucket"), reader)
   }
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Boolean = {
     if (s3Client.isDefined && products.nonEmpty) {
-      val thread = new GoesRDataAcquisitionThread( self, satId, interval, s3Client.get, products, dataDir)
+      val thread = new GoesrDataAcquisitionThread( self, satId, interval, s3Client.get, products, dataDir)
       thread.setLogging(this)
       dataAcquisitionThread = Some(thread)
       super.onInitializeRaceActor(rc, actorConf)

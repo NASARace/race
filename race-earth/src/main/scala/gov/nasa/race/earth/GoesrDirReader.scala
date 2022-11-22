@@ -22,11 +22,36 @@ import gov.nasa.race.util.FileUtils
 
 import java.io.File
 
-object GoesRDirReader {
+object GoesrDirReader {
   val FnameRE = "OR_(ABI-.*-.*)-(.*)_(.*)_s(\\d{14})_e(\\d{14})_c(\\d{14}).nc".r
   val DateRE = "(\\d{4})(\\d{3})(\\d{2})(\\d{2})(\\d{2})(\\d)".r
+
+  def readDate (s: String): DateTime = {
+    s match {
+      case DateRE(year,dayOfYear,hour,min,sec,tenthSec) =>
+        DateTime( year.toInt, dayOfYear.toInt, hour.toInt, min.toInt, sec.toInt, (tenthSec.toInt * 100))
+      case _ => DateTime.UndefinedDateTime
+    }
+  }
+
+  def createSuffix (fname: String): String = {
+    val idx = fname.lastIndexOf('_')
+    if (idx >= 0) fname.substring(idx+2, idx+16) else ""
+  }
+
+  def sortFileCreation (a: File, b: File): Boolean = {
+    createSuffix(a.getName) < createSuffix(b.getName)
+  }
+
+  def unsortedNcFilesInDir (dirPath: String, globPattern: String = "OR_*.nc"): Seq[File] = {
+    FileUtils.getMatchingFilesIn(dirPath, globPattern)
+  }
+
+  def timeSortedNcFilesInDir (dirPath: String, globPattern: String = "OR_*.nc"): Seq[File] = {
+    FileUtils.getMatchingFilesIn(dirPath, globPattern).sortWith( sortFileCreation)
+  }
 }
-import GoesRDirReader._
+import GoesrDirReader._
 
 /**
  * utility  to read and time sort all GoesR data files in a given directory.
@@ -45,7 +70,7 @@ import GoesRDirReader._
  *    for active fire (L2) this is for instance
  *    OR_ABI-L2-FDCC-M6_G17_s20222501106177_e20222501108550_c20222501109166.nc
  */
-trait GoesRDirReader {
+trait GoesrDirReader {
 
   def getGoesRData (dirPath: String, products: Seq[GoesRProduct], satId: Int, startDate: DateTime, endDate: DateTime): Seq[GoesRData] = {
     val satName = satId match {
@@ -54,7 +79,7 @@ trait GoesRDirReader {
       case _ => return Seq.empty[GoesRData] // unknown satellite
     }
 
-    FileUtils.getMatchingFilesIn(dirPath, "OR_*.nc").flatMap { f=>
+    unsortedNcFilesInDir(dirPath).flatMap { f=>
       f.getName match {
         case FnameRE(prod,modChan,sat,start,end,create) =>
           if (satName == sat) {
@@ -69,13 +94,5 @@ trait GoesRDirReader {
         case _ => None // not a GOES-R data set
       }
     }.sortWith( (a,b) => a.date < b.date)
-  }
-
-  private def readDate (s: String): DateTime = {
-    s match {
-      case DateRE(year,dayOfYear,hour,min,sec,tenthSec) =>
-        DateTime( year.toInt, dayOfYear.toInt, hour.toInt, min.toInt, sec.toInt, (tenthSec.toInt * 100))
-      case _ => DateTime.UndefinedDateTime
-    }
   }
 }

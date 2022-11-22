@@ -206,6 +206,17 @@ package object ui {
     genList(eid,"ui_tree", maxRows,maxWidthInRem,minWidthInRem,selectAction,clickAction,contextMenuAction,dblClickAction)
   }
 
+  def uiListControls (listId: UiID, first: String=NoAction, up: String=NoAction, down: String=NoAction, last: String=NoAction, clear: String=NoAction): Text.TypedTag[String] = {
+    var mods = List(cls:="ui_listcontrols", data("listId"):=listId)
+    if (first.nonEmpty) mods = (data("first"):=first) +: mods
+    if (up.nonEmpty) mods = (data("up"):=up) +: mods
+    if (down.nonEmpty) mods = (data("down"):=down) +: mods
+    if (last.nonEmpty) mods = (data("last"):=last) +: mods
+    if (clear.nonEmpty) mods = (data("clear"):=clear) +: mods
+
+    div(mods: _*)
+  }
+
   def uiClock (label: String, eid: UiID, tz: String): Text.TypedTag[String] = {
     val mods = List(cls:="ui_clock", data("id"):=eid, data("label"):= label, data("tz"):=tz)
     div(mods: _*)
@@ -247,6 +258,19 @@ package object ui {
     var mods: List[AttrPair] = List(cls:="ui_text", id:= eid)
     mods = addRemWidthStyles(mods, minWidthInRem,maxWidthInRem)
     div(mods: _*)(text)
+  }
+
+  def uiTextArea (eid: UiID, visCols: Int=0, visRows: Int=0, maxLines:  Int=0, isFixed: Boolean=false, isReadOnly: Boolean=false, isVResizable: Boolean=false): Text.TypedTag[String] = {
+    var classes = "ui_textarea"
+    if (isReadOnly) classes = classes + " readonly"
+    if (isVResizable) classes = classes + " vresize"
+    if (isFixed) classes = classes + " fixed"
+    var mods = List[AttrPair](cls:=classes, id:= eid)
+    if (isReadOnly) mods = readonly :: mods
+    if (visCols > 0) mods = (cols:=visCols) :: mods
+    if (visRows > 0) mods = (rows:=visRows) :: mods
+    if (maxLines > 0) mods = (data("maxlines"):=maxLines) :: mods
+    textarea(mods: _*)
   }
 
   def uiKvTable (eid: UiID, maxRows: Int, maxWidthInRem: Int = 0, minWidthInRem: Int = 0): Text.TypedTag[String] = {

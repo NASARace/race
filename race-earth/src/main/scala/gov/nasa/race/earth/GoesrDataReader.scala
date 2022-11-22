@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.{LogWriter, Sparse2DGrid}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.geo.GeoPosition
-import gov.nasa.race.uom.Area.{SquareMeters, UndefinedArea}
+import gov.nasa.race.uom.Area.{SquareKilometers, SquareMeters, UndefinedArea}
 import gov.nasa.race.uom.Power.{MegaWatt, UndefinedPower}
 import gov.nasa.race.uom.{Area, DateTime, Power, Temperature}
 import gov.nasa.race.uom.Temperature.{Kelvin, UndefinedTemperature}
@@ -51,7 +51,7 @@ object GoesR {
  *
  * name has to be a valid product name such as "ABI-L2-FDCC"
  */
-case class GoesRProduct (name: String, bucket: String, reader: Option[GoesRDataReader])
+case class GoesRProduct (name: String, bucket: String, reader: Option[GoesrDataReader])
 
 /**
   * data for Goes-R data product
@@ -61,15 +61,18 @@ case class GoesRData (satId: Int, file: File, product: GoesRProduct, date: DateT
 /**
   * some object that can read files that contain Goes-R data products
   */
-trait GoesRDataReader {
+trait GoesrDataReader {
   def read (data: GoesRData): Option[Any]
 }
 
-// we need mutability while we collect the data
+/**
+ * representation of a GOES-R fire pixel as read from the data product (NetCDF 2DGrid)
+ * Note we need mutability while we collect the data
+ */
 class GoesRPixel(val x: Int, val y: Int,
                  var center: GeoPosition = GeoPosition.undefinedPos, var bounds: Array[GeoPosition] = Array.empty,
                  var temp: Temperature=UndefinedTemperature, var frp: Power=UndefinedPower, var area: Area=UndefinedArea,
-                 var dqf: Int= GoesRHotspot.DQF_UNKNOWN,
+                 var dqf: Int= GoesrHotspot.DQF_UNKNOWN,
                  var mask: Int= -1
           ) {
   def hasData: Boolean = (temp.isDefined || frp.isDefined || area.isDefined)
@@ -92,56 +95,63 @@ class GoesRPixel(val x: Int, val y: Int,
 }
 
 /**
-  * reader for GoesR ABI L2 Fire (Hot Spot Characterization) data product ("ABI-L2-FDCC")
-  *
-  * see https://www.goes-r.gov/products/docs/PUG-L2+-vol5.pdf (pg 472) for details
-  */
-class AbiHotspotReader extends GoesRDataReader with LogWriter {
+ * reader for GoesR ABI L2 Fire (Hot Spot Characterization) data product ("ABI-L2-FDCC")
+ * see https://www.goes-r.gov/products/docs/PUG-L2+-vol5.pdf (pg 472) for details
+ *
+ * TODO - might have to be parameterized to support rounding of fire pixel positions
+ */
+class AbiHotspotReader extends GoesrDataReader with LogWriter {
 
   val hs = new Sparse2DGrid[GoesRPixel]
 
   def read (data: GoesRData): Option[Any] = {
     if (data.product.name == "ABI-L2-FDCC") {
-        val ncd = NetcdfDatasets.openDataset(data.file.getPath) // ?? this should open in enhanceMode, but Area grid seems not to use it
-        val gds = new GridDataset(ncd)
-        val date = DateTime.ofJ2000EpochSeconds( ncd.findVariable("t").readScalarLong)
+      val ncd = NetcdfDatasets.openDataset(data.file.getPath) // ?? this should open in enhanceMode, but Area grid seems not to use it
+      val gds = new GridDataset(ncd)
 
-        // note that nFires and nFrp do not seem to match valid fire pixels
-        val nArea = ncd.findVariable("total_number_of_pixels_with_fire_area").readScalarInt
-        val nTemp = ncd.findVariable("total_number_of_pixels_with_fire_temperature").readScalarInt
-        val nFrp = ncd.findVariable("total_number_of_pixels_with_fire_radiative_power").readScalarInt
-        val nFires = ncd.findVariable("total_number_of_pixels_with_fires_detected").readScalarInt
+      // NOTE  there are at least archived data sets (e.g. OR_ABI-L2-FDCC-M6_G17_s20202322026176_e20202322026176_c20202322031129.nc) that
+      // have -999.0 values for both 't' and 'time_bounds'. We fall back to the (deduced) GoesRData date since it appears those data sets
+      // otherwise contain valid grid data. Alternatively we could skip this data set
+      val d =  ncd.findVariable("t").readScalarDouble()
+      val date = if (d > 0) DateTime.ofJ2000EpochSeconds( d.round) else data.date
 
-        if (nFires > 0) {
-          getFirePixels(0, gds.findGridByName("Mask"), hs)
+      // note that nFires and nFrp do not seem to match valid fire pixels
+      val nArea = ncd.findVariable("total_number_of_pixels_with_fire_area").readScalarInt
+      val nTemp = ncd.findVariable("total_number_of_pixels_with_fire_temperature").readScalarInt
+      val nFrp = ncd.findVariable("total_number_of_pixels_with_fire_radiative_power").readScalarInt
+      val nFires = ncd.findVariable("total_number_of_pixels_with_fires_detected").readScalarInt
 
-          if (hs.nonEmpty) {
-            val tempGrid = gds.findGridByName("Temp")
-            val powerGrid = gds.findGridByName("Power")
-            val areaGrid = gds.findGridByName("Area")
-            val dqfGrid = gds.findGridByName("DQF")
-
-            // fill in the data values
-            hs.foreach { pix =>
-              val x = pix.x
-              val y = pix.y
-              pix.dqf = dqfGrid.readDataSlice( 0,0, y, x).reduce().getInt(0)
-              pix.temp = Kelvin(tempGrid.readDataSlice( 0,0, y, x).reduce().getDouble(0))
-              pix.frp  = MegaWatt(powerGrid.readDataSlice( 0,0, y, x).reduce().getDouble(0))
-              pix.area = SquareMeters(areaGrid.readDataSlice( 0,0, y, x).reduce().getDouble(0)) // FIXME - value does not seem to use scale_factor and add_offset
-            }
-          }
-        }
+      if (nFires > 0) {
+        getFirePixels(0, gds.findGridByName("Mask"), hs)
 
         if (hs.nonEmpty) {
-          //hs.foreach(_.show)
-          val res = hs.toSeq.map( pix=> new GoesRHotspot( data.satId, date, pix, data.product.name))
-          hs.clear()
+          val tempGrid = gds.findGridByName("Temp")
+          val powerGrid = gds.findGridByName("Power")
+          val areaGrid = gds.findGridByName("Area")
+          val dqfGrid = gds.findGridByName("DQF")
 
-          if (res.nonEmpty) {
-            Some(GoesRHotspots(date, data.satId, data.product.name, res))
-          } else None // no hotspots in fire pixels
-        } else None // no fire pixels found
+          // fill in the data values
+          hs.foreach { pix =>
+            val x = pix.x
+            val y = pix.y
+            pix.dqf = dqfGrid.readDataSlice( 0,0, y, x).reduce().getInt(0)
+            pix.temp = Kelvin(tempGrid.readDataSlice( 0,0, y, x).reduce().getDouble(0))
+            pix.frp  = MegaWatt(powerGrid.readDataSlice( 0,0, y, x).reduce().getDouble(0))
+            //pix.area = SquareMeters(areaGrid.readDataSlice( 0,0, y, x).reduce().getDouble(0)) // FIXME - value does not seem to use scale_factor and add_offset
+            pix.area = SquareKilometers(areaGrid.readDataSlice( 0,0, y, x).reduce().getDouble(0)) // km^2 according to PUG
+          }
+        }
+      }
+
+      if (hs.nonEmpty) {
+        //hs.foreach(_.show)
+        val res = hs.toSeq.map( pix=> new GoesrHotspot( data.satId, date, pix, data.product.name))
+        hs.clear()
+
+        if (res.nonEmpty) {
+          Some(GoesrHotspots(date, data.satId, data.product.name, res))
+        } else None // no hotspots in fire pixels
+      } else None // no fire pixels found
     } else None // not our product
   }
 
@@ -157,7 +167,7 @@ class AbiHotspotReader extends GoesRDataReader with LogWriter {
         val scanline: Array[Short] = sl.copyTo1DJavaArray.asInstanceOf[Array[Short]]
         for (x <- 0 until maxX) {
           val mask = scanline(x)
-          if (GoesRHotspot.isValidFirePixel(mask)) {
+          if (GoesrHotspot.isValidFirePixel(mask)) {
             val h = new GoesRPixel(x, y)
             h.mask = mask
             setCoordinates(x, y, grid, h)
@@ -199,6 +209,8 @@ class AbiHotspotReader extends GoesRDataReader with LogWriter {
 
   @inline final def gpos (lp: LatLonPoint): GeoPosition = GeoPosition.fromDegrees( lp.getLatitude, lp.getLongitude)
 
+  // TODO - this is where we should round positions so that we can track pixel history across data sets
+  //        If the data product doesn't already do it for us
   def setCoordinates (x: Int, y: Int, grid: GeoGrid, h: GoesRPixel): Unit = {
     val gcs = grid.getCoordinateSystem
     val p = gcs.getLatLon(x,y)  // the datapoint center

@@ -558,6 +558,10 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
 
   //--- simple formatting
 
+  def format_yMdHms: String = {
+    val (year,month,day) = getYMD
+    f"$year%4d$month%02d$day%02d-$getHour%02d$getMinute%02d$getSecond%02d"
+  }
   def format_yMd_HmsS_z: String = {
     val (year,month,day) = getYMD
     f"$year%4d-$month%02d-$day%02dT$getHour%02d:$getMinute%02d:$getSecond%02d.$getMillisecond%03dZ"
