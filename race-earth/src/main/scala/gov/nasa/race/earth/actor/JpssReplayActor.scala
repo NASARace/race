@@ -32,13 +32,15 @@ import scala.collection.mutable.ArrayBuffer
  * this is a decorating ArchiveReader that uses the underlying ViirsHotspotArchiveReader to collect entries that
  * fall within the next overpass, which is set per readNextEntry() call by our replay actor
  */
-class JpssOverpassReader (satId: Int, src: String, viirsReader: ViirsHotspotArchiveReader, margin: Time) extends ArchiveReader {
-  protected var nextOverpass: Option[OverpassSeq] = None
+class JpssOverpassReader (viirsReader: ViirsHotspotArchiveReader, margin: Time) extends ArchiveReader {
+
+  protected var nextOverpass: Option[OverpassSeq] = None // to be set by owner (contains satId)
+
   protected var leftOver: Option[ViirsHotspots] = None
   protected val nextHs = ArrayBuffer.empty[ViirsHotspot]
 
   override def readNextEntry(): Option[ArchiveEntry] = {
-    def emptyEntry (date: DateTime): Option[ArchiveEntry] = archiveEntry( date, ViirsHotspots(date, satId, src, Seq.empty))
+    def emptyEntry (satId: Int, date: DateTime): Option[ArchiveEntry] = archiveEntry( date, ViirsHotspots(date, satId, "<unknown>", Seq.empty))
 
     nextOverpass.foreach { ops =>
       val lowCutoff = ops.firstDate - margin // give it some leeway as we get pixel time outside overpasses from archives
@@ -47,7 +49,7 @@ class JpssOverpassReader (satId: Int, src: String, viirsReader: ViirsHotspotArch
       leftOver match {
         case Some(hs) =>
           if (hs.date <= ops.date) nextHs ++= hs.data // accumulate and go on
-          else return emptyEntry(ops.date) // no data for nextOverpass
+          else return emptyEntry( ops.satId, ops.date) // no data for nextOverpass
         case None => // no leftover, go on
       }
 
@@ -62,10 +64,10 @@ class JpssOverpassReader (satId: Int, src: String, viirsReader: ViirsHotspotArch
                   } else { // outside nextOverpass -
                     leftOver = Some(vhs)
                     if (nextHs.nonEmpty) {
-                      val ohs = ViirsHotspots(ops.lastDate, satId, src, nextHs.toSeq)
+                      val ohs = ViirsHotspots(ops.lastDate, nextHs.head.satId, nextHs.head.source, nextHs.toSeq)
                       nextHs.clear() // free early
-                      return archiveEntry(ops.date, ohs)
-                    } else return emptyEntry(ops.date) // no data for this overpass
+                      return archiveEntry( ops.date, ohs)
+                    } else return emptyEntry( ops.satId, ops.date) // no data for this overpass
                   }
                 } else {
                   // before lowCutoff -> ignore and loop on
@@ -99,7 +101,7 @@ class JpssReplayActor (val config: Config) extends JpssActor with Replayer with 
 
   overpasses ++= getHistoricalOverpasses() // initialize with history, we still get data for them
 
-  override def createReader = new JpssOverpassReader( satId, source, new ViirsHotspotArchiveReader(config), overpassMargin)
+  override def createReader = new JpssOverpassReader( new ViirsHotspotArchiveReader(config), overpassMargin)
 
   override def onStartRaceActor(originator: ActorRef): Boolean = {
     super.onStartRaceActor(originator) && {
@@ -156,21 +158,21 @@ class JpssReplayActor (val config: Config) extends JpssActor with Replayer with 
       val endDate = currentSimTime
       var d = startDate
       while (d < endDate) {
-        findClosestTLE(satId, d) match {
-          case Some(tle) => list ++= getOverpasses( tle, d, DayDuration)
-          case None => warning(s"no suitable TLE for satellite $satId on $d")
+        foreachClosestTLE(d) { tle=> // we might have more than one satellite
+          list ++= getOverpasses( tle, d, DayDuration)
         }
-
         d = d + DayDuration
       }
     }
 
-    list.toArray
+    var opss = list.toArray
+    if (numberOfTLESatellites > 1) opss = opss.sortWith( (a,b) => a.lastDate < b.lastDate)  // in case we have several satellites
+    opss
   }
 
   def getUpcomingOverpasses(dur: Time): Array[OverpassSeq] = {
     val startDate = currentSimTime
-    findClosestTLE(satId, startDate) match {
+    findClosestTLE( startDate) match {
       case Some(tle) => getOverpasses( tle, startDate, dur)
       case None => warning(s"no suitable TLE for satellite $satId on $startDate"); Array.empty
     }

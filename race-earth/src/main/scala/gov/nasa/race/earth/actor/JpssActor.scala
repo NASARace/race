@@ -46,7 +46,7 @@ trait JpssActor extends PublishingRaceActor with ContinuousTimeRaceActor {
       if (initialize(data)) {
         skipToNextRecord() // first line is header
         while (hasMoreData) {
-          parseHotspot(satId) match {
+          parseHotspot() match {
             case SuccessValue(hs) => hotspots += hs
             case Failure(err) => warning(s"error parsing $source: $err")
           }
@@ -57,12 +57,14 @@ trait JpssActor extends PublishingRaceActor with ContinuousTimeRaceActor {
     }
   }
 
+  def defaultScanAngle = 56.2 // VIIRS - override for other instruments
+
   //--- configuration data
-  val satId = config.getInt("satellite") // NORAD cat ID
-  val source = config.getString("source") // e.g. VIIRS_NOAA20_NRT (instrument+satellite+dataset)
+  val satId = config.getInt("satellite") // NORAD cat ID  FIXME - we might have multiple
+  val source = config.getString("source") // e.g. VIIRS
   val overpassBounds = config.getGeoPositionArray("region") // polygon of GeoPositions
   val history = config.getFiniteDurationOrElse("history", 1.day) // for initial request
-  val maxScanAngle = Degrees( config.getDoubleOrElse("max-scan", 56.2)) // max VIIRS scan angle
+  val maxScanAngle = Degrees( config.getDoubleOrElse("max-scan", defaultScanAngle)) // max VIIRS scan angle
   val overpassMargin = config.getDurationTimeOrElse("overpass-margin", Minutes(5))
   val trajectoryTimeStep = config.getDurationTimeOrElse("trajectory-timestep", Seconds(30))
 

@@ -31,8 +31,9 @@ function isProbablePixel(mask) { return (mask == 13 || mask == 14 || mask == 33 
 var satellites = [];
 var satNames = new Map();
 
-var dataSets = [];
-var dataSetView = undefined;
+var dataSets = []; // complete list in ascending time (latest entries are appended)
+var displayDataSets = []; // in reverse, latest on top
+var dataSetView = undefined; // showing displayDataSets
 var selectedDataSet = undefined;
 
 var hotspots = [];
@@ -44,7 +45,8 @@ var maskLabel = undefined;
 
 var pixelLevel = "all";  // high, probable, all
 var latestOnly = true; // do we just show pixels reported in the last batch
-var followLatest = true;
+var followLatest = config.goesr.followLatest;
+var lockStep = config.goesr.lockStep;
 
 var refDate = Number.MAX_INTEGER;
 
@@ -74,7 +76,7 @@ ui.registerLoadFunction(function initialize() {
     maskLabel = ui.getLabel("goesr.mask");
 
     ui.setCheckBox("goesr.followLatest", followLatest);
-    ui.setCheckBox("goesr.latestOnly",config.goesr.latestOnly);
+    ui.setCheckBox("goesr.lockStep", lockStep);
     ui.selectRadio( "goesr.level.all");
     initSliders();
 
@@ -144,7 +146,7 @@ function initHistoryView() {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
             { name: "dqf", tip: "pixel quality flag []", width: "2rem", attrs: ["fixed", "alignRight"], map: e => e.dqf },
             { name: "mask", tip: "fire pixel classification code", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.mask },
-            { name: "temp", tip: "pixel temperature [K]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.temp) ? "-" : Math.round(e.temp) },
+            { name: "bright", tip: "pixel brightness [K]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.temp) ? "-" : Math.round(e.temp) },
             { name: "frp", tip: "fire radiative power [MW]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.frp) ? "-" : Math.round(e.frp) },
             { name: "area", tip: "surface area [ac]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.area) ? "-" : util.f_1.format(util.squareMetersToAcres(e.area)) },
             { name: "time", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalHMTimeString(e.date) },
@@ -158,22 +160,63 @@ ui.exportToMain(function selectGoesrDataSet(event) {
     if (ds) {
         selectedDataSet = ds;
         refDate = ds.date;
-        updateHotspots();
 
-        if (ds != dataSets[0]) { // if we explicitly select an earlier element we disable followLatest
+        if (ds != displayDataSets[0]) { // if we explicitly select an earlier element we disable followLatest
             followLatest = false;
             ui.setCheckBox("goesr.followLatest", false);
         }
+    } else {
+        selectedDataSet = undefined;
+        refDate = 0;
     }
+
+    updateHotspots();
 });
 
 function updateHotspots() {
-    let hotspots = getHotspots();
-    setEntities( hotspots);
-    ui.setListItems( hotspotView, hotspots);
+    if (selectedDataSet){
+        let hotspots = getHotspots();
+        setEntities( hotspots);
+        ui.setListItems( hotspotView, hotspots);
+    } else {
+        clearEntities();
+        ui.clearList(hotspotView);
+    }
+    uiCesium.requestRender();
 }
 
-function getHotspots () {
+function getHotspots() {
+    if (lockStep) {
+        let list = selectedDataSet.hotspots;
+
+        let idx = dataSets.indexOf(selectedDataSet);
+        let ds1 = getPreceedingPeer(selectedDataSet.satId, idx);
+        let ds2 = getFollowingPeer(selectedDataSet.satId, idx);
+        if (ds1 && selectedDataSet.date - ds1.date < 180000) {
+            list = list.concat(ds1.hotspots).sort( (a,b) => (a.center < b.center));
+        } else if (ds2 && ds2.date - selectedDataSet.date < 180000) {
+            list = list.concat(ds2.hotspots).sort( (a,b) => (a.center < b.center));
+        }
+        return list;
+
+    } else {
+        return selectedDataSet.hotspots;
+    }
+}
+
+function getPreceedingPeer (satId, idx) {
+    for (var i=idx-1; i>=0; i--) {
+        if (dataSets[i].satId  != satId) return dataSets[i];
+    }
+}
+
+function getFollowingPeer (satId, idx) {
+    for (var i=idx+1; i<dataSets.length; i++) {
+        if (dataSets[i].satId  != satId) return dataSets[i];
+    }
+}
+
+function _getHotspots () {
     let hsList = [];
     let cutoff = latestOnly ? 0 : maxMissingMin * 60000; // duration in millis
 
@@ -181,7 +224,7 @@ function getHotspots () {
         let hsMaps = satellites.map( sat=> new Map());
         let processed = 0;
 
-        for (let i=0; i<dataSets.length; i++) {
+        for (let i=0; i<displayDataSets.length; i++) {
             let ds = dataSets[i];
             let satIdx = ds.sat.satIdx;
 
@@ -404,16 +447,20 @@ function handleGoesrSatellites(goesrSatellites) {
 function handleGoesrDataSet (dataSet) {
     dataSet.sat = getSatelliteWithId(dataSet.satId);
     if (dataSet.sat) {
-        dataSets.unshift(dataSet); // not very efficient during large history init
-        ui.setListItems(dataSetView, dataSets); 
+        dataSets.push(dataSet);
+        updateDataSets();
 
-        let now = ui.getClockEpochMillis("time.utc");
+        let now = ui.getClockEpochMillis("time.utc"); // we don't want to do this during init of history
         if (followLatest && Math.abs(now - dataSet.date) < 30000) {
             ui.selectFirstListItem(dataSetView);
         }
     }
 }
 
+function updateDataSets() {
+    displayDataSets = dataSets.filter( ds=> ds.sat.show).reverse(); // we should really use a list here
+    ui.setListItems( dataSetView, displayDataSets);
+}
 
 
 function filterPixel(hs) {
@@ -422,13 +469,15 @@ function filterPixel(hs) {
         (pixelLevel == "probable" && isProbablePixel(hs.mask)));
 }
 
-ui.exportToMain(function toggleShowSatellite(event) {
+ui.exportToMain(function toggleShowGoesrSatellite(event) {
     let cb = ui.getCheckBox(event.target);
     if (cb) {
-        let satName = ui.getCheckBoxLabel(cb);
-        let se = ui.getListItemOfElement(cb);
+        let satName = ui.getCheckBoxLabel(cb)
+        let se = getSatelliteWithName(satName);
         if (se) {
-            se.show = ui.isCheckBoxSelected(cb);
+            se.show = !se.show
+            if (!se.show) lockStep = false; // at least one satellite isn't showing
+            updateDataSets();
             updateHotspots();
         }
     }
@@ -482,9 +531,14 @@ ui.exportToMain(function setGoesrMaxMissing(event) {
 ui.exportToMain(function setGoesrPointSize(event) {
 });
 
-ui.exportToMain(function toggleGoesrFollowLatest(event) {
+ui.exportToMain(function toggleFollowLatestGoesr(event) {
     followLatest = ui.isCheckBoxSelected(event.target);
     if (followLatest && ui.getSelectedListItemIndex(dataSetView) != 0) {
         ui.selectFirstListItem(dataSetView);
     }
+});
+
+ui.exportToMain(function toggleGoesrLockStep(event) {
+    lockStep = ui.isCheckBoxSelected(event.target);
+    updateHotspots();
 });

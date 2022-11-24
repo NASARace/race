@@ -38,8 +38,7 @@ import gov.nasa.race.uom.Time._
 import scalatags.Text
 
 import java.net.InetSocketAddress
-import scala.collection.immutable.{ArraySeq, Queue}
-import scala.collection.mutable
+import scala.collection.mutable.ArrayDeque
 import scala.concurrent.duration.DurationInt
 
 object CesiumGoesrRoute {
@@ -60,7 +59,7 @@ trait CesiumGoesrRoute extends CesiumRoute with ContinuousTimeRaceRoute with Pus
   val goesrAssets = getSymbolicAssetMap("goesr.assets", config, Seq(("fire","fire.png")))
 
   // our data
-  private var hotspots = Queue.empty[GoesrHotspots]
+  private var hotspots = ArrayDeque.empty[GoesrHotspots]
   private val maxHistory = Time.fromFiniteDuration( config.getFiniteDurationOrElse("max-history", 7.days))
 
   //--- route
@@ -117,7 +116,10 @@ trait CesiumGoesrRoute extends CesiumRoute with ContinuousTimeRaceRoute with Pus
   def receiveGoesrData: Receive = {
     case BusEvent(channel,hs:GoesrHotspots,sender) =>
       val cutOff = simClock.dateTime - maxHistory
-      hotspots = hotspots.dropWhile( e=> e.date < cutOff).enqueue(hs)
+      hotspots = hotspots.dropWhile( e=> e.date < cutOff)
+      hotspots += hs
+      hotspots.sortInPlaceWith( (a,b) => a.date < b.date)
+
       push( TextMessage.Strict(serializeGoesrHotspots(hs)))
   }
 
@@ -140,8 +142,11 @@ trait CesiumGoesrRoute extends CesiumRoute with ContinuousTimeRaceRoute with Pus
       cesiumLayerPanel("goesr", "main.toggleShowGoesr(event)"),
       uiPanel("data sets", true)(
         uiRowContainer()(
-          goesrSatellites.map( sat=> uiCheckBox( sat.name, "main.toggleGoesrShowSatellite(event)", s"goesr.${sat.name}")).foldLeft(
-            Seq( uiCheckBox("follow latest", "main.toggleGoesrFollowLatest(event)", "goesr.followLatest"))
+          goesrSatellites.map( sat=> uiCheckBox( sat.name, "main.toggleShowGoesrSatellite(event)", s"goesr.${sat.name}")).foldLeft(
+            Seq(
+              uiCheckBox("lock step", "main.toggleGoesrLockStep(event)", "goesr.lockStep"),
+              uiCheckBox("follow latest", "main.toggleFollowLatestGoesr(event)", "goesr.followLatest")
+            )
           )( (acc,e)=> e +: acc).reverse:_*
         ),
         uiList("goesr.dataSets", 6, "main.selectGoesrDataSet(event)"),
@@ -153,7 +158,6 @@ trait CesiumGoesrRoute extends CesiumRoute with ContinuousTimeRaceRoute with Pus
           uiRadio("high", "main.setGoesrPixelLevel(event)", "goesr.level.high"),
           uiRadio("probable", "main.setGoesrPixelLevel(event)", "goesr.level.probable"),
           uiRadio( "all", "main.setGoesrPixelLevel(event)", "goesr.level.all"),
-          uiCheckBox("latest only", "main.toggleGoesrLatestOnly(event)", "goesr.latestOnly")
         )
       ),
       uiPanel("hotspot history", true)(
@@ -177,7 +181,8 @@ trait CesiumGoesrRoute extends CesiumRoute with ContinuousTimeRaceRoute with Pus
   ${cesiumLayerConfig(cfg, "/fire/detection/GOES-R", "GOES-R ABI Fire / Hotspot Characterization")},
   maxMissingMin: ${cfg.getFiniteDurationOrElse("max-missing", 15.minutes).toMinutes},
   pixelLevel: '${cfg.getStringOrElse("pixel-level", "all")}',
-  latestOnly: ${cfg.getBooleanOrElse("latest-only", true)},
+  followLatest: ${cfg.getBooleanOrElse("follow-latest", true)},
+  lockStep: ${cfg.getBooleanOrElse("lock-step", true)},
   pointSize: ${cfg.getIntOrElse("point-size", 6)},
   outlineWidth: ${cfg.getIntOrElse("outline-width", 1)},
   strongOutlineWidth: ${cfg.getIntOrElse("strong-outline-width", 2)},

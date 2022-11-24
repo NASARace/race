@@ -116,7 +116,7 @@ object ImageryLayerRoute {
   val clrMapPrefixMatcher = PathMatcher(clrMapPrefix / "[^/?]+".r) // match the resource prefix plus the imagery id
 
   val jsModule = "ui_cesium_imglayer.js"
-  val icon = "imagery-icon.svg"
+  val icon = "globe-icon.svg"
   val windowId = "imglayer"
 }
 import ImageryLayerRoute._

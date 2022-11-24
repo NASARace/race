@@ -118,10 +118,10 @@ trait Hotspots [T <: Hotspot] extends Seq[T] with JsonSerializable with Dated {
  * ArchiveReader root type that reads CSV archives containing a sequence of hotspot records that should be reported
  * as batched Hotspots collections
  */
-abstract class HotspotArchiveReader[T<:Hotspot] (val satId: Int, val iStream: InputStream, val pathName: String="<unknown>", bufLen: Int,
+abstract class HotspotArchiveReader[T<:Hotspot] (val iStream: InputStream, val pathName: String="<unknown>", bufLen: Int,
                                  geoFilter: Option[GeoPositionFilter] = None) extends StreamArchiveReader with Utf8CsvPullParser {
 
-  def this(conf: Config) = this( conf.getInt("satellite"), createInputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096),
+  def this(conf: Config) = this( createInputStream(conf), configuredPathName(conf), conf.getIntOrElse("buffer-size",4096),
     GeoPositionFilter.fromOptionalConfig(conf, "bounds"))
 
   val lineBuffer = new LineBuffer(iStream,bufLen)
@@ -134,13 +134,13 @@ abstract class HotspotArchiveReader[T<:Hotspot] (val satId: Int, val iStream: In
   lineBuffer.nextLine() // skip the header line of the archive
 
   def parseHotspot(): ResultValue[T]
-  def batchProduct: Hotspots[T]
+  def batchProduct: Option[Hotspots[T]]
 
   override def readNextEntry(): Option[ArchiveEntry] = {
     src = ""
     hs.clear()
 
-    def result: Option[ArchiveEntry] = if (hs.isEmpty) None else archiveEntry(date, batchProduct)
+    def result: Option[ArchiveEntry] = batchProduct.flatMap( hs=> archiveEntry(date,hs))
 
     ifSome(prev) { h =>
       date = h.date

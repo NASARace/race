@@ -241,14 +241,14 @@ case class GoesrHotspots (date: DateTime, satId: Int, src: String, data: Seq[Goe
 /**
  * ArchiveReader that works on CSV archives containing time-ordered sequences of GoesRHotspot records
  */
-class GoesrHotspotArchiveReader (satId: Int, iStream: InputStream, pathName: String="<unknown>", bufLen: Int, geoFilter: Option[GeoPositionFilter] = None)
-         extends HotspotArchiveReader[GoesrHotspot](satId,iStream,pathName,bufLen,geoFilter) with GoesrHotspotParser {
+class GoesrHotspotArchiveReader (iStream: InputStream, pathName: String="<unknown>", bufLen: Int, geoFilter: Option[GeoPositionFilter] = None)
+         extends HotspotArchiveReader[GoesrHotspot](iStream,pathName,bufLen,geoFilter) with GoesrHotspotParser {
 
-  def this(conf: Config) = this( conf.getInt("satellite"), createInputStream(conf), configuredPathName(conf),
+  def this(conf: Config) = this( createInputStream(conf), configuredPathName(conf),
     conf.getIntOrElse("buffer-size",4096),
     GeoPositionFilter.fromOptionalConfig(conf, "bounds"))
 
-  override def batchProduct: Hotspots[GoesrHotspot] = {
-    GoesrHotspots(date, satId, src, hs.toSeq)
+  override def batchProduct: Option[Hotspots[GoesrHotspot]] = {
+    if (hs.nonEmpty) Some(GoesrHotspots(date, hs.head.satId, hs.head.source, hs.toSeq)) else None
   }
 }

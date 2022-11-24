@@ -159,11 +159,25 @@ trait ViirsHotspotParser extends Utf8CsvPullParser {
   }
 
   def readConfidence(): Int = {
-    readNextValue().charAt(0) match {
-      case 'l' => LOW_CONFIDENCE
-      case 'n' => NOMINAL_CONFIDENCE
-      case 'h' => HIGH_CONFIDENCE
-      case _ => -1
+    val conf = readNextValue()
+
+    if (conf.length == 1) {  // VIIRS
+      conf.charAt(0) match {
+        case 'l' => LOW_CONFIDENCE
+        case 'n' => NOMINAL_CONFIDENCE
+        case 'h' => HIGH_CONFIDENCE
+        case _ => -1
+      }
+
+    } else if (Character.isDigit(conf.charAt(0))) { // MODIS
+      val pct = conf.toInt
+      if (pct <33) LOW_CONFIDENCE
+      else if (pct < 66) NOMINAL_CONFIDENCE
+      else if (pct <= 100)  HIGH_CONFIDENCE
+      else  -1
+
+    } else {
+      -1
     }
   }
 
@@ -172,7 +186,7 @@ trait ViirsHotspotParser extends Utf8CsvPullParser {
     (c == 'D' || c == 'd')
   }
 
-  def parseHotspot (satId: Int): ResultValue[ViirsHotspot] = {
+  def parseHotspot(): ResultValue[ViirsHotspot] = {
     val lat: Angle = Degrees(readNextValue().toDouble)
     val lon: Angle = Degrees(readNextValue().toDouble)
     val brightness = Kelvin(readNextValue().toDouble)
@@ -188,12 +202,25 @@ trait ViirsHotspotParser extends Utf8CsvPullParser {
     val isDay = readDayNight()
     skipToNextRecord()
 
+    val satId = getSatId(src)
+
+    if (satId <0) return Failure("unknown satellite")
     if (lat.isUndefined || lon.isUndefined) return Failure("no position")
     if (date.isUndefined) return Failure("no date")
     if (confidence < 0) return Failure("unknown confidence")
 
     val pos = GeoPosition(lat,lon)
     SuccessValue( new ViirsHotspot(satId, date,pos,src,brightness,brightness1,frp,scan,track,sensor,confidence,version,isDay))
+  }
+
+  def getSatId(src: String): Int = {
+    src match {
+      case "1" => 43013
+      case "N" => 37849
+      case "Aqua" => 27424
+      case "Terra" => 25994
+      case _ => -1
+    }
   }
 }
 
@@ -208,15 +235,15 @@ trait ViirsHotspotParser extends Utf8CsvPullParser {
   * Note that FIRMS hotspot archives are *not* monotone in time, i.e. there are strings of hotspots interspersed
   * that can jump back in acquisition time.
   */
-class ViirsHotspotArchiveReader (satId: Int, iStream: InputStream, pathName: String="<unknown>", bufLen: Int,
+class ViirsHotspotArchiveReader (iStream: InputStream, pathName: String="<unknown>", bufLen: Int,
                                  geoFilter: Option[GeoPositionFilter] = None)
-         extends HotspotArchiveReader[ViirsHotspot](satId,iStream,pathName,bufLen,geoFilter) with ViirsHotspotParser {
+         extends HotspotArchiveReader[ViirsHotspot](iStream,pathName,bufLen,geoFilter) with ViirsHotspotParser {
 
-  def this(conf: Config) = this( conf.getInt("satellite"),
-                                 createInputStream(conf), configuredPathName(conf),
+  def this(conf: Config) = this( createInputStream(conf), configuredPathName(conf),
                                  conf.getIntOrElse("buffer-size",4096),
                                  GeoPositionFilter.fromOptionalConfig(conf, "bounds"))
 
-  def parseHotspot(): ResultValue[ViirsHotspot] = parseHotspot(satId)
-  def batchProduct: Hotspots[ViirsHotspot] = ViirsHotspots(date, satId, src, hs.toSeq)
+  def batchProduct: Option[Hotspots[ViirsHotspot]] = {
+    if (hs.nonEmpty) Some(ViirsHotspots(date, hs.head.satId, hs.head.source, hs.toSeq)) else None
+  }
 }

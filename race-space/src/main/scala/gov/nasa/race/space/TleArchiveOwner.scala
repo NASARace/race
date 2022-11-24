@@ -46,34 +46,62 @@ import scala.collection.mutable.ArrayBuffer
 trait TleArchiveOwner {
   val config: Config
 
-  protected val tleArchive = config.getNonEmptyFile("tle-archive")
-  private val tleMap = readTLEs(tleArchive)
+  protected val tleArchives = config.getStrings("tle-archive").map( new File(_))
+  private val tleMap = readTLEs(tleArchives)
 
-  private def readTLEs( archive: File): Map[Int,NearestLookupTable[Long,TLE]] = {
+  protected def numberOfTLESatellites: Int = tleMap.keys.size
+
+  private def readTLEs( archives: Array[File]): Map[Int,NearestLookupTable[Long,TLE]] = {
     val satMap = mutable.Map.empty[Int,ArrayBuffer[TLE]]
-    val fis = new FileInputStream(archive)
-    val is = if (FileUtils.getExtension(archive) == "gz") new GZIPInputStream(fis) else fis
-    val lb = new LineBuffer(is)
 
-    while (!lb.hasReachedEnd){
-      val l0 = if (lb.nextLine()) lb.toString else ""
-      val l1 = if (lb.nextLine()) lb.toString else ""
-      val l2 = if (lb.nextLine()) lb.toString else ""
+    archives.foreach { archive =>
+      val fis = new FileInputStream(archive)
+      val is = if (FileUtils.getExtension(archive) == "gz") new GZIPInputStream(fis) else fis
+      val lb = new LineBuffer(is)
 
-      if (l0.nonEmpty && l1.nonEmpty && l2.nonEmpty) {
-        val tle = TLE(l0,l1,l2)
+      while (!lb.hasReachedEnd) {
+        val l0 = if (lb.nextLine()) lb.toString else ""
+        val l1 = if (lb.nextLine()) lb.toString else ""
+        val l2 = if (lb.nextLine()) lb.toString else ""
 
-        val list = satMap.getOrElseUpdate(tle.catNum, ArrayBuffer.empty)
-        list += tle
+        if (l0.nonEmpty && l1.nonEmpty && l2.nonEmpty) {
+          val tle = TLE(l0, l1, l2)
+
+          val list = satMap.getOrElseUpdate(tle.catNum, ArrayBuffer.empty)
+          list += tle
+        }
       }
+      is.close()
     }
-    is.close()
 
     satMap.map( e=> (e._1, NearestLookupTable.from[Long,TLE]( e._2.toArray, (tle:TLE) => tle.date.toEpochMillis))).toMap
   }
 
   def findClosestTLE (satId: Int, date: DateTime): Option[TLE] = {
     tleMap.get(satId).map( _.findNearest(date.toEpochMillis)._2)
+  }
+
+  // BEWARE - this is probably not what you want
+  def findClosestTLE(date: DateTime): Option[TLE] = {
+    var minTd = Long.MaxValue
+    var closestTLE: Option[TLE] = None
+
+    tleMap.foreach { e=>
+      val (td, tle) = e._2.findNearest(date.toEpochMillis)
+      if (td < minTd) {
+        minTd = td
+        closestTLE = Some(tle)
+      }
+    }
+
+    closestTLE
+  }
+
+  def foreachClosestTLE(date: DateTime)(f: TLE=>Unit): Unit = {
+    tleMap.foreach { e =>
+      val (td, tle) = e._2.findNearest(date.toEpochMillis)
+      f(tle)
+    }
   }
 
   def findTLE (satId: Int, date: DateTime): Option[TLE] = {

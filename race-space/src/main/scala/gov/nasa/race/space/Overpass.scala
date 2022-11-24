@@ -133,6 +133,6 @@ case class OverpassSeq (satId: Int, overpasses: Array[Overpass], groundPositions
   }
 
   override def toString: String ={
-    s"Overpass(${firstDate.format_yMd_Hms_z}-${lastDate.format_Hms_z}, ${trajectory.map(_.size).getOrElse(0)}tps, ${swathWidth.map(_.toKilometers.round).getOrElse(0)}km)"
+    s"Overpass($satId,${firstDate.format_yMd_Hms_z}-${lastDate.format_Hms_z}, ${trajectory.map(_.size).getOrElse(0)}tps, ${swathWidth.map(_.toKilometers.round).getOrElse(0)}km)"
   }
 }

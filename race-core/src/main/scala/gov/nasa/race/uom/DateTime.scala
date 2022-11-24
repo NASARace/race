@@ -631,6 +631,9 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
   //.. and possibly more formatters
 }
 
+object DateTimeOrdering extends Ordering[DateTime] {
+  def compare(a: DateTime, b: DateTime) = if (a < b) -1 else if (a == b) 0 else 1
+}
 
 /**
   * wrapper class for arrays of Date vals without per element allocation

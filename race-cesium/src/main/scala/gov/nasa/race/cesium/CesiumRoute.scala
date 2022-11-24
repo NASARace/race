@@ -94,7 +94,7 @@ trait CesiumRoute
         fileAssetPath("ui_cesium.js") ~
         fileAssetPath("ui_cesium.css") ~
         fileAssetPath("time-icon.svg") ~
-        fileAssetPath("view-icon.svg") ~
+        fileAssetPath("camera-icon.svg") ~
         fileAssetPath("layer-icon.svg") ~
         fileAssetPath("map-cursor.png")
     }
@@ -193,18 +193,19 @@ export const cesium = {
   // positions can be set in main css (ids: 'view', 'view_icon', 'time', 'time_icon')
 
   def uiViewWindow(title: String="View"): Text.TypedTag[String] = {
-    uiWindow(title, "view", "view-icon.svg")(
+    uiWindow(title, "view", "camera-icon.svg")(
       uiFieldGroup()(
         uiNumField("lat [°]", "view.latitude"),
         uiNumField("lon [°]", "view.longitude"),
         uiNumField("alt [m]", "view.altitude")
       ),
       uiRowContainer()(
-        uiCheckBox("fullscreen", "main.toggleFullScreen(event)"),
         uiButton("Home", "main.setHomeView()"),
         uiButton("Down", "main.setDownView()"),
         uiButton( "Back", "main.restoreCamera()")
       ),
+      uiCheckBox("fullscreen", "main.toggleFullScreen(event)"),
+
       uiPanel("view parameters", false)(
         uiCheckBox("render on-demand", "main.toggleRequestRenderMode()", "view.rm"),
         uiSlider("frame rate", "view.fr", "main.setFrameRate(event)")
@@ -213,7 +214,7 @@ export const cesium = {
   }
 
   def uiViewIcon: Text.TypedTag[String] = {
-    uiIcon("view-icon.svg", "main.toggleWindow(event,'view')", "view_icon")
+    uiIcon("camera-icon.svg", "main.toggleWindow(event,'view')", "view_icon")
   }
 
   def uiTimeWindow(title: String="Time"): Text.TypedTag[String] = {

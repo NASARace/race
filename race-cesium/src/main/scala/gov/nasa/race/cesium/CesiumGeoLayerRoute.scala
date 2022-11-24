@@ -128,7 +128,7 @@ case class GeoLayer (pathName: String, file: File, date: DateTime, info: String,
 
 object GeoLayerRoute {
   val jsModule = "ui_cesium_geolayer.js"
-  val icon = "map-annotation-icon.svg"
+  val icon = "geomarker-icon.svg"
 
   val windowId = "geolayer"
 }

@@ -250,15 +250,20 @@ object FileUtils {
   }
   def ensureWritableDir (pathName: String): Option[File] = ensureWritableDir(new File(pathName))
 
+  def parentFile(f: File): File = {
+    val pf = f.getParentFile
+    if (pf != null) pf else new File(".")
+  }
+
   def ensureWritable(file: File): Option[File] = {
-    if (ensureWritableDir(file.getParentFile).isDefined){
+    if (ensureWritableDir(parentFile(file)).isDefined){
       if (!file.exists || file.canWrite) Some(file) else None
     } else None
   }
   def ensureWritable(pathName: String): Option[File] = ensureWritable(new File(pathName))
 
   def ensureEmptyWritable (file: File): Option[File] = {
-    if (ensureWritableDir(file.getParentFile).isDefined){
+    if (ensureWritableDir(parentFile(file)).isDefined){
       if (file.isFile) {
         if (file.delete) Some(file) else None
       } else {

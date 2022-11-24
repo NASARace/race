@@ -98,8 +98,10 @@ class PastEntry {
             h.pos = Cesium.Cartographic.fromDegrees(h.lon, h.lat, 10);
             h.xyzPos = Cesium.Cartographic.toCartesian(h.pos);
 
-            h.bounds = h.bounds.map( p=> Cesium.Cartographic.fromDegrees(p[1], p[0]));
-            h.xyzBounds = h.bounds.map( p=> Cesium.Cartographic.toCartesian(p));
+            if (h.bounds){
+                h.bounds = h.bounds.map( p=> Cesium.Cartographic.fromDegrees(p[1], p[0]));
+                h.xyzBounds = h.bounds.map( p=> Cesium.Cartographic.toCartesian(p));
+            }
         });
     }
 }
@@ -260,27 +262,28 @@ function toggleShowSatelliteRegion(event) {
 
 function toggleShowUpcomingSwath (event) {
     let cb = ui.getCheckBox(event.target);
-    if (cb) toggleShowSwath(ui.getListItemOfElement(cb));
+    let isSelected = ui.isCheckBoxSelected(cb);
+    let ops = ui.getListItemOfElement(cb);
+    if (ops) toggleShowSwath(isSelected, ops);
 }
 
 function toggleShowPastSwath (event) {
     let cb = ui.getCheckBox(event.target);
-    if (cb) {
-        let pe = ui.getListItemOfElement(cb);
-        if (pe && pe.ops) toggleShowSwath(pe.ops);
-    }
+    let isSelected = ui.isCheckBoxSelected(cb);
+    let pe = ui.getListItemOfElement(cb);
+    if (pe && pe.ops) toggleShowSwath(isSelected, pe.ops);
 }
 
-function toggleShowSwath (ops) {
-    if (ops.swathEntity) {
-        dataSource.entities.remove(ops.swathEntity)
-        ops.swathEntity = undefined;
-    } else {
+function toggleShowSwath (showIt, ops) {
+    if (showIt && !ops.swathEntity) {
         let e = createSwathEntity(ops)
         if (e) {
             dataSource.entities.add( e);
             ops.swathEntity = e;
         }
+    } else {
+        dataSource.entities.remove(ops.swathEntity)
+        ops.swathEntity = undefined;
     }
     uiCesium.requestRender();
 }
