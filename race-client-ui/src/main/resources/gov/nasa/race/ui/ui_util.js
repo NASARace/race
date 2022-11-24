@@ -197,7 +197,11 @@ export function metersToFlightLevel(alt) {
 }
 
 export function squareMetersToAcres(area) {
-    return (area / 4046.8564224);
+    return (area * 0.000247105381);
+}
+
+export function squareKilometersToAcres(area) {
+    return (area * 247.105381);
 }
 
 export function metersToUsMiles (len) {

@@ -21,6 +21,18 @@ import gov.nasa.race.common.{JsonSerializable, JsonWriter}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.geo.GeoPosition
 
+object SatelliteInfo {
+
+  val satelliteInfos: Map[Int,SatelliteInfo] = Map(
+    (27424 -> new SatelliteInfo(27424, "Aquqa", "polar orbiting MODIS satellite")),
+    (25994 -> new SatelliteInfo(25994, "Terra", "polar orbiting MODIS satellite")),
+    (43013 -> new SatelliteInfo(43013, "J-1", "polar orbiting VIIRS satellite")),
+    (37849 -> new SatelliteInfo(37849, "NPP", "polar orbiting VIIRS satellite")),
+    (43226 -> new SatelliteInfo(43226, "G17", "geostationary ABI satellite (GOES-West)")),
+    (41866 -> new SatelliteInfo(41866, "G16", "geostationary ABI satellite (GOES-East)"))
+  )
+}
+
 /**
  * generic satellite info, normally initialized from config files
  */

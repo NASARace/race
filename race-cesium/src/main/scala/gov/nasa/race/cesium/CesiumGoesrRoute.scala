@@ -144,6 +144,7 @@ trait CesiumGoesrRoute extends CesiumRoute with ContinuousTimeRaceRoute with Pus
         uiRowContainer()(
           goesrSatellites.map( sat=> uiCheckBox( sat.name, "main.toggleShowGoesrSatellite(event)", s"goesr.${sat.name}")).foldLeft(
             Seq(
+              uiHorizontalSpacer(2),
               uiCheckBox("lock step", "main.toggleGoesrLockStep(event)", "goesr.lockStep"),
               uiCheckBox("follow latest", "main.toggleFollowLatestGoesr(event)", "goesr.followLatest")
             )
@@ -183,7 +184,7 @@ trait CesiumGoesrRoute extends CesiumRoute with ContinuousTimeRaceRoute with Pus
   pixelLevel: '${cfg.getStringOrElse("pixel-level", "all")}',
   followLatest: ${cfg.getBooleanOrElse("follow-latest", true)},
   lockStep: ${cfg.getBooleanOrElse("lock-step", true)},
-  pointSize: ${cfg.getIntOrElse("point-size", 6)},
+  pointSize: ${cfg.getIntOrElse("point-size", 5)},
   outlineWidth: ${cfg.getIntOrElse("outline-width", 1)},
   strongOutlineWidth: ${cfg.getIntOrElse("strong-outline-width", 2)},
   goodColor: ${cesiumColor(cfg, "good-color", "Red")},

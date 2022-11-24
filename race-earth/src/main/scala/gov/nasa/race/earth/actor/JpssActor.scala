@@ -22,7 +22,7 @@ import gov.nasa.race.{Failure, SuccessValue, ifSome}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PublishingRaceActor}
 import gov.nasa.race.earth.{ViirsHotspot, ViirsHotspotParser}
 import gov.nasa.race.geo.{GeoPosition, GreatCircle}
-import gov.nasa.race.space.{OreKit, OverpassSeq, TLE}
+import gov.nasa.race.space.{OreKit, OverpassRegion, OverpassSeq, TLE}
 import gov.nasa.race.trajectory.Trajectory
 import gov.nasa.race.uom.Angle.{Degrees, HalfPi, Pi}
 import gov.nasa.race.uom.DateTime.UndefinedDateTime
@@ -74,6 +74,8 @@ trait JpssActor extends PublishingRaceActor with ContinuousTimeRaceActor {
   var maxOverpassDuration: Time = UndefinedTime           // computed from TLE
 
   def satName = tle.flatMap(_.name)
+
+  def getOverpassRegions: Seq[OverpassRegion] = Seq(OverpassRegion( satId, satName, overpassBounds.toSeq))
 
   def getOverpasses(backDays: Long): Array[OverpassSeq] = {
     tle match {

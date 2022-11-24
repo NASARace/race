@@ -105,7 +105,7 @@ class JpssReplayActor (val config: Config) extends JpssActor with Replayer with 
 
   override def onStartRaceActor(originator: ActorRef): Boolean = {
     super.onStartRaceActor(originator) && {
-      publish( OverpassRegion( satId, satName, overpassBounds.toSeq))
+      getOverpassRegions.foreach(publish)
       pastOverpasses.foreach(publish)
       overpasses.foreach(publish)
       true

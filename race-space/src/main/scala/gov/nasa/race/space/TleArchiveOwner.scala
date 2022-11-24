@@ -47,7 +47,7 @@ trait TleArchiveOwner {
   val config: Config
 
   protected val tleArchives = config.getStrings("tle-archive").map( new File(_))
-  private val tleMap = readTLEs(tleArchives)
+  protected val tleMap = readTLEs(tleArchives)
 
   protected def numberOfTLESatellites: Int = tleMap.keys.size
 

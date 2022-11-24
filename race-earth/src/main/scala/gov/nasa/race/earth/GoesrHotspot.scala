@@ -108,8 +108,9 @@ case class GoesrHotspot(
 
   // this key can be used to sort, cluster or match hotspots in local areas (not crossing equator or Greenwich meridian)
   // note that 4 digits (degrees) give us about 10m accuracy at the equator
-  // TODO - can we extend this across the equator?
+  // TODO - use UTM or MGRS
   val center: Long = ((abs(position.latDeg) * 10000).round)<<32 | (abs(position.lonDeg) * 10000).round
+  //(abs(position.latDeg) * 10000).round + (abs(position.lonDeg) * 10000).round
 
   //--- pixel classification
   def hasValues: Boolean = bright.isDefined && area.isDefined && frp.isDefined // correlates with isGoodPixel

@@ -26,8 +26,6 @@ function isCloudPixel(mask) { return (mask == 12 || mask == 32); }
 function isHighPixel(mask) { return (mask == 13 || mask == 33); }
 function isProbablePixel(mask) { return (mask == 13 || mask == 14 || mask == 33 || mask == 34); }
 
-
-
 var satellites = [];
 var satNames = new Map();
 
@@ -35,10 +33,16 @@ var dataSets = []; // complete list in ascending time (latest entries are append
 var displayDataSets = []; // in reverse, latest on top
 var dataSetView = undefined; // showing displayDataSets
 var selectedDataSet = undefined;
+var selectedPeerDataSet = undefined;
 
 var hotspots = [];
 var hotspotView = undefined;
 var selectedHotspot = undefined;
+
+// restorable selections
+var lastSelDs = undefined;
+var lastSelPeerDs = undefined;
+var lastSelHs = undefined;
 
 var historyView = undefined; // for selected hotspot
 var maskLabel = undefined;
@@ -122,7 +126,7 @@ function initSliders() {
     ui.setSliderValue(e, maxMissingMin);
 
     e = ui.getSlider('goesr.pointSize');
-    ui.setSliderRange(e, 3, 5, 1, util.f_0);
+    ui.setSliderRange(e, 0, 8, 1, util.f_0);
     ui.setSliderValue(e, pointSize);
 }
 
@@ -133,8 +137,8 @@ function hotspotClass (hs) {
     } else {
         switch (hs.probability) {
             case "high": return ui.createImage("goesr-asset/fire");
-            case "medium": return " ⚠︎";
-            case "low": return " ?";
+            case "medium": return "med";
+            case "low": return "low";
             default: return "";
         }
     }
@@ -148,7 +152,7 @@ function initHistoryView() {
             { name: "mask", tip: "fire pixel classification code", width: "3rem", attrs: ["fixed", "alignRight"], map: e => e.mask },
             { name: "bright", tip: "pixel brightness [K]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.temp) ? "-" : Math.round(e.temp) },
             { name: "frp", tip: "fire radiative power [MW]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.frp) ? "-" : Math.round(e.frp) },
-            { name: "area", tip: "surface area [ac]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.area) ? "-" : util.f_1.format(util.squareMetersToAcres(e.area)) },
+            { name: "area", tip: "surface area [ac]", width: "4rem", attrs: ["fixed", "alignRight"], map: e => isNaN(e.area) ? "-" : Math.round(util.squareMetersToAcres(e.area)) },
             { name: "time", width: "5rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalHMTimeString(e.date) },
         ]);
     }
@@ -159,6 +163,7 @@ ui.exportToMain(function selectGoesrDataSet(event) {
     let ds = event.detail.curSelection;
     if (ds) {
         selectedDataSet = ds;
+        if (lockStep) selectedPeerDataSet = getPeerDataSet(selectedDataSet);
         refDate = ds.date;
 
         if (ds != displayDataSets[0]) { // if we explicitly select an earlier element we disable followLatest
@@ -167,41 +172,30 @@ ui.exportToMain(function selectGoesrDataSet(event) {
         }
     } else {
         selectedDataSet = undefined;
+        selectedPeerDataSet = undefined;
         refDate = 0;
     }
 
     updateHotspots();
 });
 
-function updateHotspots() {
-    if (selectedDataSet){
-        let hotspots = getHotspots();
-        setEntities( hotspots);
-        ui.setListItems( hotspotView, hotspots);
+function getPeerDataSet (ds) {
+    if (hasShowingPeer(ds.sat)) {
+        console.log("@@@ has showing peers ", ds.satId);
+        let idx = dataSets.indexOf(ds);
+        let ds1 = getPreceedingPeer(ds.satId, idx);
+        let ds2 = getFollowingPeer(ds.satId, idx);
+
+        if (ds1 && selectedDataSet.date - ds1.date < 180000) return ds1;
+        else if (ds2 && ds2.date - selectedDataSet.date < 180000) return ds2;
+        else return undefined;
     } else {
-        clearEntities();
-        ui.clearList(hotspotView);
+        return undefined;
     }
-    uiCesium.requestRender();
 }
 
-function getHotspots() {
-    if (lockStep) {
-        let list = selectedDataSet.hotspots;
-
-        let idx = dataSets.indexOf(selectedDataSet);
-        let ds1 = getPreceedingPeer(selectedDataSet.satId, idx);
-        let ds2 = getFollowingPeer(selectedDataSet.satId, idx);
-        if (ds1 && selectedDataSet.date - ds1.date < 180000) {
-            list = list.concat(ds1.hotspots).sort( (a,b) => (a.center < b.center));
-        } else if (ds2 && ds2.date - selectedDataSet.date < 180000) {
-            list = list.concat(ds2.hotspots).sort( (a,b) => (a.center < b.center));
-        }
-        return list;
-
-    } else {
-        return selectedDataSet.hotspots;
-    }
+function hasShowingPeer (sat) {
+    return satellites.find( s=> (s.satId != sat.satId) && s.show );
 }
 
 function getPreceedingPeer (satId, idx) {
@@ -214,6 +208,27 @@ function getFollowingPeer (satId, idx) {
     for (var i=idx+1; i<dataSets.length; i++) {
         if (dataSets[i].satId  != satId) return dataSets[i];
     }
+}
+
+function updateHotspots() {
+    if (selectedDataSet){
+        let hotspots = getHotspots();
+        setEntities( hotspots);
+        ui.setListItems( hotspotView, hotspots);
+
+    } else {
+        clearEntities();
+        ui.clearList(hotspotView);
+    }
+    uiCesium.requestRender();
+}
+
+function getHotspots() {
+    let list = selectedDataSet.hotspots;
+    if (selectedPeerDataSet) list = list.concat(selectedPeerDataSet.hotspots);
+    list = list.filter(hs=> filterPixel(hs));
+    list = list.sort( (a,b) => b.center - a.center); // spatial clustering (roughly east to west)
+    return list;
 }
 
 function _getHotspots () {
@@ -283,14 +298,20 @@ function setEntities (hotspots) {
     // clean up obsolete entities
     satellites.forEach( sat=> {
         let ec = sat.dataSource.entities;
-        util.filterIterator(ec.values, e=> e._timeStamp != now).forEach( e=> ec.remove(e));
+        util.filterIterator(ec.values, e=> e._timeStamp != now).forEach( e=> {
+            if (e._hotspot) e._hotspot.entity = undefined; // remove backlink
+            ec.remove(e)
+        });
     });
 
     uiCesium.requestRender();
 }
 
 function clearEntities() {
-    satellites.forEach( sat=> sat.dataSource.entities.removeAll());
+    satellites.forEach( sat=> {
+        sat.dataSource.entities.values.forEach( e=> e._hotspot.entity = undefined); // remove backlinks
+        sat.dataSource.entities.removeAll()
+    });
 }
 
 // we only call this on same location entities, no need to update pos or polygon vertices
@@ -309,13 +330,13 @@ function updateHotspotEntity (e, hs) {
     polygon.outlineWidth = outlineWidth(hs);
 
     e._hotspot = hs;
+    hs.entity = e;
 }
 
 function createHotspotEntity (hs) {
     let clr = color(hs);
 
     let e = new Cesium.Entity({
-        id: hs.center,
         position: Cesium.Cartesian3.fromDegrees( hs.lon, hs.lat),
         point: {
             pixelSize: pointSize,
@@ -339,6 +360,7 @@ function createHotspotEntity (hs) {
     });
 
     e._hotspot = hs;
+    hs.entity = e; // watch out - backlink that could cause memory leak
     return e;
 }
 
@@ -448,13 +470,34 @@ function handleGoesrDataSet (dataSet) {
     dataSet.sat = getSatelliteWithId(dataSet.satId);
     if (dataSet.sat) {
         dataSets.push(dataSet);
+
+        saveSelections();
         updateDataSets();
 
         let now = ui.getClockEpochMillis("time.utc"); // we don't want to do this during init of history
         if (followLatest && Math.abs(now - dataSet.date) < 30000) {
             ui.selectFirstListItem(dataSetView);
+        } else {
+            restoreSelections();
         }
     }
+}
+
+function saveSelections() {
+    lastSelDs = selectedDataSet;
+    lastSelPeerDs = selectedPeerDataSet;
+    lastSelHs = selectedHotspot;
+}
+
+function restoreSelections() {
+    if (lastSelDs) ui.setSelectedListItem(dataSetView, lastSelDs);
+    if (lastSelHs) ui.selSelectedListItem(hotspotView, lastSelHs);
+}
+
+function withRestoredSelections(cond, f) {
+    if (cond) saveSelections();
+    f();
+    if (cond) restoreSelections();
 }
 
 function updateDataSets() {
@@ -475,9 +518,13 @@ ui.exportToMain(function toggleShowGoesrSatellite(event) {
         let satName = ui.getCheckBoxLabel(cb)
         let se = getSatelliteWithName(satName);
         if (se) {
-            se.show = !se.show
-            if (!se.show) lockStep = false; // at least one satellite isn't showing
+            se.show = !se.show            
+            let restoreSel = selectedDataSet && (selectedDataSet.satId != se.satId);
+            if (restoreSel) saveSelections();
+
             updateDataSets();
+            if (restoreSel && lastSelDs) ui.setSelectedListItem(dataSetView, lastSelDs);
+
             updateHotspots();
         }
     }
@@ -521,6 +568,7 @@ ui.exportToMain(function zoomToGoesrHotspot(event) {
         let hs = ui.getSelectedListItem(lv);
         if (hs) {
             uiCesium.zoomTo(Cesium.Cartesian3.fromDegrees(hs.lon, hs.lat, config.goesr.zoomHeight));
+            if (hs.entity) uiCesium.setSelectedEntity(hs.entity);
         }
     }
 });
@@ -529,6 +577,15 @@ ui.exportToMain(function setGoesrMaxMissing(event) {
 });
 
 ui.exportToMain(function setGoesrPointSize(event) {
+    pointSize = ui.getSliderValue(event.target);
+    satellites.forEach( sat=>{
+        if (sat.dataSource) {
+            sat.dataSource.entities.values.forEach( e=> {
+                if (e.point) e.point.pixelSize = pointSize;
+            })
+        }
+    });
+    uiCesium.requestRender();
 });
 
 ui.exportToMain(function toggleFollowLatestGoesr(event) {

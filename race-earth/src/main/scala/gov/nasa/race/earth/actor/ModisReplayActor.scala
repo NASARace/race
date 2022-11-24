@@ -17,6 +17,10 @@
 package gov.nasa.race.earth.actor
 
 import com.typesafe.config.Config
+import gov.nasa.race.space.OverpassRegion
+import gov.nasa.race.space.SatelliteInfo.satelliteInfos
+
+import scala.collection.immutable.ArraySeq
 
 /**
  * replay actor for Aqua and Terra satellites. While these are not using VIIRS the file format is the same and
@@ -33,5 +37,7 @@ class ModisReplayActor  (val conf: Config) extends JpssReplayActor(conf) {
 
   override def defaultScanAngle = 55.0 // MODIS has a smaller scan angle
 
-
+  override def getOverpassRegions: Seq[OverpassRegion] = tleMap.keys.toSeq.map( sid =>
+    OverpassRegion(sid, satelliteInfos.get(sid).map(_.name), ArraySeq.unsafeWrapArray(overpassBounds))
+  )
 }
