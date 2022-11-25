@@ -189,6 +189,10 @@ function unloadSource(sourceEntry) {
 }
 
 function showGeoLayer(cond) {
+    sources.forEach( src=> {
+        if (src.dataSource) src.dataSource.show = cond;
+    });
+    uiCesium.requestRender();
 }
 
 ui.exportToMain(function selectGeoLayerSource(event) {

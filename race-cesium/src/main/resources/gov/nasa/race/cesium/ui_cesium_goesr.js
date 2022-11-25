@@ -532,7 +532,9 @@ ui.exportToMain(function toggleShowGoesrSatellite(event) {
 
 function showGoesr(cond) {
     // we don't want to change the hotspotEntry show, just make the assets disappear
-    hotspots.forEach(he => he.asset.show = cond);
+    satellites.forEach( sat=> {
+        sat.dataSource.show = cond;
+    });
     uiCesium.requestRender();
 }
 
@@ -598,4 +600,11 @@ ui.exportToMain(function toggleFollowLatestGoesr(event) {
 ui.exportToMain(function toggleGoesrLockStep(event) {
     lockStep = ui.isCheckBoxSelected(event.target);
     updateHotspots();
+});
+
+ui.exportToMain(function toggleShowGoesr(event) {
+    let cb = ui.getCheckBox(event.target);
+    if (cb) {
+        showGoesr( ui.isCheckBoxSelected(cb));
+    }
 });

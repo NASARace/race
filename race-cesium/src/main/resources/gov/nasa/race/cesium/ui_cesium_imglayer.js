@@ -55,6 +55,7 @@ function toggleShowSource(event) {
             src.show = isSelected;
 
             setViewerLayers();
+            uiCesium.requestRender();
         }
     }
 }
