@@ -24,8 +24,9 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
 import gov.nasa.race.cesium.CesiumRoute.cesiumJsUrl
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
+import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.http._
-import gov.nasa.race.ui.{uiRowContainer, uiSlider, _}
+import gov.nasa.race.ui.{uiRadio, uiRowContainer, uiSlider, _}
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.util.{FileUtils, StringUtils}
 import scalatags.Text
@@ -46,6 +47,20 @@ object CesiumRoute {
   }
 }
 import CesiumRoute._
+
+object CameraPosition {
+  def apply (conf: Config): CameraPosition = {
+    CameraPosition(
+      conf.getString("name"),
+      GeoPosition.fromDegreesAndMeters(
+        conf.getDouble("lat"), conf.getDouble("lon"), conf.getDouble("alt")
+      )
+    )
+  }
+}
+case class CameraPosition (name: String, pos: GeoPosition) {
+  override def toString(): String = f"{name: \"$name\", lat: ${pos.latDeg}%.5f, lon: ${pos.lonDeg}%.5f, alt: ${pos.altMeters.round}}"
+}
 
 /**
   * a RaceRouteInfo that servers Cesium related content, including:
@@ -74,6 +89,25 @@ trait CesiumRoute
   val targetFrameRate = config.getIntOrElse("frame-rate", -1)
   val proxyTerrain = config.getBooleanOrElse("proxy-elevation-provider", true)
   val terrainProvider = config.getStringOrElse("elevation-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
+  val cameraPositions = getCameraPositions()
+
+  def getCameraPositions(): Seq[CameraPosition] = {
+    val places = config.getConfigSeq("camera-positions").map( cfg=> CameraPosition(cfg))
+    if (places.nonEmpty) places else Seq(defaultCameraPosition)
+  }
+
+  def defaultCameraPosition = {
+    config.getOptionalConfig("eye").map( cfg => CameraPosition( "home",  // legacy config
+      GeoPosition.fromDegreesAndMeters(
+        cfg.getDouble("lat"),
+        cfg.getDouble("lon"),
+        cfg.getDouble("alt")
+      )
+    )).getOrElse(
+      CameraPosition("bay area",  GeoPosition.fromDegreesAndMeters(37.6, -122.4, 150000))
+    )
+  }
+
 
   //--- cesium related routes
 
@@ -110,10 +144,9 @@ trait CesiumRoute
   protected def initializeCesiumConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
     val remoteAddr = ctx.remoteAddress
     sendSetClock( remoteAddr, queue)
-    sendInitialCameraPosition( remoteAddr, queue)
   }
 
-  def sendInitialCameraPosition (remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
+  def sendCameraPosition (remoteAddr: InetSocketAddress, queue: SourceQueueWithComplete[Message]): Unit = {
     // position over center of continental US if nothing specified
     var lat = 40.34
     var lon = -98.66
@@ -158,6 +191,7 @@ trait CesiumRoute
     val wsToken = registerTokenForClient(remoteAddr)
     val terrain = if (proxyTerrain) CesiumRoute.terrainPrefix else terrainProvider
     // new Cesium.CesiumTerrainProvider({ url: Cesium.IonResource.fromAssetId(1),}),
+    val places = cameraPositions.mkString(",\n    ")
 
     s"""
 export const wsUrl = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';
@@ -166,6 +200,7 @@ export const cesium = {
   requestRenderMode: $requestRenderMode,
   targetFrameRate: $targetFrameRate,
   terrainProvider: new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'}),
+  cameraPositions: [\n    $places\n  ]
 };
 """
   }
@@ -194,18 +229,28 @@ export const cesium = {
 
   def uiViewWindow(title: String="View"): Text.TypedTag[String] = {
     uiWindow(title, "view", "camera-icon.svg")(
-      uiFieldGroup()(
-        uiNumField("lat [°]", "view.latitude"),
-        uiNumField("lon [°]", "view.longitude"),
-        uiNumField("alt [m]", "view.altitude")
+      uiRowContainer()(
+        uiCheckBox("fullscreen", "main.toggleFullScreen(event)"),
+        uiHorizontalSpacer(2),
+        uiRadio("pointer", "main.setDisplayPointerLoc(event)", "view.showPointer"),
+        uiRadio( "camera", "main.setDisplayCameraLoc(event)", "view.showCamera"),
       ),
       uiRowContainer()(
-        uiButton("Home", "main.setHomeView()"),
-        uiButton("Down", "main.setDownView()"),
-        uiButton( "Back", "main.restoreCamera()")
+        uiColumnContainer("align_center")(
+          uiButton("Home", "main.setHomeView()"),
+          uiButton("Down", "main.setDownView()"),
+          uiButton("Save", "main.saveCamera()"),
+          uiButton( "Back", "main.restoreCamera()")
+        ),
+        uiColumnContainer()(
+          uiFieldGroup()(
+            uiNumField("lat", "view.latitude"),
+            uiNumField("lon", "view.longitude"),
+            uiNumField("alt", "view.altitude")
+          ),
+          uiList("view.places", 5, dblClickAction = "main.setCameraFromSelection(event)")
+        )
       ),
-      uiCheckBox("fullscreen", "main.toggleFullScreen(event)"),
-
       uiPanel("view parameters", false)(
         uiCheckBox("render on-demand", "main.toggleRequestRenderMode()", "view.rm"),
         uiSlider("frame rate", "view.fr", "main.setFrameRate(event)")

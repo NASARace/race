@@ -48,6 +48,9 @@ var layerHierarchyView = undefined;
 var mouseMoveHandlers = [];
 var mouseClickHandlers = [];
 
+var cameraPositions = config.cesium.cameraPositions;
+var showPointerLoc = true;
+
 ui.registerLoadFunction(function initialize() {
     if (config.cesium.accessToken) Cesium.Ion.defaultAccessToken = config.cesium.accessToken;
 
@@ -87,6 +90,7 @@ ui.registerLoadFunction(function initialize() {
 
     ws.addWsHandler(config.wsUrl, handleWsViewMessages);
 
+    initCameraWindow();
     initLayerWindow();
 
     viewer.scene.postRender.addEventListener(function(scene, time) {
@@ -94,8 +98,31 @@ ui.registerLoadFunction(function initialize() {
     });
 
     ui.registerPostLoadFunction(initModuleLayerViewData);
+    ui.registerPostLoadFunction(setHomeView);  // finally set our home view
+
     console.log("ui_cesium initialized");
 });
+
+function initCameraWindow() {
+    let view = ui.getList("view.places");
+    if (view) {
+        ui.setListItemDisplayColumns(view, ["fit"], [
+            { name: "name", tip: "place name name", width: "9rem", attrs: [], map: e => e.name }
+        ]);
+        ui.setListItems(view, cameraPositions);
+    }
+
+    ui.selectRadio( showPointerLoc ? "view.showPointer" : "view.showCamera");
+}
+
+ui.exportToMain( function showPointer(){
+    showPointerLoc = true;
+});
+
+ui.exportToMain( function showCamera(){
+    showPointerLoc = false;
+});
+
 
 function initFrameRateSlider() {
     let e = ui.getSlider('view.fr');
@@ -304,13 +331,15 @@ function getCartographicMousePosition(e) {
 }
 
 function updateMouseLocation(e) {
-    let pos = getCartographicMousePosition(e)
-    if (pos) {
-        let longitudeString = Cesium.Math.toDegrees(pos.longitude).toFixed(5);
-        let latitudeString = Cesium.Math.toDegrees(pos.latitude).toFixed(5);
+    if (showPointerLoc) {
+        let pos = getCartographicMousePosition(e)
+        if (pos) {
+            let longitudeString = Cesium.Math.toDegrees(pos.longitude).toFixed(5);
+            let latitudeString = Cesium.Math.toDegrees(pos.latitude).toFixed(5);
 
-        ui.setField("view.latitude", latitudeString);
-        ui.setField("view.longitude", longitudeString);
+            ui.setField("view.latitude", latitudeString);
+            ui.setField("view.longitude", longitudeString);
+        }
     }
 }
 
@@ -318,15 +347,21 @@ function updateMouseLocation(e) {
 
 export function saveCamera() {
     let camera = viewer.camera;
+    let pos = camera.positionCartographic
+
     lastCamera = {
-        destination: camera.positionWC,
-        orientation: {
-            heading: camera.heading,
-            pitch: camera.pitch,
-            roll: camera.roll
-        }
+        lat: util.toDegrees(pos.latitude),
+        lon: util.toDegrees(pos.longitude),
+        alt: pos.height,
+        heading: util.toDegrees(camera.heading),
+        pitch: util.toDegrees(camera.pitch),
+        roll: util.toDegrees(camera.roll)
     };
+
+    let spec = `{ lat: ${util.fmax_4.format(lastCamera.lat)}, lon: ${util.fmax_4.format(lastCamera.lon)}, alt: ${Math.round(lastCamera.alt)} }`;
+    navigator.clipboard.writeText(spec);
 }
+ui.exportToMain(saveCamera);
 
 const centerOrientation = {
     heading: Cesium.Math.toRadians(0.0),
@@ -344,14 +379,30 @@ export function zoomTo(cameraPos) {
 }
 
 export function setHomeView() {
+    setCamera(cameraPositions[0]);
+}
+ui.exportToMain(setHomeView);
+
+export function setCamera(camera) {
+    saveCamera();
+
     viewer.selectedEntity = undefined;
     viewer.trackedEntity = undefined;
     viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(cameraSpec.lon, cameraSpec.lat, cameraSpec.alt),
+        destination: Cesium.Cartesian3.fromDegrees(camera.lon, camera.lat, camera.alt),
         orientation: centerOrientation
     });
 }
-ui.exportToMain(setHomeView);
+
+ui.exportToMain( function setCameraFromSelection(event){
+    let places = ui.getList(event);
+    if (places) {
+        let cp = ui.getSelectedListItem(places);
+        if (cp) {
+            setCamera(cp);
+        }
+    }
+})
 
 var minCameraHeight = 50000;
 
@@ -378,11 +429,13 @@ ui.exportToMain(setDownView);
 
 export function restoreCamera() {
     if (lastCamera) {
-        viewer.trackedEntity = undefined;
-        viewer.camera.flyTo(lastCamera);
+        let last = lastCamera;
+        saveCamera();
+        setCamera(last);
     }
 }
 ui.exportToMain(restoreCamera);
+
 
 export function toggleFullScreen(event) {
     ui.toggleFullScreen();

@@ -606,6 +606,7 @@ function createRegionEntity (se) {
                 fill: false,
                 outline: true,
                 outlineColor: cfg.regionColor,
+                height: 1,
                 heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             },
             label: {
@@ -651,14 +652,15 @@ function createSwathEntity (ops) {
         polyline: {
             positions: pts,
             material: cfg.trackColor,
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            height: 0,
+            //heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             //distanceDisplayCondition: cfg.swathDC
         },
         label: {
             text: info,
             font: cfg.font,
             fillColor: cfg.labelColor,
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            //heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
             //distanceDisplayCondition: cfg.swathDC
         }
     });
