@@ -414,7 +414,8 @@ function _initializeContainers() {
             let title = e.dataset.title;
             let cwe = _createElement("DIV","ui_container_wrapper");
             let te = _createElement("DIV", "ui_container_title");
-            te.setHTML(title);
+            //te.setHTML(title); // not yet supported by Firefox
+            te.innerHTML = title;
             cwe.appendChild(te);
             pe.replaceChild(cwe,e);
             cwe.appendChild(e);
@@ -679,7 +680,8 @@ export function setLabelText(o, text) {
 export function setTextContent(o,newContent) {
     let e = getText(o);
     if (e) {
-        e.setHTML(newContent); // use the sanitizer to avoid XSS (allow static html such as links)
+        //e.setHTML(newContent); // use the sanitizer to avoid XSS (allow static html such as links) - not yet supported by Firefox
+        e.innerHTML = newContent;
         _resetPanelMaxHeight(e);
     }
 }

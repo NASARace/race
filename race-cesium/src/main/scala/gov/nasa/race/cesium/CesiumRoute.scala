@@ -248,7 +248,7 @@ export const cesium = {
             uiNumField("lon", "view.longitude"),
             uiNumField("alt", "view.altitude")
           ),
-          uiList("view.places", 5, dblClickAction = "main.setCameraFromSelection(event)")
+          uiList("view.places", 6, dblClickAction = "main.setCameraFromSelection(event)")
         )
       ),
       uiPanel("view parameters", false)(
