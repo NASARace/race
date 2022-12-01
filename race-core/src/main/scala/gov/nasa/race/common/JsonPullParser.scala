@@ -52,7 +52,8 @@ object JsonPullParser {
   }
   sealed trait AggregateStart extends AggregateDelimiter {
     override def isStartBracket = true
-    def endDelimiter: AggregateEnd
+    val endDelimiter: AggregateEnd
+    def ensureEnd(p: JsonPullParser): Unit
   }
   sealed trait AggregateEnd extends AggregateDelimiter {
     override def isStartBracket = false
@@ -60,22 +61,29 @@ object JsonPullParser {
   }
 
   case object ObjectStart extends AggregateStart {
-    override def endDelimiter: AggregateEnd = ObjectEnd
+    val endDelimiter: AggregateEnd = ObjectEnd
+    override def ensureEnd(p: JsonPullParser): Unit = p.ensureNextIsObjectEnd()
   }
   case object ObjectEnd extends AggregateEnd {
     override def char = '}'
   }
 
   case object ArrayStart extends AggregateStart {
-    override def endDelimiter: AggregateEnd = ArrayEnd
+    val endDelimiter: AggregateEnd = ArrayEnd
+    override def ensureEnd(p: JsonPullParser): Unit = p.ensureNextIsArrayEnd()
   }
   case object ArrayEnd extends AggregateEnd {
     override def char = ']'
   }
 
   // this is an artificial construct to support remainder parsing
-  case class AnyStart (endDelimiter: AggregateEnd) extends AggregateStart {
-    override def matchesParseResult (res: JsonParseResult): Boolean = true // matches any reslt
+  case object NoStart extends AggregateStart {
+    val endDelimiter: AggregateEnd = NoEnd
+    override def matchesParseResult(res: JsonParseResult): Boolean = true // always matches without read
+    override def ensureEnd(p: JsonPullParser): Unit = {} // no check, no read
+  }
+  case object NoEnd extends AggregateEnd {
+    override def char = ' '
   }
 
   sealed trait ScalarValue extends JsonParseResult {
@@ -138,7 +146,9 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   protected val env = Stack.empty[State]   // state stack
   protected var lastResult: JsonParseResult = NoValue // needs to be protected to ensure integrity
 
-  override def exception(msg: String) = new JsonParseException(s"$msg around '${dataContext(idx)}'")
+  override def exception(msg: String) = {
+    new JsonParseException(s"$msg around '${dataContext(idx)}' ($idx)")
+  }
 
   def tryParse[T](err: JsonParseException=>Unit)(f: =>T): Option[T] = {
     try {
@@ -626,7 +636,7 @@ abstract class JsonPullParser extends LogWriter with Thrower {
           f // this is supposed to parse/process ONE element of the container
         } while (notDone && (level >= endLevel && aggregateHasMoreValues))
       }
-      ensureNext(expected.endDelimiter) // this consumes the end delimiter
+      expected.ensureEnd(this)
     } else throw exception(s"expected '${expected.getClass.getSimpleName}' got '${res.getClass.getSimpleName}'")
   }
 
@@ -679,10 +689,11 @@ abstract class JsonPullParser extends LogWriter with Thrower {
   /**
    * apply the given partial function to all remaining members of the current object
    * this can be used to do value based parsing
+   * NOTE this does not consume the end token
    * note though that JSON does not guarantee member order - use only if the producer is known or the order does not matter
    */
   final def foreachRemainingMember (f: PartialFunction[CharSeqByteSlice,Unit]): Unit = {
-    foreachInAggregate(lastResult, AnyStart(ObjectEnd)) {
+    foreachInAggregate(lastResult, NoStart) {
       readNext()
       if (!isNull) f.applyOrElse(member, (_: CharSequence) => {})
     }
@@ -943,6 +954,9 @@ abstract class JsonPullParser extends LogWriter with Thrower {
             _addToContainer(c,v)
             _parseContainer(v)
 
+          case NoStart => // cannot happen - this is only an artificial construct we use for remainder parsing
+          case NoEnd =>
+
           case _:ScalarValue =>
             if (isQuotedValue) {
               _addToContainer(c,JsonString(value.toString))
@@ -953,8 +967,6 @@ abstract class JsonPullParser extends LogWriter with Thrower {
               else _addToContainer(c, if (value.contains('.')) JsonDouble(value.toDouble) else JsonLong(value.toLong))
               // TODO - check for NumberFormatExceptions
             }
-
-          case _:AnyStart => // cannot happen - this is only an artificial construct we use for remainder parsing
 
           case NoValue | ArrayEnd | ObjectEnd => return
         }
@@ -1200,7 +1212,8 @@ abstract class JsonPullParser extends LogWriter with Thrower {
           printIndent
           ps.println('}')
 
-        case _:AnyStart => // ignore, this is just an artificial construct to support remainder parsing
+        case NoStart => // ignore, this is just an artificial construct to support remainder parsing
+        case NoEnd =>
 
         case v:ScalarValue =>
           printIndent

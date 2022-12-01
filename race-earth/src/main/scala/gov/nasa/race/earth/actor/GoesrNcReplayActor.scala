@@ -44,7 +44,7 @@ class GoesrNcArchiveReader(val config: Config) extends ArchiveReader with GoesrD
  * hence should not block the actor
  * We could speed up considerably if we process data sets in parallel but we still do have to publish them sequentially
  * and this is only a bottleneck during init of replays with a long history. Processing this in parallel could also consume
- * considerable resources by NedCDF
+ * considerable resources by NetCDF
  */
 class GoesrNcReplayActor(val config: Config) extends Replayer {
   type R = ArchiveReader

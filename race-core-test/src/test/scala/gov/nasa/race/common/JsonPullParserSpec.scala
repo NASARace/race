@@ -615,4 +615,114 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
       case _ => fail("failed to parse")
     }
   }
+
+  "a JsonPullParser" should "parse nested objects" in {
+    val msg1 =
+      """
+        |{
+        |  "event": "join",
+        |  "data": {
+        |    "deviceIds": ["x42"],
+        |    "messageId": "42-1"
+        |  }
+        |}
+        |""".stripMargin
+
+    val msg2 =
+        """
+        |{
+        |  "event": "record",
+        |  "data": {
+        |    "deviceId":"dizwqq96w36j",
+        |    "sensorNo":0,
+        |    "type":"magnetometer"
+        |  }
+        |}
+        |""".stripMargin
+
+    println()
+    val p = new EventParser
+
+    println(s"-- parsing json input:\n$msg1")
+    p.initialize(msg1)
+    val res1 = p.parseEvent()
+    println(res1)
+    assert(res1.isDefined && res1.get.isInstanceOf[JoinEvent])
+
+    println()
+    println(s"-- parsing json input:\n$msg2")
+    p.initialize(msg2)
+    val res2 = p.parseEvent()
+    println(res2)
+    assert(res2.isDefined && res2.get.isInstanceOf[RecordEvent])
+  }
+
+  val EVENT = asc("event")
+  val JOIN = asc("join")
+  val RECORD = asc("record")
+  val DATA = asc("data")
+  val DEVICE_ID = asc("deviceId")
+  val DEVICE_IDS = asc("deviceIds")
+  val MESSAGE_ID = asc("messageId")
+  val SENSOR_NO = asc("sensorNo")
+  val TYPE = asc("type")
+
+  trait Event
+  case class JoinEvent (deviceIds: Seq[String], msgId: String) extends Event
+  case class RecordEvent (deviceId: String, sensorNo: Int, recType: String) extends Event
+
+  class EventParser extends StringJsonPullParser {
+    def parseEvent(): Option[Event] = {
+      var res: Option[Event] = None
+      ensureNextIsObjectStart()
+      foreachMemberInCurrentObject {
+        case EVENT => value match {
+          case JOIN => res = parseJoinEvent()
+          case RECORD => res = parseRecordEvent()
+          case other => fail(s"unknown event type '$other'")
+        }
+        case other => fail(s"unknown message '$other'")
+      }
+      res
+    }
+
+    def parseJoinEvent(): Option[JoinEvent] = {
+      var res: Option[JoinEvent] = None
+      foreachRemainingMember {
+        case DATA =>
+          var deviceIds = Seq.empty[String]
+          var msgId = ""
+
+          foreachMemberInCurrentObject {
+            case DEVICE_IDS => deviceIds = readCurrentStringArray()
+            case MESSAGE_ID => msgId = quotedValue.intern
+          }
+          res = Option.when(deviceIds.nonEmpty && !msgId.isEmpty)( JoinEvent(deviceIds, msgId))
+
+        case _ =>
+      }
+      res
+    }
+
+    def parseRecordEvent(): Option[RecordEvent] = {
+      var res: Option[RecordEvent] = None
+      foreachRemainingMember {
+        case DATA =>
+          var deviceId = ""
+          var sensorNo = -1
+          var recType = ""
+
+          foreachMemberInCurrentObject {
+            case DEVICE_ID => deviceId = quotedValue.intern
+            case SENSOR_NO => sensorNo = unQuotedValue.toInt
+            case TYPE => recType = quotedValue.intern
+            case _ => // ignore
+          }
+          res = Option.when(!deviceId.isEmpty && sensorNo >= 0 && !recType.isEmpty)( RecordEvent(deviceId, sensorNo, recType))
+
+        case _ =>
+      }
+      res
+    }
+  }
 }
