@@ -53,7 +53,7 @@ trait UiSettingsRoute extends UiRoute with ConfigScriptRoute with CachedFileAsse
       uiPanel("theme vars", false)(
         uiColumnContainer("align_right")(
           uiList("settings.themeVars", 20, "main.selectThemeVar(event)"),
-          uiTextInput("value", "settings.value", "main.themeVarChange(event)","", "15rem")
+          uiTextInput("value", "settings.value", false, "main.themeVarChange(event)","", "15rem")
         ),
         uiRowContainer()(
           uiButton("Save", "main.saveLocalTheme()", eid="settings.save")

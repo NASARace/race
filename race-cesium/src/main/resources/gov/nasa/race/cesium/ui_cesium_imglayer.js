@@ -5,7 +5,6 @@ import { ExpandableTreeNode } from "./ui_data.js";
 import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
-
 var defaultRender = config.imglayer.render;
 var sources = config.imglayer.sources;
 
@@ -328,13 +327,15 @@ ui.exportToMain(function setImgGamma(event) {
 //--- theme change
 
 function themeChanged() {
-    imageryLayers.forEach(li => li.imageryParams = li.originalImageryParams); // restore original imageryParams
+    /* TBD
+    sources.forEach(li => li.imageryParams = li.originalImageryParams); // restore original imageryParams
     adjustImageryParams(); // adjust defaults according to theme
 
     if (selectedMapLayer) { // update selectedMapLayer
         updateSelectedMapLayer();
         setMapSliders(selectedMapLayer);
     }
+    */ 
 }
 
 //--- color maps

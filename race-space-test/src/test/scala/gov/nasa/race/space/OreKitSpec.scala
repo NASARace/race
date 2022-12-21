@@ -50,7 +50,7 @@ class OreKitSpec extends AnyFlatSpec with RaceSpec {
 
     println(s"\n--- computing trajectory of NOAA-20 between $start and $end")
 
-    val traj = OreKit.computeOrbit(l1,l2, start,dt,end)
+    val traj = OreKit.getGeoTrajectory(l1,l2, start,dt,end)
 
     var i = 0
     for (p <- traj.iterator(new TDP3)) {

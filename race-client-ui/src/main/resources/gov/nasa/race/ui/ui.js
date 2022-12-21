@@ -537,16 +537,16 @@ function getIconBox() {
         document.body.appendChild(iconBox);
     }
 
-    let top = _rootVar("--icon-box-top");
+    let top = getRootVar("--icon-box-top");
     if (!iconBox.style.top && top) iconBox.style.top = top;
 
-    let right = _rootVar("--icon-box-right");
+    let right = getRootVar("--icon-box-right");
     if (!iconBox.style.right && right) iconBox.style.right = right;
 
-    let bottom = _rootVar("--icon-box-bottom");
+    let bottom = getRootVar("--icon-box-bottom");
     if (!iconBox.style.bottom && bottom) iconBox.style.bottom = bottom;
 
-    let left = _rootVar("--icon-box-left");
+    let left = getRootVar("--icon-box-left");
     if (!iconBox.style.left && left) iconBox.style.left = left;
 
     return iconBox;
@@ -578,10 +578,12 @@ function _initializeFields() {
             let dataWidth = _inheritableData(e, 'width');
             let labelWidth = _inheritableData(e, 'labelWidth');
 
-            if (id && labelText) {
-                let label = _createElement("DIV", "ui_field_label", labelText);
-                if (labelWidth) label.style.width = labelWidth;
-                e.appendChild(label);
+            if (id) {
+                if (labelText) {
+                    let label = _createElement("DIV", "ui_field_label", labelText);
+                    if (labelWidth) label.style.width = labelWidth;
+                    e.appendChild(label);
+                }
 
                 let field = _createElement("INPUT", e.classList);
                 field.setAttribute("type", "text");
@@ -663,7 +665,7 @@ export function setLabelText(o, text) {
     if (e) {
         if (!_containsClass(e, "permanent")) {
             if (text) {
-                let h = _rootVar("--field-height");
+                let h = getRootVar("--field-height");
                 e.style.height = h;
                 e.style.lineHeight = h;
             } else {
@@ -1245,15 +1247,16 @@ export function setChoiceItems(o, items, selIndex = -1) {
     if (e) {
         let prevChoices = _firstChildWithClass(e.parentElement, "ui_popup_menu");
         if (prevChoices) e.parentElement.removeChild(prevChoices);
-        e._uiSelIndex = Math.min(selIndex, items.length);
+        e._uiSelIndex = Math.min(selIndex, items.length-1);
         e._uiItems = items;
 
         let choice = e.parentElement;
         var i = 0;
         let menu = _createElement("DIV", "ui_popup_menu");
         for (let item of items) {
+            let itemLabel = getItemLabel(item);
             let idx = i;
-            let mi = _createElement("DIV", "ui_menuitem", item);
+            let mi = _createElement("DIV", "ui_menuitem", itemLabel);
             mi.addEventListener("click", (event) => {
                 event.preventDefault();
                 e.innerText = mi.innerText;
@@ -1264,7 +1267,7 @@ export function setChoiceItems(o, items, selIndex = -1) {
             });
             if (selIndex == i) {
                 mi.classList.add('checked');
-                e.innerText = item;
+                e.innerText = itemLabel;
             }
             menu.appendChild(mi);
             i += 1;
@@ -1296,16 +1299,25 @@ export function selectChoiceItemIndex(o, selIndex) {
             e._uiSelIndex = selIndex;
             mi.classList.add('checked');
             //e.innerText = mi.innerText;
-            e.innerText = e._uiItems[selIndex];
+            e.innerText = getItemLabel(e._uiItems[selIndex]);
             e.parentElement.dispatchEvent(new Event("change"));
         }
+    }
+}
+
+export function selectChoiceItem(o, item) {
+    let e = getChoice(o);
+    if (e) {
+        let idx = e._uiItems.findIndex( it=> it == item);
+        if (idx >= 0) selectChoiceItemIndex(o,idx);
     }
 }
 
 export function getSelectedChoiceValue(o) {
     let e = getChoice(o);
     if (e) {
-        return e.innerText;
+        let choiceName =  e.innerText;
+        return e._uiItems.find( it=> choiceName === getItemLabel(it));
     }
 }
 
@@ -1572,8 +1584,8 @@ export function getSelectorLabel(o) {
 //--- key-value tables (2 column lists, first column contains right aligned labels)
 
 function _initializeKvTables() {
-    let itemHeight = _rootVar("--list-item-height");
-    let itemPadding = _rootVar("--list-item-padding");
+    let itemHeight = getRootVar("--list-item-height");
+    let itemPadding = getRootVar("--list-item-padding");
    
     for (let e of document.getElementsByClassName("ui_kvtable")) {
         let nRows = _intDataAttrValue(e, "rows", 8);
@@ -1619,8 +1631,8 @@ export function setKvList (o, kvList, createValueElement = undefined) {
 //--- lists (with columns)
 
 function _initializeLists() {
-    let itemHeight = _rootVar("--list-item-height");
-    let itemPadding = _rootVar("--list-item-padding");
+    let itemHeight = getRootVar("--list-item-height");
+    let itemPadding = getRootVar("--list-item-padding");
 
     for (let e of document.getElementsByClassName('ui_list')) {
         let nRows = _intDataAttrValue(e, "rows", 8);
@@ -1673,7 +1685,7 @@ function addListWrapper(list) {
 export function setListItemDisplayColumns(o, listAttrs, colSpecs) {
     let e = getList(o);
     if (e) {
-        let defaultWidth = _rootVar("--list-item-column-width", "5rem");
+        let defaultWidth = getRootVar("--list-item-column-width", "5rem");
         let totalWidth = "";
         let re = _createElement("DIV", "ui_list_item");
         let he = (listAttrs.includes("header")) ? _createElement("DIV", "ui_list_header") : null;
@@ -1994,8 +2006,25 @@ export function selectNextListItem(o) {
     if (listBox) {
         let sel = listBox._uiSelectedItemElement;
         if (sel) {
-            selectAndShow(listBox, sel.nextElementSibling);
+            selectAndShow(listBox, nextItemElement(sel));
         }
+    }
+}
+
+function nextItemElement (ie) {
+    if (_containsClass(ie, "ui_list_item")) {
+        let p = ie.parentElement;
+        if (p.classList.contains("ui_node")) { // it's a tree list
+            if (p.nextElementSibling ){
+                let ne = p.nextElementSibling;
+                return (ne.childElementCount > 1) ? ne.children[1] : ne;
+            } else return null;
+        } else {  // normal list
+            return ie.nextElementSibling;
+        }
+    } else {
+        let ne = ie.nextElementSibling;
+        return (ne && ne.childElementCount > 1) ? ne.children[1] : ne;
     }
 }
 
@@ -2004,8 +2033,25 @@ export function selectPrevListItem(o) {
     if (listBox) {
         let sel = listBox._uiSelectedItemElement;
         if (sel) {
-            selectAndShow(listBox, sel.previousElementSibling);
+            selectAndShow(listBox, prevItemElement(sel));
         }
+    }
+}
+
+function prevItemElement (ie) {
+    if (_containsClass(ie, "ui_list_item")) {
+        let p = ie.parentElement;
+        if (p.classList.contains("ui_node")) { // it's a tree list
+            if (p.previousElementSibling){
+                let pe = p.previousElementSibling;
+                return (pe.childElementCount > 1) ? pe.children[1] : pe; // could be a header node
+            } else return null;
+        } else { // normal list
+            return ie.previousElementSibling;
+        }
+    } else {
+        let pe = ie.previousElementSibling;
+        return (pe && pe.childElementCount > 1) ? pe.children[1] : pe;
     }
 }
 
@@ -2097,16 +2143,20 @@ function _setSelectedItemElement(listBox, itemElement) {
     let nextItem = null;
 
     let prevItemElem = listBox._uiSelectedItemElement;
+
     if (prevItemElem !== itemElement) {
         if (prevItemElem) {
             prevItem = prevItemElem._uiItem;
             _removeClass(prevItemElem, "selected");
+            if (_containsClass(prevItemElem.parentElement, "ui_node")) _removeClass(prevItemElem.parentElement, "selected");
         }
 
         if (itemElement) {
             nextItem = itemElement._uiItem;
             listBox._uiSelectedItemElement = itemElement;
             _addClass(itemElement, "selected");
+            if (_containsClass(itemElement.parentElement, "ui_node")) _addClass(itemElement.parentElement, "selected");
+
         } else {
             listBox._uiSelectedItemElement = null;
         }
@@ -2227,6 +2277,17 @@ function createTooltip (e, text) {
             ett.style.left = "-1000px";
         }
     });
+}
+
+//--- buttons
+
+export function getButton (o) {
+    let e = _elementOf(o);
+    if (e) {
+        let eCls = e.classList;
+        if (eCls.contains("ui_button")) return e;
+    }
+    return undefined;
 }
 
 //--- menus
@@ -2361,7 +2422,7 @@ export function toggleMenuItemCheck(event) {
 
 export function createColorBox(clrSpec) {
     let e = _createElement("DIV", "ui_color_box");
-    e.style.background = clrSpec;
+    e.style.backgroundColor = clrSpec;
     return e;
 }
 
@@ -2455,7 +2516,7 @@ function _setAlignment(e, attrs) {
     }
 }
 
-function _rootVar(varName, defaultValue = undefined) {
+export function getRootVar(varName, defaultValue = undefined) {
     let v = getComputedStyle(document.documentElement).getPropertyValue(varName);
     if (v) return v;
     else return defaultValue;
@@ -2701,4 +2762,25 @@ export function positionRight(e, len) {
     e.style.position = 'absolute';
     e.style.right = len;
     e.style.display = 'inline-block';
+}
+
+function getItemLabel (item) {
+    if (item.label) return util.evalProperty(item.label);
+    else if (item.name) return util.evalProperty(item.name);
+    else if (item.id) return util.evalProperty(item.id);
+    else return item.toString;
+}
+
+export function setElementColors (e, clr, backClr) {
+    if (e) {
+        e.style.color = clr;
+        e.style.backgroundColor = backClr;
+    }
+}
+
+export function resetElementColors(e) {
+    if (e) {
+        e.style.color = null;
+        e.style.backgroundColor = null;
+    }
 }

@@ -411,19 +411,19 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     private[GisItemDB]  var y: Double = 0
     private[GisItemDB]  var z: Double = 0
 
-    Datum.withECEF(pos)(setXyz)
+    Datum.withECEF(pos.latDeg, pos.lonDeg, pos.altMeters)(setXyz)
 
     /** NOTE - don't change while processQuery on same query object is running */
     def setPos (newPos: GeoPosition): Unit = {
       pos = newPos
-      Datum.withECEF(pos)(setXyz)
+      Datum.withECEF(pos.latDeg, pos.lonDeg, pos.altMeters)(setXyz)
     }
     def getPos: GeoPosition = pos
 
-    private[GisItemDB] def setXyz(lx: Length, ly: Length, lz: Length): Unit = {
-      x = lx.toMeters
-      y = ly.toMeters
-      z = lz.toMeters
+    private[GisItemDB] def setXyz(xMeters: Double, yMeters: Double, zMeters: Double): Unit = {
+      x = xMeters
+      y = yMeters
+      z = zMeters
     }
 
     @inline final def _closest (v: Double, min: Double, max: Double): Double = {

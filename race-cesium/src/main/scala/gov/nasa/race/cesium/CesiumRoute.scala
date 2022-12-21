@@ -39,7 +39,7 @@ import java.util.TimeZone
 object CesiumRoute {
   val terrainPrefix = "terrain"
 
-  val defaultCesiumJsVersion = "1.99"
+  val defaultCesiumJsVersion = "1.100"
 
   val cesiumPathMatcher = PathMatchers.separateOnSlashes("Build/Cesium/")
   def cesiumJsUrl (version: String): String = {
@@ -200,7 +200,12 @@ export const cesium = {
   requestRenderMode: $requestRenderMode,
   targetFrameRate: $targetFrameRate,
   terrainProvider: new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'}),
-  cameraPositions: [\n    $places\n  ]
+  cameraPositions: [\n    $places\n  ],
+  color: ${cesiumColor(config, "color", "red")},
+  outlineColor: ${cesiumColor(config, "outline-color", "yellow")},
+  font: '${config.getStringOrElse("label-font", "16px sans-serif")}',
+  labelBackground: ${cesiumColor(config, "label-bg", "#00000060")},
+  pointSize: ${config.getIntOrElse("point-size", 3)},
 };
 """
   }
@@ -228,28 +233,32 @@ export const cesium = {
   // positions can be set in main css (ids: 'view', 'view_icon', 'time', 'time_icon')
 
   def uiViewWindow(title: String="View"): Text.TypedTag[String] = {
+    val bw = 3.5
     uiWindow(title, "view", "camera-icon.svg")(
       uiRowContainer()(
         uiCheckBox("fullscreen", "main.toggleFullScreen(event)"),
-        uiHorizontalSpacer(2),
+        uiHorizontalSpacer(1),
         uiRadio("pointer", "main.setDisplayPointerLoc(event)", "view.showPointer"),
         uiRadio( "camera", "main.setDisplayCameraLoc(event)", "view.showCamera"),
+        uiHorizontalSpacer(1),
+        uiButton("⟘", "main.setDownView()", 2.5),  // ⇩  ⊾ ⟘
+        uiButton("⌂", "main.setHomeView()", 2.5) // ⌂ ⟐ ⨁
       ),
       uiRowContainer()(
-        uiColumnContainer("align_center")(
-          uiButton("Home", "main.setHomeView()"),
-          uiButton("Down", "main.setDownView()"),
-          uiButton("Save", "main.saveCamera()"),
-          uiButton( "Back", "main.restoreCamera()")
-        ),
-        uiColumnContainer()(
-          uiFieldGroup()(
-            uiNumField("lat", "view.latitude"),
-            uiNumField("lon", "view.longitude"),
-            uiNumField("alt", "view.altitude")
-          ),
-          uiList("view.places", 6, dblClickAction = "main.setCameraFromSelection(event)")
-        )
+        uiButton(text = "⨀", eid = "view.pickPos", action = "main.pickPoint()", widthInRem = 2.5),
+        uiButton("⨁", "main.addPoint()", 2.5),
+        uiTextInput("", "view.latitude", isFixed = true, action = "main.setViewFromFields()", width = "5rem"),
+        uiTextInput("", "view.longitude", isFixed = true, action = "main.setViewFromFields()", width = "6rem"),
+        uiTextInput("", "view.altitude", isFixed = true, action = "main.setViewFromFields()", width = "5.2rem"),
+        uiHorizontalSpacer(0.4)
+      ),
+      uiList("view.positions", 8, dblClickAction = "main.setCameraFromSelection(event)"),
+      uiRowContainer()(
+        uiChoice("","view.posSet", "main.selectPositionSet(event)"),
+        uiButton("save", "main.storePositionSet()", bw),
+        uiButton("del", "main.removePositionSet()", bw),
+        uiHorizontalSpacer(4),
+        uiButton("⌫", "main.removePoint()", 2.5)
       ),
       uiPanel("view parameters", false)(
         uiCheckBox("render on-demand", "main.toggleRequestRenderMode()", "view.rm"),

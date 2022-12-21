@@ -26,7 +26,7 @@ import gov.nasa.race.config.NoConfig
 import gov.nasa.race.core.ParentActor
 import gov.nasa.race.http.{DocumentRoute, ResponseData}
 import gov.nasa.race.ifSome
-import gov.nasa.race.ui.{extModule, uiColumnContainer, uiIcon, uiKvTable, uiLabel, uiList, uiPanel, uiRowContainer, uiSlider, uiText, uiTreeList, uiWindow}
+import gov.nasa.race.ui.{UiSettingsRoute, extModule, uiColumnContainer, uiIcon, uiKvTable, uiLabel, uiList, uiPanel, uiRowContainer, uiSlider, uiText, uiTreeList, uiWindow}
 import gov.nasa.race.util.{ClassLoaderUtils, FileUtils, StringUtils}
 import scalatags.Text
 
@@ -291,5 +291,5 @@ class TileMapServiceImageryProvider (val config: Config) extends CesiumImageryPr
 /**
  * single layer test application
  */
-class CesiumImageryLayerApp (val parent: ParentActor, val config: Config) extends DocumentRoute with ImageryLayerRoute
+class CesiumImageryLayerApp (val parent: ParentActor, val config: Config) extends DocumentRoute with ImageryLayerRoute with UiSettingsRoute
 

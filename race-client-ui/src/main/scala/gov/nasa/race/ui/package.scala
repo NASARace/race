@@ -74,7 +74,7 @@ package object ui {
     div(mods: _*)
   }
 
-  def uiButton (text: String, action: String, widthInRem:Int=0, eid: UiID=NoId): Text.TypedTag[String] = {
+  def uiButton (text: String, action: String, widthInRem:Double=0, eid: UiID=NoId): Text.TypedTag[String] = {
     var mods = List(cls:="ui_button", tpe:="button", value:=text, onclick:=action)
     if (eid.nonEmpty) mods = (id:=eid) :: mods
     if (widthInRem!= 0) mods = (style:=s"width:${widthInRem}rem") :: mods
@@ -171,8 +171,10 @@ package object ui {
     div(mods: _*)
   }
 
-  def uiTextInput (label: String, eid: UiID, action: String=NoAction, placeHolder: String="", width: String=NoWidth): Text.TypedTag[String] = {
-    var mods = List(cls:="ui_field text input", data("id"):=eid, data("label"):= label)
+  def uiTextInput (label: String, eid: UiID, isFixed: Boolean = false, action: String=NoAction, placeHolder: String="", width: String=NoWidth): Text.TypedTag[String] = {
+    var classes = "ui_field text input"
+    if (isFixed) classes += " fixed"
+    var mods = List(cls:=classes, data("id"):=eid, data("label"):= label)
     if (action.nonEmpty) mods = (onchange:=action) :: mods
     if (placeHolder.nonEmpty) mods = (data("placeholder"):=placeHolder) :: mods
     if (width.nonEmpty) mods = (data("width"):=width) :: mods

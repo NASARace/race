@@ -24,46 +24,40 @@ import gov.nasa.race.uom.Angle._
 import gov.nasa.race.uom.Area._
 
 import Math._
-import scala.language.postfixOps
+import scala.language.{postfixOps, reflectiveCalls}
 
 /**
   * functions related to Datum conversion
   *
-  * TODO - extend .uom package so that we don't have to convert to Doubles
-  * TODO - we need a cartesian coordinate type (not yet clear if Vec3[T] or Vec4[T])
+  * conversion between ECEF and WGS84 uses the closed form described in
+  *           https://hal.archives-ouvertes.fr/hal-01704943v2
   */
 object Datum {
 
-  /**
-    * convert earth-centered-inertial (ECI) geocentric (x,y,z) coordinates to
-    * (lat,lon,alt) WGS84 geodetic coordinates
-    *
-    * from Astronomical Almanac pg. K12
-    */
-  def ecefToWGS84(xLen: Length, yLen: Length, zLen: Length): GeoPosition = {
-    val x = xLen.toMeters
-    val y = yLen.toMeters
-    val z = zLen.toMeters
+  //--- constants and functions
+  val `a²`: Double = 4.0680631590769e+13d
+  val `b²`: Double = 4.04082999828157e+13d
+  val `a/b`: Double = 1.0033640898209764d
+  val `1-a²/b²`: Double = -0.006739496788261468d
+  val `a²/c`: Double = 7.79540464078689228919e+7d
+  val `b²/c²`: Double = 1.48379031586596594555e+2d
+  val `1-e²`: Double = 9.93305620009858682943e-1d
+  val `e⁴`: Double = 4.48147234524044602618e-5d
+  val `(1-e²)/b`: Double = 1.56259921876129741211e-7d
+  val `(1-e²)/a²`: Double = 2.44171631847341700642e-14d
+  val `1/a²`: Double = 2.45817225764733181057e-14d
+  val `𝑙`: Double = 3.34718999507065852867e-3d
+  val `𝑙²`: Double = `𝑙` * `𝑙`
+  val `2𝑙²`: Double = 2 * `𝑙²`
+  val `4𝑙²`: Double = 4 * `𝑙²`
+  val Hmin: Double = 2.25010182030430273673e-14d
+  val `∛2`: Double = 1.259921049894873d
+  val `1/∛2`: Double = 7.93700525984099737380e-1d
+  val `1/3`: Double = 3.33333333333333333333e-1d
+  val `1/6`:Double = 1.66666666666666666667e-1d
 
-    val r = sqrt(x*x + y*y)
-    var φ1 = atan(z/r)
-    var φ = 0.0
-    var c = 0.0
-
-    do {
-      φ = φ1
-      val sin_φ = sin(φ)
-      c = sqrt(1.0 - E_ECC* sin_φ`²`)
-      φ1 = atan((z + RE_E*E_ECC * c * sin_φ) / r)
-    } while (abs(φ - φ1) > 0.000000001)
-
-    val h = r / cos(φ) - RE_E*c
-    val λ = atan(y/x)
-
-    GeoPosition(Radians(φ),Radians(λ),Meters(h))
-  }
-  @inline def ecefToWGS84(pos: (Length,Length,Length)): GeoPosition = ecefToWGS84(pos._1,pos._2,pos._3)
-  @inline def ecefToWGS84(pos: XyzPos): GeoPosition = ecefToWGS84(pos.x,pos.y,pos.z)
+  @inline final def `√` (x: Double): Double = sqrt(x)
+  @inline final def `∛` (x: Double): Double = pow(x, `1/3`)
 
 
   /**
@@ -71,37 +65,84 @@ object Datum {
     *
     * from Astronomical Almanac pg. K12
     */
-  def withECEF[U] (φ: Angle, λ: Angle, alt: Length)(fn: (Length,Length,Length)=>U): U = {
-    val h = alt.toMeters
-    val cos_φ = Cos(φ)
-    val sin_φ = Sin(φ)
+  def withECEF[U] (φ: Double, λ: Double, alt: Double)(fn: (Double,Double,Double)=>U): U = {
+    val h = alt
+    val cos_φ = cos(φ)
+    val N = `a²/c` / `√`((cos_φ`²`) + `b²/c²`)
+    val d = (N + h) * cos_φ
 
-    val f = (1.0 - RE_FLATTENING)`²`
-    val c = sqrt( (cos_φ`²`) + f * (sin_φ`²`))
-    val s = f * c
-    val ach = (RE_E * c + h)
+    val x = d * cos(λ)
+    val y = d * sin(λ)
+    val z = (N * `1-e²` + h) * sin(φ)
 
-    val x = ach * cos_φ * Cos(λ)
-    val y = ach * cos_φ * Sin(λ)
-    val z = (RE_E * s + h) * sin_φ
-
-    fn( Meters(x),Meters(y),Meters(z))
-  }
-  @inline def withECEF(pos: GeoPosition)(f: (Length,Length,Length)=>Unit): Unit = {
-    withECEF(pos.φ,pos.λ,pos.altitude)(f)
+    fn(x,y,z)
   }
 
-  def wgs84ToECEF(φ: Angle, λ: Angle, alt: Length): XyzPos = {
-    withECEF(φ, λ, alt)( (x,y,z) => XyzPos(x,y,z))
+  def wgs84ToECEF (pos: GeoPosition): XyzPos = withECEF(pos.lat.toRadians, pos.lon.toRadians, pos.altMeters) { (x,y,z)=>
+    XyzPos.fromMeters(x,y,z)
   }
-  @inline def wgs84ToECEF(pos: GeoPosition): XyzPos = wgs84ToECEF(pos.φ,pos.λ,pos.altitude)
+  def wgs84ToECEF (pos: LatLonAlt): XyzPos = withECEF(pos.φ, pos.λ, pos.altitude) { (x,y,z)=>
+    XyzPos.fromMeters(x,y,z)
+  }
+  def wgs84ToECEF (pos: (Double,Double,Double)): XyzPos = withECEF(pos._1, pos._2, pos._3) { (x,y,z)=>
+    XyzPos.fromMeters(x,y,z)
+  }
 
+  def withWGS84[U](x: Double, y: Double, z: Double)(f: (Double,Double,Double)=>U): U = {
+    val `w²` = x*x + y*y
+    val m = `w²` * `1/a²`
+    val n = (z`²`) * `(1-e²)/a²`
+    val `m+n` = m + n
 
-  def earthRadius (φ: Angle): Length = {
-    val cos_φ = Cos(φ)
-    val sin_φ = Sin(φ)
+    val p = `1/6` * (`m+n` - `e⁴`)
+    val G = m * n * `𝑙²`
+    val H = 2 * (p`³`) + G
 
-    Meters(sqrt(((RE_E2 * cos_φ).`²` + (RE_N2 * sin_φ).`²`)/(RE_E * cos_φ).`²` + (RE_N * sin_φ).`²`))
+    if (H < Hmin) throw new RuntimeException("outside bounds")
+
+    val C = `∛`(H + G + 2*`√`(H*G)) * `1/∛2`
+    val i = -`𝑙²` - (`m+n`/ 2)
+    val P = p`²`
+    val β = i/3 - C - P/C
+    val k = `𝑙²` * (`𝑙²` - `m+n`)
+
+    //val t = `√`( `√`((β`²`) - k) - (β+i)/2) - (signum(m-n) * `√`(abs((β-i)/2)))
+    val tl = `√`( `√`((β`²`) - k) - (β+i)/2)
+    val tr = `√`(abs((β-i)/2))
+    val t =  tl - (if (m < n) -tr else tr)
+
+    val `2𝑙(m-n)` = 2*`𝑙`*(m - n)
+    val F = (t`⁴`) + 2*i* (t`²`) + `2𝑙(m-n)`*t + k
+    val `𝑑F/𝑑t` = 4*(t`³`) + 4*i*t + `2𝑙(m-n)`
+    val `𝛥t` = -F / `𝑑F/𝑑t`
+    val `t+𝛥t` = t + `𝛥t`
+
+    val u = `t+𝛥t` + `𝑙`
+    val v = `t+𝛥t` - `𝑙`
+    val w = `√`(`w²`)
+    val wv = w * v
+    val zu = z * u
+    val φ = atan2(zu, wv)
+
+    val `1/uv` = 1 / (u*v)
+    val `𝛥w` = w - (wv * `1/uv`)
+    val `𝛥z` = z - (zu * `1-e²` * `1/uv`)
+    val `𝛥a` = `√`((`𝛥w``²`) + (`𝛥z``²`))
+    val h = signum(u - 1) * `𝛥a`
+
+    val λ = atan2(y,x)
+
+    f( φ, λ, h)
+  }
+
+  @inline def ecefToWGS84(pos: (Length,Length,Length)): GeoPosition =  withWGS84(pos._1.toMeters, pos._2.toMeters, pos._3.toMeters) { (φ,λ,h) =>
+    GeoPosition.fromRadiansAndMeters(φ,λ,h)
+  }
+  @inline def ecefToWGS84(pos: Cartesian3Pos): GeoPosition = withWGS84(pos.xMeters,pos.yMeters,pos.zMeters) { (φ,λ,h) =>
+    GeoPosition.fromRadiansAndMeters(φ,λ,h)
+  }
+  @inline def ecefToWGS84(pos: Cartesian3): GeoPosition = withWGS84(pos.x,pos.y,pos.z) { (φ,λ,h) =>
+    GeoPosition.fromRadiansAndMeters(φ,λ,h)
   }
 
   def parallelDistance (pos1: GeoPosition, pos2: GeoPosition): Length = {
@@ -125,4 +166,71 @@ object Datum {
 
     Meters(dlat.toRadians * r)
   }
+
+  def geoCentricLatitude (lat: Angle): Angle = {
+    Radians( atan( `1-e²` * Tan(lat)))
+  }
+
+  // φ is the geodetic latitude
+  def earthRadius (φ: Angle): Length = {
+    val cos_φ = Cos(φ)
+    val sin_φ = Sin(φ)
+
+    val n = ((RE_E2 * cos_φ)`²`) + ((RE_N2 * sin_φ)`²`)
+    val d = ((RE_E * cos_φ)`²`) + ((RE_N * sin_φ)`²`)
+    val r = `√`(n/d)
+
+    Meters(r)
+  }
+
+  // get earth radius for given cartesian point
+  def earthRadius (xyz: Cartesian3): Double = {
+    val d2 = xyz.length2
+    val c0 = (xyz.z `²`) / d2
+    val c1 = ((xyz.x `²`) + (xyz.y `²`)) / d2
+    val c2 = c0 / `b²` + c1 / `a²`
+
+    `√`(1.0/c2)
+  }
+
+  def toEarthRadius (xyz: Cartesian3): Cartesian3 = {
+    xyz * (earthRadius(xyz) / xyz.length)
+  }
+
+  def scaleToEarthRadius (xyz: MutXyz): Unit = {
+    xyz *= (earthRadius(xyz) / xyz.length)
+  }
+
+  def earthRadius (xyz: XyzPos): Length = {
+    val d2 = xyz.length2
+    val c0 = (xyz.z.toMeters `²`) / d2
+    val c1 = ((xyz.x.toMeters `²`) + (xyz.y.toMeters `²`)) / d2
+    val c2 = c0 / `b²` + c1 / `a²`
+
+    Meters(`√`(1.0/c2))
+  }
+
+  def toEarthRadius (xyz: XyzPos): XyzPos = {
+    xyz * (earthRadius(xyz).toMeters / xyz.length)
+  }
+
+  // spherical approximation of earth
+  def wgs84ToSphericalECEF(pos: GeoPosition): XyzPos = {
+    val lat = pos.lat
+    val lon = pos.lon
+
+    val r = earthRadius(lat) + pos.altitude
+    val d = Cos(lat) * r
+
+    val z = Sin(lat) * r
+    val x = Cos(lon) * d
+    val y = Sin(lon) * d
+
+    XyzPos(x,y,z)
+  }
+
+  def geodeticToGeocentricLatitude (φ: Angle): Angle = {
+    Radians( atan(`1-e²` * Tan(φ)))
+  }
+  def gdToGcLatDeg(deg:Double): Double = geodeticToGeocentricLatitude(Degrees(deg)).toDegrees
 }

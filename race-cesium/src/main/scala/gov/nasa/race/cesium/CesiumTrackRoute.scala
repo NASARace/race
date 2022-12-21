@@ -138,7 +138,7 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute with CachedFileAsse
         uiList("tracks.sources", 5, "main.selectSource(event)", NoAction)
       ),
       uiPanel("tracks")(
-        uiTextInput("query","tracks.query", "main.queryTracks(event)", "enter track query", width="12rem"),
+        uiTextInput("query","tracks.query", false, "main.queryTracks(event)", "enter track query", width="12rem"),
         uiList("tracks.list", 10, "main.selectTrack(event)"),
         uiRowContainer()(
           uiCheckBox("show path", "main.toggleShowPath(event)", "tracks.path"),

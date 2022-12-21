@@ -16,10 +16,10 @@
  */
 package gov.nasa.race.space
 
-import gov.nasa.race.common.{squareRoot, squared}
+import gov.nasa.race.common.{MutXyz, squareRoot, squared}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.RaceActor
-import gov.nasa.race.geo.{GeoPosition, GreatCircle}
+import gov.nasa.race.geo.{Datum, GeoPosition, GreatCircle}
 import gov.nasa.race.{Dated, DatedOrdering, ifTrue, ifTrueCheck}
 import gov.nasa.race.trajectory.{MutAccurateTrajectory, Trajectory}
 import gov.nasa.race.uom.Angle.{Acos, Radians, Sin, π_2}
@@ -28,17 +28,18 @@ import gov.nasa.race.uom.Length.{Kilometers, Meters}
 import gov.nasa.race.uom.Time.{Seconds, UndefinedTime}
 import gov.nasa.race.uom.{Angle, DateTime, Length, Time}
 import gov.nasa.race.util.FileUtils
+import org.hipparchus.geometry.euclidean.threed.Vector3D
 import org.hipparchus.ode.events.Action
 import org.hipparchus.util.FastMath
 import org.orekit.bodies.{GeodeticPoint, OneAxisEllipsoid}
 import org.orekit.data.{ClasspathCrawler, DataContext, DirectoryCrawler, ZipJarCrawler}
-import org.orekit.frames.{FactoryManagedFrame, FramesFactory, TopocentricFrame}
+import org.orekit.frames.{FactoryManagedFrame, Frame, FramesFactory, TopocentricFrame}
 import org.orekit.propagation.{AbstractPropagator, SpacecraftState}
 import org.orekit.propagation.analytical.tle.{TLEPropagator, TLE => OreTLE}
 import org.orekit.propagation.events.{ElevationExtremumDetector, EventsLogger}
 import org.orekit.propagation.events.handlers.EventHandler
 import org.orekit.time.{AbsoluteDate, TimeScalesFactory, UTCScale}
-import org.orekit.utils.{Constants, IERSConventions}
+import org.orekit.utils.{Constants, IERSConventions, PVCoordinates}
 
 import java.io.File
 import java.net.URL
@@ -207,38 +208,86 @@ object OreKit {
 
   //--- orbits
 
-  def computeOrbit (tleLine1: String, tleLine2: String, startDate: DateTime, tInc: Time, endDate: DateTime): Trajectory = {
-    val earth = Earth
+  def propagateOrbit (tleLine1: String, tleLine2: String, startDate: DateTime, tInc: Time, endDate: DateTime)
+                     (f: (PVCoordinates,Frame,AbsoluteDate)=> Unit): Unit = {
     val oreTLE = new OreTLE(tleLine1,tleLine2)
     val propagator = TLEPropagator.selectExtrapolator(oreTLE)
-    val tleFrame = propagator.getFrame
+    val tleFrame: Frame = propagator.getFrame
 
     val t0: AbsoluteDate = startDate
     val t1: AbsoluteDate = endDate
     val dt: Double = tInc.toSeconds
-
-    val n = (endDate.timeSince(startDate) / tInc).toInt
-    val traj = new MutAccurateTrajectory(n)
 
     var t = t0
     var d = startDate // it's faster and more accurate to increment this ourselves than to go through an AbsoluteDate -> DateTime conversion
 
     while (t.compareTo(t1) <= 0){
       val state = propagator.propagate(t)
-      val pos = state.getPVCoordinates().getPosition
-      val geoPos = earth.transform(pos,tleFrame, t)  // note this is measuring altitude against the ellipsoid
+      val pvc = state.getPVCoordinates()
 
-      traj.append(d, Radians(geoPos.getLatitude), Radians(geoPos.getLongitude), Meters(geoPos.getAltitude))
+      f( pvc, tleFrame, t)
 
       t = t.shiftedBy(dt)
+      d += tInc
+    }
+  }
+
+  def getOrbitalTrajectory (tleLine1: String, tleLine2: String, startDate: DateTime, tInc: Time, endDate: DateTime): OrbitalTrajectory = {
+    val n = (endDate.timeSince(startDate) / tInc).toInt + 1
+    val ot = new OrbitalTrajectory(n, startDate, tInc)
+    val ecef = FramesFactory.getITRF(IERSConventions.IERS_2010,true) // getEME2000
+    var i = 0
+
+    propagateOrbit( tleLine1, tleLine2, startDate, tInc, endDate) { (pvc, frame, t)=>
+      val tf = frame.getTransformTo( ecef, t)
+      ot(i) = tf.transformPVCoordinates(pvc).getPosition
+      i += 1
+    }
+    ot
+  }
+  def getOrbitalTrajectory(tle: TLE, startDate: DateTime, tInc: Time, endDate: DateTime): OrbitalTrajectory = {
+    getOrbitalTrajectory(tle.line1, tle.line2, startDate,tInc,endDate)
+  }
+
+  def getXyzGroundTrack (tleLine1: String, tleLine2: String, startDate: DateTime, tInc: Time, endDate: DateTime): OrbitalTrajectory = {
+    val n = (endDate.timeSince(startDate) / tInc).toInt + 1
+    val ot = new OrbitalTrajectory(n, startDate, tInc)
+    val ecef = FramesFactory.getITRF(IERSConventions.IERS_2010,true) // getEME2000
+    var i = 0
+    val p = MutXyz()
+
+    propagateOrbit( tleLine1, tleLine2, startDate, tInc, endDate) { (pvc, frame, t)=>
+      val tf = frame.getTransformTo( ecef, t)
+      val pos = tf.transformPVCoordinates(pvc).getPosition
+      p.setTo( pos.getX, pos.getY, pos.getZ)
+      Datum.scaleToEarthRadius(p)
+      ot(i) = p
+      i += 1
+    }
+    ot
+  }
+  def getXyzGroundTrack(tle: TLE, startDate: DateTime, tInc: Time, endDate: DateTime): OrbitalTrajectory = {
+    getXyzGroundTrack(tle.line1, tle.line2, startDate,tInc,endDate)
+  }
+
+  def getGeoTrajectory(tleLine1: String, tleLine2: String, startDate: DateTime, tInc: Time, endDate: DateTime): Trajectory = {
+    val earth = Earth
+    val n = (endDate.timeSince(startDate) / tInc).toInt
+    val traj = new MutAccurateTrajectory(n)
+    var d = startDate
+
+    propagateOrbit( tleLine1, tleLine2, startDate, tInc, endDate) { (pvc, frame, t)=>
+      val pos = pvc.getPosition
+      val geoPos = earth.transform( pos, frame, t)  // note this is WGS84 latitude
+      traj.append( d, Radians(geoPos.getLatitude), Radians(geoPos.getLongitude), Meters(geoPos.getAltitude))
       d += tInc
     }
 
     traj.snapshot
   }
 
-  def computeOrbit (tle: TLE, startDate: DateTime, tInc: Time, endDate: DateTime): Trajectory = {
-    computeOrbit(tle.line1, tle.line2, startDate,tInc,endDate)
+  def getGeoTrajectory(tle: TLE, startDate: DateTime, tInc: Time, endDate: DateTime): Trajectory = {
+    getGeoTrajectory(tle.line1, tle.line2, startDate,tInc,endDate)
   }
 
   //--- overpasses

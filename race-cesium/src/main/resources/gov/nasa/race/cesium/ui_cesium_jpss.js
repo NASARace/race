@@ -633,10 +633,17 @@ function getPixelColor(pixel, refDate) {
 }
 
 function createSwathEntity (ops) {
+    let earth = Cesium.Ellipsoid.WGS84
     let cfg = config.jpss;
     let trj = ops.trajectory;
-    let pts = trj.map( tp=> Cesium.Cartesian3.fromDegrees(tp.lon, tp.lat));
-    let cp = pts[Math.round(pts.length/2)];
+    
+    //let pts = trj.map( tp=> earth.scaleToGeodeticSurface(Cesium.Cartesian3.fromElements(tp.x, tp.y, tp.z)));
+    // Cesium has bug when rendering corridors with large number of centerline points
+    if (trj.length > 40) trj = util.downSampleWithFirstAndLast(trj,40);
+    let pts = trj.map( tp=> Cesium.Cartesian3.fromElements(tp.x, tp.y, tp.z));
+
+    let cp = earth.scaleToGeodeticSurface(pts[Math.round(pts.length/2)]);
+
     let info = `${satName(ops.satId)}\n${util.toLocalDateString(ops.lastDate)}\n${util.toLocalHMTimeString(ops.firstDate)} - ${util.toLocalHMTimeString(ops.lastDate)}`;
 
     return new Cesium.Entity( {
@@ -644,16 +651,19 @@ function createSwathEntity (ops) {
         corridor: {
             positions: pts,
             width: 2*ops.swath,
-            height: 1,  // Cesium BUG? without Cesium clips (part of) the interior against the ellipsoid surface 
             cornerType: Cesium.CornerType.MITERED,
             material: cfg.swathColor,
+            height: 0,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            clampToGround: true,
             //distanceDisplayCondition: cfg.swathDC // Cesium BUG ? does not work correctly
         },
         polyline: {
             positions: pts,
             material: cfg.trackColor,
             height: 0,
-            //heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            clampToGround: true,
             //distanceDisplayCondition: cfg.swathDC
         },
         label: {

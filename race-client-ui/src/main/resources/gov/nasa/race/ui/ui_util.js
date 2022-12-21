@@ -493,6 +493,11 @@ export function formatLatLon(latDeg, lonDeg, digits) {
     return fmt.format(latDeg) + " " + fmt.format(lonDeg);
 }
 
+export function formatFloat(v, digits) {
+    let fmt = f_N[digits];
+    return fmt.format(v);
+}
+
 // along great circle, in meters
 export function distanceBetweenGeoPos(lat1Deg,lon1Deg, lat2Deg,lon2Deg) {
     let lat1 = toRadians(lat1Deg);
@@ -578,4 +583,30 @@ export function getRectCenter (rect) {
     let x = (rect.west + rect.east)/2;
     let y = (rect.north + rect.south)/2;
     return { lat: y, lon: x};
+}
+
+
+export function downSampleWithFirstAndLast (a, newLen) {
+    let len = a.length;
+    if (newLen > len) return a; // nothing to downsample
+    let step = Math.floor(len / newLen);
+
+    let b = Array(newLen);
+    let j = 0;
+    for (var i=0; i<len; i+= step) b[j++] = a[i];
+    if (i > len) b[j] = a[len-1]; 
+
+    return b;
+}
+
+export function evalProperty(p) {
+    if (p) {
+        return (p instanceof Function) ? p() : p;
+    } else {
+        return undefined;
+    }
+}
+
+export function copyArrayIfSame (oldArr,newArr) {
+    return (oldArr === newArr) ? [...oldArr] : newArr;
 }

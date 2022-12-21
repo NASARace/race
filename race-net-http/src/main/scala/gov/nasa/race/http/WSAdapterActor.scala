@@ -108,7 +108,7 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
   @inline final def isConnected: Boolean = connection.isDefined
   @inline final def isConnectedTo (uri: String): Boolean = connection.isDefined && connection.get.uri == uri
 
-  protected val connectionChecks: MutMap[String,Cancellable] = MutMap.empty
+  protected val connectionChecks: MutMap[String,Cancellable] = MutMap.empty  // uri -> cancellable
 
   //--- end init
 
@@ -256,7 +256,9 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
         case Some(uri) => connect(uri)
         case None => warning("connect request ignored - no web socket uri")
       }
-    } else warning(s"connect request ignored - already connected to ${connection.get.uri}")
+    } else {
+      warning(s"connect request ignored - already connected to ${connection.get.uri}")
+    }
   }
 
   /**
@@ -282,7 +284,7 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
     */
   def connect (uri: String): Unit = {
     if (isConnected) {
-      warning(s"connect request to $uri ignored - already connected to ${connection.get.uri}")
+      info(s"connect request to $uri ignored - already connected to ${connection.get.uri}")
       return
     }
 

@@ -3,6 +3,10 @@ import * as ui from "./ui.js";
 import * as ws from "./ws.js";
 import * as util from "./ui_util.js";
 
+const UI_POSITIONS = "race-ui-positions";
+const LOCAL = "local-";  // prefix for local position set names
+
+
 class LayerEntry {
     constructor (wid,layerConfig,showAction) {
         this.id = layerConfig.name;    // (unique) full path: /cat/.../name
@@ -27,6 +31,26 @@ class LayerEntry {
     }
 }
 
+// don't depend on member functions as we serialize/deserialize these
+
+class PositionSet {
+    constructor (name, positions) {
+        this.name = name;
+        this.positions = positions;
+    }
+}
+
+class Position {
+    constructor (name, latDeg, lonDeg, altM) {
+        this.name = name;
+        this.lat = latDeg;
+        this.lon = lonDeg;
+        this.alt = altM;
+
+        this.asset = undefined; // on-demand point entity
+    }
+}
+
 export var viewer = undefined;
 
 var cameraSpec = undefined;
@@ -34,9 +58,6 @@ var lastCamera = undefined; // saved last position & orientation
 
 var requestRenderMode = false;
 var targetFrameRate = -1;
-
-var imageryLayers = config.cesium.imageryLayers;
-var imageryParams = {...config.cesium.imageryParams }; // we might still adjust them based on theme (hence we have to copy)
 
 var pendingRenderRequest = false;
 
@@ -48,7 +69,12 @@ var layerHierarchyView = undefined;
 var mouseMoveHandlers = [];
 var mouseClickHandlers = [];
 
-var cameraPositions = config.cesium.cameraPositions;
+var homePosition = undefined;
+var positionSets = [];
+var selectedPositionSet = undefined;
+var positions = undefined;
+var positionsView = undefined;
+var dataSource = undefined;
 var showPointerLoc = true;
 
 ui.registerLoadFunction(function initialize() {
@@ -68,6 +94,11 @@ ui.registerLoadFunction(function initialize() {
         animation: false,
         requestRenderMode: requestRenderMode
     });
+
+    positionSets = getPositionSets();
+
+    dataSource = new Cesium.CustomDataSource("positions");
+    addDataSource(dataSource);
 
     setTargetFrameRate(config.cesium.targetFrameRate);
     initFrameRateSlider();
@@ -104,15 +135,252 @@ ui.registerLoadFunction(function initialize() {
 });
 
 function initCameraWindow() {
-    let view = ui.getList("view.places");
+    positionsView = initPositionsView();
+    ui.selectRadio( showPointerLoc ? "view.showPointer" : "view.showCamera");
+}
+
+function initPositionsView() {
+    let view = ui.getList("view.positions");
     if (view) {
-        ui.setListItemDisplayColumns(view, ["fit"], [
-            { name: "name", tip: "place name name", width: "9rem", attrs: [], map: e => e.name }
+        ui.setListItemDisplayColumns(view, ["fit", "header"], [
+            { name: "", tip: "show/hide ground point", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.asset, toggleShowPosition) },
+            { name: "name", tip: "place name name", width: "4rem", attrs: [], map: e => e.name },
+            { name: "lat", tip: "latitude [deg]", width:  "5.5rem", attrs: ["fixed", "alignRight"], map: e => util.formatFloat(e.lat,4)},
+            { name: "lon", tip: "longitude [deg]", width:  "6.5rem", attrs: ["fixed", "alignRight"], map: e => util.formatFloat(e.lon,4)},
+            { name: "alt", tip: "altitude [m]", width:  "5.2rem", attrs: ["fixed", "alignRight"], map: e => Math.round(e.alt)}
         ]);
-        ui.setListItems(view, cameraPositions);
+
+        selectedPositionSet = positionSets[0];
+        positions = selectedPositionSet.positions;
+        ui.setChoiceItems("view.posSet", positionSets, 0);
+        ui.setListItems(view, positions);
     }
 
-    ui.selectRadio( showPointerLoc ? "view.showPointer" : "view.showCamera");
+    return view;
+}
+
+ui.exportToMain(function selectPositionSet(event) {
+    let posSet = ui.getSelectedChoiceValue(event);
+    if (posSet) {
+        selectedPositionSet = posSet;
+        positions = selectPositionSet.positions;
+        ui.setListItems(positionsView, positions);
+    }
+});
+
+function toggleShowPosition(event) {
+    let cb = ui.getCheckBox(event.target);
+    if (cb) {
+        let pos = ui.getListItemOfElement(cb);
+        if (pos) {
+            if (pos.asset) { // hide
+                clearPositionAsset(pos);
+            } else { // show
+                setPositionAsset(pos);
+            }
+        }
+    }
+}
+
+ui.exportToMain( function addPoint() {
+    let latDeg = Number.parseFloat(ui.getFieldValue("view.latitude"));
+    let lonDeg = Number.parseFloat(ui.getFieldValue("view.longitude"));
+    let altM = Number.parseFloat(ui.getFieldValue("view.altitude"));
+
+    if (isNaN(latDeg) || isNaN(lonDeg) || isNaN(altM)){
+        alert("please enter valid latitude, longitude and altitude");
+        return;
+    }
+
+    let name = prompt("please enter point name", positions.length.toString());
+    if (name) {
+        let pt = new Position(name, latDeg, lonDeg, altM);
+        positions = util.copyArrayIfSame( selectedPositionSet.positions, positions);
+        positions.push(pt);
+        ui.setListItems(positionsView, positions);
+    }
+});
+
+ui.exportToMain( function pickPoint() {
+    let btn = ui.getButton("view.pickPos");
+    ui.setElementColors( btn, ui.getRootVar("--selected-data-color"), ui.getRootVar("--selection-background"));
+
+    // system prompt blocks DOM manipulation so we need to defer the action
+    setTimeout( ()=> {
+        let name = prompt("please enter point name and click on map", selectedPositionSet.positions.length);
+        if (name) {
+            pickSurfacePoint( (cp) => {
+                if (cp) {
+                    let latDeg = util.toDegrees(cp.latitude);
+                    let lonDeg = util.toDegrees(cp.longitude);
+                    let altM = ui.getFieldValue("view.altitude");
+                    
+                    ui.setField("view.latitude", latDeg);
+                    ui.setField("view.longitude", lonDeg);
+                    
+                    let pt = new Position(name, latDeg, lonDeg, altM);
+                    positions = util.copyArrayIfSame( selectedPositionSet.positions, positions);
+                    positions.push(pt);
+                    ui.setListItems("view.positions", positions);
+                }
+                ui.resetElementColors(btn);
+            });
+        } else {
+            ui.resetElementColors(btn);
+        }
+    }, 100);
+});
+
+ui.exportToMain( function namePoint() {
+
+});
+
+ui.exportToMain( function removePoint() {
+    let pos = ui.getSelectedListItem(positionsView);
+    if (pos) {
+        let idx = positions.findIndex( p=> p === pos);
+        if (idx >= 0) {
+            positions = util.copyArrayIfSame( selectedPositionSet.positions, positions);
+            positions.splice(idx, 1);
+            ui.setListItems(positionsView, positions);
+        }
+    }
+});
+
+function getPositionSets() {
+    let sets = [];
+    sets.push( getGlobalPositionSet());
+    getLocalPositionSets().forEach( ps=> sets.push(ps));
+    return sets;
+}
+
+// TODO - we should support multiple gobal position sets
+function getGlobalPositionSet() { // from config
+    let positions = config.cesium.cameraPositions.map( p=> new Position(p.name, p.lat, p.lon, p.alt));
+    let pset = new PositionSet("default", positions);
+
+    homePosition = positions.find( p=> p.name === "home");
+    if (!homePosition) homePosition = positions[0];
+
+    return pset;
+}
+
+function getLocalPositionSets() { // from local storage
+    let psets = localStorage.getItem(UI_POSITIONS);
+    return psets ? JSON.parse(psets) : [];
+}
+
+ui.exportToMain(function selectPositionSet(event) {
+    let ps = ui.getSelectedChoiceValue(event);
+    if (ps) {
+        selectedPositionSet = ps;
+        positions = ps.positions;
+        ui.setListItems(positionsView, positions);
+    }
+});
+
+function filterAssets(k,v) {
+    if (k === 'asset') return undefined;
+    else return v;
+}
+
+ui.exportToMain(function storePositionSet() {
+    if (selectedPositionSet) {
+        let psName = selectedPositionSet.name;
+        if (!psName.startsWith(LOCAL)) psName = LOCAL + psName;
+
+        psName = prompt("please enter name for local poisition set",psName);
+        if (psName) {
+            if (!psName.startsWith(LOCAL)) psName = LOCAL + psName;
+
+            let newPss = getLocalPositionSets();
+            let newPs = new PositionSet(psName, positions);
+            let idx = newPss.findIndex(e => e.name === psName);
+            if (idx <0 ) {
+                newPss.push( newPs);
+                idx = newPss.length-1;
+            } else {
+                newPss[idx] = newPs;
+            }
+
+            localStorage.setItem(UI_POSITIONS, JSON.stringify( newPss, filterAssets));
+
+            newPss.unshift(getGlobalPositionSet());
+            selectedPositionSet = newPs;
+            positions = selectedPositionSet.positions;
+            ui.setChoiceItems("view.posSet", newPss, idx+1);
+            ui.selectChoiceItem("view.posSet", newPs);
+            ui.setListItems(positionsView, positions);
+        }
+    }
+});
+
+ui.exportToMain(function removePositionSet() {
+    if (selectedPositionSet) {
+        let psName = selectedPositionSet.name;
+        if (!psName.startsWith(LOCAL)) {
+            alert("denied - cannot remove non-local position sets");
+            return;
+        }
+
+        let localPs = getLocalPositionSets();
+        let idx = localPs.findIndex(e => e.name === psName);
+        if (idx >= 0){
+            if (confirm("delete position set " + selectedPositionSet.name)) {
+                if (localPs.length == 1) {
+                    localStorage.removeItem(UI_POSITIONS);
+                } else {
+                    localPs.splice(idx, 1);
+                    localStorage.setItem(UI_POSITIONS, JSON.stringify(localPs));
+                }
+
+                let ps = getPositionSets();
+                selectedPositionSet = ps[0];
+                positions = selectedPositionSet.positions;
+                ui.setChoiceItems("view.posSet", ps, 0);
+                ui.setListItems(positionsView, positions);
+            }
+        }
+    }
+});
+
+
+function setPositionAsset(pos) {
+    let cfg = config.cesium;
+
+    let e = new Cesium.Entity({
+        id: pos.name,
+        position: Cesium.Cartesian3.fromDegrees( pos.lon, pos.lat),
+        point: {
+            pixelSize: cfg.pointSize,
+            color: cfg.color,
+            outlineColor: cfg.outlineColor,
+            outlineWidth: 1,
+            disableDepthTestDistance: Number.NEGATIVE_INFINITY
+        },
+        label: {
+            text: pos.name,
+            font: cfg.font,
+            fillColor: cfg.outlineColor,
+            showBackground: true,
+            backgroundColor: cfg.labelBackground,
+            //heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+            verticalOrigin: Cesium.VerticalOrigin.TOP,
+            pixelOffset: new Cesium.Cartesian2( 5, 5)
+        }
+    });
+    pos.asset = e;
+    dataSource.entities.add(e);
+    requestRender();
+}
+
+function clearPositionAsset(pos) {
+    if (pos.asset) {
+        dataSource.entities.remove(pos.asset);
+        pos.asset = undefined;
+        requestRender();
+    }
 }
 
 ui.exportToMain( function showPointer(){
@@ -334,8 +602,8 @@ function updateMouseLocation(e) {
     if (showPointerLoc) {
         let pos = getCartographicMousePosition(e)
         if (pos) {
-            let longitudeString = Cesium.Math.toDegrees(pos.longitude).toFixed(5);
-            let latitudeString = Cesium.Math.toDegrees(pos.latitude).toFixed(5);
+            let longitudeString = Cesium.Math.toDegrees(pos.longitude).toFixed(4);
+            let latitudeString = Cesium.Math.toDegrees(pos.latitude).toFixed(4);
 
             ui.setField("view.latitude", latitudeString);
             ui.setField("view.longitude", longitudeString);
@@ -344,6 +612,31 @@ function updateMouseLocation(e) {
 }
 
 //--- user control 
+
+function setViewFromFields() {
+    let lat = ui.getFieldValue("view.latitude");
+    let lon = ui.getFieldValue("view.longitude");
+    let alt = ui.getFieldValue("view.altitude");
+
+    if (lat && lon && alt) {
+        let latDeg = parseFloat(lat);
+        let lonDeg = parseFloat(lon);
+        let altM = parseFloat(alt);
+
+        // TODO - we should check for valid ranges here
+        if (isNaN(latDeg)) { alert("invalid latitude: " + lat); return; }
+        if (isNaN(lonDeg)) { alert("invalid longitude: " + lon); return; }
+        if (isNaN(altM)) { alert("invalid altitude: " + alt); return; }
+
+        viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(lonDeg, latDeg, altM),
+            orientation: centerOrientation
+        });
+    } else {
+        alert("please enter latitude, longitude and altitude");
+    }
+}
+ui.exportToMain(setViewFromFields);
 
 export function saveCamera() {
     let camera = viewer.camera;
@@ -359,7 +652,8 @@ export function saveCamera() {
     };
 
     let spec = `{ lat: ${util.fmax_4.format(lastCamera.lat)}, lon: ${util.fmax_4.format(lastCamera.lon)}, alt: ${Math.round(lastCamera.alt)} }`;
-    navigator.clipboard.writeText(spec);
+    //navigator.clipboard.writeText(spec);  // this is still experimental in browsers and needs to be enabled explicitly for sec reasons
+    console.log(spec);
 }
 ui.exportToMain(saveCamera);
 
@@ -379,7 +673,7 @@ export function zoomTo(cameraPos) {
 }
 
 export function setHomeView() {
-    setCamera(cameraPositions[0]);
+    setCamera(homePosition);
 }
 ui.exportToMain(setHomeView);
 
@@ -537,6 +831,31 @@ ui.exportToMain(function lowerModuleLayer(event){
 });
 
 //--- interactive geo input
+
+export function pickSurfacePoint (callback) {
+    let cancel = false;
+
+    function onKeydown(event) {
+        if (event.key == "Escape") {
+            cancel = true;
+            viewer.scene.canvas.click();
+        }
+    }
+
+    function onClick(event) {
+        let p = getCartographicMousePosition(event);
+        if (p) { 
+            callback( cancel ? null : p)
+        }
+        setDefaultCursor();
+        releaseMouseClickHandler(onClick);
+        document.removeEventListener( 'keydown', onKeydown);
+    }
+
+    document.addEventListener('keydown', onKeydown);
+    setCursor("crosshair");
+    registerMouseClickHandler(onClick);
+}
 
 // this should normally use a ScreenSpaceEventHandler but that fails for some reason if
 // sceneModePicker is enabled (positions are off). This one does not correctly handle terrain but is close enough

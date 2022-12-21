@@ -116,7 +116,7 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
         uiList("jpss.satellites", 5, "main.selectJpssSatellite(event)"),
         uiRowContainer()(
           uiColumnContainer()(
-            uiTextInput("area","jpss.bounds", "main.setJpssBounds(event)", "enter lat,lon bounds (WSEN order)", width="20rem"),
+            uiTextInput("area","jpss.bounds", true, "main.setJpssBounds(event)", "enter lat,lon bounds (WSEN order)", width="20rem"),
             uiLabel("jpss.bounds-info")
           ),
           uiButton("pick", "main.pickJpssBounds()"),

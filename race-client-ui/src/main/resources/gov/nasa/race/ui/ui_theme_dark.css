@@ -27,11 +27,13 @@
     --font-small: var(--font-size-small) var(--font-family);
     --mono-font: var(--font-size) var(--font-family-mono);
     --mono-font-large: var(--font-size-large) monospace;
-    --border-color: rgb(130, 130, 130);
+    --border-color: rgb(110, 110, 110);
     --border-dark-color: rgb(80, 80, 80);
-    --border-bright-color: rgb(150, 150, 150);
-    --border-width: 2px;
-    --border: var(--border-width) inset var(--border-color);
+    --border-bright-color: rgb(130, 130, 130);
+    /*--border-width: 2px;*/
+    /*--border: var(--border-width) inset var(--border-color);*/
+    --border-width: 1px;
+    --border: var(--border-width) solid var(--border-color);
     --box-shadow: 5px 5px 8px rgb(136, 136, 136);
     --padding: 5px;
     --margin: 3px;

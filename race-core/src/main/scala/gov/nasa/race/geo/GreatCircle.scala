@@ -26,7 +26,9 @@ import math.{atan2,asin,acos,sqrt,sin,cos}
 /**
  * object with library functions to compute great circle trajectories
  *
- * note this is just the spherical approximation
+ * note this is just the spherical approximation of earth
+ *
+ * see http://www.movable-type.co.uk/scripts/latlong.html
  */
 object GreatCircle {
 
@@ -40,7 +42,8 @@ object GreatCircle {
 
   def initialBearing (φ1: Angle, λ1: Angle, φ2: Angle, λ2: Angle): Angle = {
     val Δλ = λ2 - λ1
-    Radians(atan2( Sin(Δλ) * Cos(φ2), Cos(φ1) * Sin(φ2) - Sin(φ1) * Cos(φ2) * Cos(Δλ)) % π2)
+    val cos_φ2 = Cos(φ2)
+    Radians( atan2( Sin(Δλ) * cos_φ2, Cos(φ1) * Sin(φ2) - Sin(φ1) * cos_φ2 * Cos(Δλ)) % π2)
   }
   @inline def initialBearing (startPos: GeoPosition, endPos: GeoPosition): Angle = {
     initialBearing(startPos.φ,startPos.λ,endPos.φ,endPos.λ)
@@ -75,7 +78,6 @@ object GreatCircle {
     *   c = 2 ⋅ atan2( √a, √(1−a) )
     *   d = R ⋅ c
     * }}}
-    * Note this is only an approximation
     */
   def distance (φ1: Angle, λ1: Angle, alt1: Length, φ2: Angle, λ2: Angle, alt2: Length): Length = {
     val Δφ = φ2 - φ1
@@ -146,8 +148,12 @@ object GreatCircle {
     val θ = if (dist.isPositive) initialBearing else initialBearing + Pi
     val δ = Radians( dist.abs / (MeanEarthRadius + alt))
 
-    val φ2 = Radians(asin(Sin(φ1) * Cos(δ) + Cos(φ1) * Sin(δ) * Cos(θ)))
-    val λ2 = λ1 + Radians(atan2(Sin(θ) * Sin(δ) * Cos(φ1), Cos(δ) - Sin(φ1) * Sin(φ2)))
+    val sin_φ1 = Sin(φ1)
+    val cos_δ = Cos(δ)
+    val `cos_φ1×sin_δ` = Cos(φ1) * Sin(δ)
+
+    val φ2 = Radians( asin( sin_φ1 * cos_δ + `cos_φ1×sin_δ` * Cos(θ)))
+    val λ2 = λ1 + Radians( atan2( Sin(θ) * `cos_φ1×sin_δ`, cos_δ - sin_φ1 * Sin(φ2)))
 
     GeoPosition( φ2.toNormalizedLatitude, λ2.toNormalizedLongitude, alt)
   }
@@ -163,8 +169,9 @@ object GreatCircle {
                           φ1: Angle, λ1: Angle, alt1: Length,
                           φ2: Angle, λ2: Angle, alt2: Length): Length = {
 
-    val d13 = acos( Sin(φ1)*Sin(φ) + (Cos(φ1)*Cos(φ) * Cos(λ1-λ))) // angular distance between p1,p
-    //val d13 = 2.0 * asin(sqrt(squared(Sin((φ1-φ)/2)) + Cos(φ1)*Cos(φ)*squared((Sin((φ1-φ)/2)))))
+    val d13 = angularDistance( φ1,λ1, φ,λ).toRadians
+    //val d13 = acos( Sin(φ1)*Sin(φ) + (Cos(φ1)*Cos(φ) * Cos(λ1-λ))) // angular distance between p1,p
+    //val d13 = 2.0 * asin( sqrt(squared(  Sin((φ1-φ)/2)) + Cos(φ1)*Cos(φ) * squared(Sin((φ1-φ)/2))))
 
     val h13 = initialBearing(φ1,λ1, φ,λ)
     val h12 = initialBearing(φ1,λ1, φ2,λ2)
@@ -180,12 +187,14 @@ object GreatCircle {
                           φ2: Angle, λ2: Angle, alt2: Length): Length = {
     val r = MeanEarthRadius + (alt1 + alt2)/2
 
-    val d13 = acos( Sin(φ1)*Sin(φ) + (Cos(φ1)*Cos(φ) * Cos(λ1-λ))) // angular distance between p1,p
+    //val d13 = acos( Sin(φ1)*Sin(φ) + (Cos(φ1)*Cos(φ) * Cos(λ1-λ))) // angular distance between p1,p
+    val d13 = angularDistance( φ1,λ1, φ,λ).toRadians
+
     val h13 = initialBearing(φ1,λ1, φ,λ)
     val h12 = initialBearing(φ1,λ1, φ2,λ2)
-    val dxt = asin( sin(d13) * Sin(h13 - h12)) * r
+    val dxt = asin( sin(d13) * Sin(h13 - h12)) * r // cross track distance
 
-    acos(cos(d13)/cos(dxt/r)) * r
+    acos( cos(d13) / cos(dxt/r)) * r
   }
   @inline def alongTrackDistance(pos: GeoPosition, startPos: GeoPosition, endPos: GeoPosition): Length = {
     alongTrackDistance( pos.φ,pos.λ, startPos.φ,startPos.λ,startPos.altitude, endPos.φ,endPos.λ,endPos.altitude)
@@ -193,7 +202,7 @@ object GreatCircle {
 
   /**
    * ortho projection of p onto GC pStart->pEnd
-   * TODO - improve math
+   * we roll this into one method to save expensive trig function calls
    */
   def crossTrackPoint (p: GeoPosition, pStart: GeoPosition, pEnd: GeoPosition): GeoPosition = {
     val r = MeanEarthRadius
@@ -204,21 +213,60 @@ object GreatCircle {
     val φ2 = pEnd.φ
     val λ2 = pEnd.λ
 
-    val h12 = initialBearing(φ1,λ1, φ2,λ2)
+    val cos_φ = Cos(φ)
+    val cos_φ1 = Cos(φ1)
+    val cos_φ2 = Cos(φ2)
+    val sin_φ1 = Sin(φ1)
+    val sin_φ2 = Sin(φ2)
 
-    // compute along track distance
-    val h13 = initialBearing(φ1,λ1, φ,λ)
-    val d13 = acos( Sin(φ1)*Sin(φ) + (Cos(φ1)*Cos(φ) * Cos(λ1-λ))) // angular distance between p1,p
-    val dxt = asin( sin(d13) * Sin(h13 - h12)) * r
-    val dist = acos(cos(d13)/cos(dxt/r)) * r
+    val Δλ12 = λ2 - λ1
+    val Δφ = φ - φ1
+    val Δλ = λ - λ1
 
-    // compute cross track point p4 (projecting p onto great circle p1-p2)
-    val δ = Radians( dist.abs / r)
-    val φ4 = Radians(asin(Sin(φ1) * Cos(δ) + Cos(φ1) * Sin(δ) * Cos(h12)))
-    val λ4 = λ1 + Radians(atan2(Sin(h12) * Sin(δ) * Cos(φ1), Cos(δ) - Sin(φ1) * Sin(φ2)))
+    //--- initialBearing( φ1, λ1, φ2, λ2)
+    val h12 = atan2( Sin(Δλ12) * cos_φ2, cos_φ1 * sin_φ2 - sin_φ1 * cos_φ2 * Cos(Δλ12)) % π2
 
-    GeoPosition( φ4, λ4)
+    //--- alongTrackDistance( φ,λ, φ1,λ1, φ2,λ2)
+    // angularDistance( φ1,λ1, φ,λ)
+    val a = Sin2(Δφ / 2) + cos_φ1 * cos_φ2 * Sin2( Δλ / 2)
+    val d13 = 2.0 * atan2(sqrt(a), sqrt(1.0 - a))
+
+    // initialBearing( φ1,λ1, φ,λ)
+    val h13 = atan2( Sin(Δλ) * cos_φ, cos_φ1 * Sin(φ) - sin_φ1 * cos_φ * Cos(Δλ)) % π2
+
+    val dxt = asin( sin(d13) * sin(h13 - h12)) * r // cross track distance
+    val dat = acos( cos(d13) / cos(dxt/r)) * r  // along track distance
+
+    //--- endPos( pStart,dat,h12)
+    val θ = if (dat.isPositive) h12 else h12 + π
+    val δ = dat.abs / r
+
+    val cos_δ = cos(δ)
+    val `cos_φ1×sin_δ` = cos_φ1 * sin(δ)
+
+    val φ4 = Radians( asin( sin_φ1 * cos_δ + `cos_φ1×sin_δ` * cos(θ)))
+    val λ4 = λ1 + Radians( atan2( sin(θ) * `cos_φ1×sin_δ`, cos_δ - sin_φ1 * Sin(φ4)))
+
+    GeoPosition( φ4.toNormalizedLatitude, λ4.toNormalizedLongitude)
   }
+
+
+  def _crossTrackPoint (p: GeoPosition, pStart: GeoPosition, pEnd: GeoPosition): GeoPosition = {
+    val r = MeanEarthRadius
+    val φ = p.φ
+    val λ = p.λ
+    val φ1 = pStart.φ
+    val λ1 = pStart.λ
+    val φ2 = pEnd.φ
+    val λ2 = pEnd.λ
+
+    val h12 = initialBearing( φ1, λ1, φ2, λ2) // initial bearing p1->p2
+    println(s"@@ h12: $h12")
+    val dat = alongTrackDistance( φ,λ, φ1,λ1,Length0, φ2,λ2,Length0)
+    println(s"@@ dat: $dat")
+    endPos(pStart,dat,h12)
+  }
+
 
   /**
    * bearing from crosss track point to p

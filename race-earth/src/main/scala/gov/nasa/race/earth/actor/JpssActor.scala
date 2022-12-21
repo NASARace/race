@@ -16,19 +16,21 @@
  */
 package gov.nasa.race.earth.actor
 
-import gov.nasa.race.common.Utf8CsvPullParser
+import gov.nasa.race.common.{Cartesian3, Utf8CsvPullParser}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.{Failure, SuccessValue, ifSome}
 import gov.nasa.race.core.{ContinuousTimeRaceActor, PublishingRaceActor}
 import gov.nasa.race.earth.{ViirsHotspot, ViirsHotspotParser}
-import gov.nasa.race.geo.{GeoPosition, GreatCircle}
-import gov.nasa.race.space.{OreKit, OverpassRegion, OverpassSeq, TLE}
+import gov.nasa.race.geo.{Datum, GeoPosition, GreatCircle, XyzPos}
+import gov.nasa.race.space.{OrbitalTrajectory, OreKit, OverpassRegion, OverpassSeq, TLE}
 import gov.nasa.race.trajectory.Trajectory
 import gov.nasa.race.uom.Angle.{Degrees, HalfPi, Pi}
-import gov.nasa.race.uom.DateTime.UndefinedDateTime
+import gov.nasa.race.uom.DateTime.{UndefinedDateTime, utcId}
 import gov.nasa.race.uom.Time.{Days, Minutes, Seconds, UndefinedTime}
 import gov.nasa.race.uom.{Angle, DateTime, Length, Time}
+import org.orekit.time.UTCScale
 
+import java.util.TimeZone
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.{Queue => MutQueue}
 import scala.concurrent.duration.DurationInt
@@ -66,7 +68,7 @@ trait JpssActor extends PublishingRaceActor with ContinuousTimeRaceActor {
   val history = config.getFiniteDurationOrElse("history", 1.day) // for initial request
   val maxScanAngle = Degrees( config.getDoubleOrElse("max-scan", defaultScanAngle)) // max VIIRS scan angle
   val overpassMargin = config.getDurationTimeOrElse("overpass-margin", Minutes(5))
-  val trajectoryTimeStep = config.getDurationTimeOrElse("trajectory-timestep", Seconds(30))
+  val trajectoryTimeStep = config.getDurationTimeOrElse("trajectory-timestep", Seconds(5))
 
   //--- the operational data
   var tle: Option[TLE] = None // the current TLE
@@ -103,10 +105,12 @@ trait JpssActor extends PublishingRaceActor with ContinuousTimeRaceActor {
     ops.swathWidth = ops.approximateSwathWidth(maxScanAngle)
   }
 
-  def getOverpassSeqTrajectory (tle: TLE, ops: OverpassSeq): Trajectory = {
+  // note this is the ground track, not the trajectory itself
+  def getOverpassSeqTrajectory (tle: TLE, ops: OverpassSeq): OrbitalTrajectory = {
     val start = ops.firstDate.toPrecedingMinute - overpassMargin
     val end = ops.lastDate.toFollowingMinute + overpassMargin
-    OreKit.computeOrbit( tle, start, trajectoryTimeStep, end)
+    OreKit.getOrbitalTrajectory( tle, start, trajectoryTimeStep, end)
+    //OreKit.getXyzGroundTrack(tle,start,trajectoryTimeStep,end)
   }
 
   def nextOverpassDate: Option[DateTime] = {
@@ -130,8 +134,11 @@ trait JpssActor extends PublishingRaceActor with ContinuousTimeRaceActor {
 
   // TODO - this is inefficient. Use quaternions or Rodriguez' rotation in ecef
   def computeHotspotBounds (date: DateTime, pos: GeoPosition, scan: Length, track: Length): Seq[GeoPosition] = {
-    getTrajectoryPoint( date, pos) match {
-      case Some(satPos) =>
+    val xyz = Datum.wgs84ToECEF(pos).toXyz
+
+    getTrajectoryPoint( date, xyz) match {
+      case Some(xyzSat) =>
+        val satPos = Datum.ecefToWGS84(xyzSat)
         val scanDist = scan / 2
         val trackDist = track / 2
 
@@ -153,13 +160,11 @@ trait JpssActor extends PublishingRaceActor with ContinuousTimeRaceActor {
     }
   }
 
-  // note that date in VIIRS hotspot records is the acquisition time (full minute), i.e. we should compute geometrically and not
-  // look up the nearest trajectory point by time (JPSSes are moving fast)
-  def getTrajectoryPoint (d: DateTime, p: GeoPosition): Option[GeoPosition] = {
+  def getTrajectoryPoint (d: DateTime, xyz: Cartesian3): Option[Cartesian3] = {
     overpasses.foreach { ops=>
       ops.trajectory.foreach { trj=>
         if (d.isWithin( trj.getFirstDate, trj.getLastDate)) {
-          return Some( GreatCircle.crossTrackPoint(p, trj.getFirst.get.position, trj.getLast.get.position))
+            return Some(trj.findClosestGroundTrackPoint(xyz))
         }
       }
     }

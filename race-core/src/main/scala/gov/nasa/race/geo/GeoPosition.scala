@@ -40,6 +40,10 @@ object GeoPosition {
     new LatLonPos(Degrees(latDeg), Degrees(lonDeg), Feet(altFeet))
   }
 
+  def fromRadiansAndMeters (lat: Double, lon: Double, altMeters: Double): LatLonPos = {
+    new LatLonPos( Radians(lat), Radians(lon), Meters(altMeters))
+  }
+
   val LAT = asc("lat")
   val LON = asc("lon")
   val ALT = asc("alt")
@@ -105,6 +109,8 @@ trait GeoPosition extends JsonSerializable {
     w.writeDoubleMember(LON, lon.toDegrees)
     w.writeDoubleMember(ALT, altitude.toMeters)
   }
+
+  def to2d: GeoPosition = GeoPosition(φ,λ)
 }
 
 
@@ -151,4 +157,20 @@ case class MutLatLonPos (var φ: Angle = Angle0, var λ: Angle = Angle0, var alt
     φ = lat
     λ = lon
   }
+}
+
+/**
+ * Dimension-less version. You are on your own tracking them
+ */
+case class LatLonAlt (φ: Double, λ: Double, altitude: Double) {
+  def asGeoPositionFromRadiansAndMeters: GeoPosition = GeoPosition.fromRadiansAndMeters(φ,λ,altitude)
+  def asGeoPositionFromDegreesAndMeters: GeoPosition = GeoPosition.fromDegreesAndMeters(φ,λ,altitude)
+}
+
+/**
+ * mutable version
+ */
+case class MutLatLonAlt (var φ: Double =0, var λ: Double =0, var altitude: Double =0) {
+  def asGeoPositionFromRadiansAndMeters: GeoPosition = GeoPosition.fromRadiansAndMeters(φ,λ,altitude)
+  def asGeoPositionFromDegreesAndMeters: GeoPosition = GeoPosition.fromDegreesAndMeters(φ,λ,altitude)
 }

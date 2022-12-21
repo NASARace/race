@@ -18,7 +18,7 @@ package gov.nasa.race.space
 
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.{Dated, ifSome}
-import gov.nasa.race.common.{FMT_3_5, JsonSerializable, JsonWriter, squareRoot, squared}
+import gov.nasa.race.common.{FMT_3_5, JsonSerializable, JsonWriter, MutXyz, squareRoot, squared}
 import gov.nasa.race.geo.{GeoPosition, GreatCircle, MeanEarthRadius}
 import gov.nasa.race.trajectory.{MutTrajectoryPoint, Trajectory}
 import gov.nasa.race.uom.Angle.{Asin, Cos, Sin}
@@ -62,6 +62,9 @@ object OverpassSeq {
   val LAT = asc("lat")
   val LON = asc("lon")
   val ALT = asc("alt")
+  val X = asc("x")
+  val Y = asc("y")
+  val Z = asc("z")
 
   /**
    * compute swath width for given height above ground and max scan angle of instrument, approximating earth as a sphere
@@ -88,7 +91,7 @@ import OverpassSeq._
  */
 case class OverpassSeq (satId: Int, overpasses: Array[Overpass], groundPositions: Array[GeoPosition]) extends JsonSerializable {
 
-  var trajectory: Option[Trajectory] = None
+  var trajectory: Option[OrbitalTrajectory] = None
   var swathWidth: Option[Length] = None
 
   //--- computed values
@@ -100,6 +103,8 @@ case class OverpassSeq (satId: Int, overpasses: Array[Overpass], groundPositions
   def date: DateTime = lastDate // this is the official time we use
   def iterator: Iterator[Overpass] = overpasses.iterator
   def foreach (f: Overpass=>Unit): Unit = overpasses.foreach(f)
+
+  def includes (date: DateTime): Boolean = date.isWithin(firstDate, lastDate)
 
   def approximateSwathWidth (maxScanAngle: Angle): Option[Length] = {
     trajectory.map( trj => computeApproximateSwathWidth( trj.getAverageAltitude, maxScanAngle))
@@ -118,17 +123,14 @@ case class OverpassSeq (satId: Int, overpasses: Array[Overpass], groundPositions
 
   def serializeTrajectoryTo (writer: JsonWriter): Unit = {
     trajectory.foreach { trj=>
-      val tp = new MutTrajectoryPoint()
-      trj.foreach(tp) {p=>
-        val pos = p.position
+      trj.foreach { (date, p) =>
         writer.writeObject { w=>
-          w.writeDateTimeMember(TIME, p.date)
-          w.writeDoubleMember(LAT,pos.latDeg, FMT_3_5)
-          w.writeDoubleMember(LON, pos.lonDeg, FMT_3_5)
-          w.writeLongMember(ALT, pos.altMeters.round)
+          w.writeDateTimeMember(TIME, date)
+          w.writeDoubleMember( X, p.x)
+          w.writeDoubleMember( Y, p.y)
+          w.writeDoubleMember( Z, p.z)
         }
       }
-
     }
   }
 

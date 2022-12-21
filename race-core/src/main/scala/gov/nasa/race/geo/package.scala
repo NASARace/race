@@ -29,7 +29,7 @@ import gov.nasa.race.uom._
   */
 package object geo {
 
-  final val MeanEarthRadius = Kilometers(6371)
+  final val MeanEarthRadius = Kilometers(6371)  // IERS mean radius of semi axes
   final val NM = Meters(1852.0) // length of Nautical Mile in meters
 
   //--- WGS84 earth axes constants
@@ -40,10 +40,10 @@ package object geo {
 
   final val RE_FLATTENING = ( RE_E - RE_N ) / RE_E
   final val INV_RE_FLATTENING = 298.257223563
-  final val E_ECC = 2.0 * RE_FLATTENING - RE_FLATTENING * RE_FLATTENING
+  final val E_ECC = 2.0 * RE_FLATTENING - (RE_FLATTENING * RE_FLATTENING)
   final val E2 = (RE_E*RE_E - RE_N*RE_N)/(RE_E*RE_E) // squared eccentricity: 0.0066943799901413165
 
-  // geometric names for ellipoids
+  // geometric names for ellipsoids
   final val A = RE_E
   final val A2 = RE_E2
   final val B = RE_N

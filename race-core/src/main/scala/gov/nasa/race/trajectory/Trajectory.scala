@@ -53,6 +53,8 @@ class TrajectoryPoint (val date: DateTime, val position: GeoPosition) extends Tr
   def setTDataPoint3(p: TDataPoint3): Unit = {
     p.set(date.toEpochMillis, position.latDeg, position.lonDeg, position.altMeters)
   }
+
+  override def toString(): String = s"TrajectoryPoint{ date: $date, pos: $position}"
 }
 
 /**

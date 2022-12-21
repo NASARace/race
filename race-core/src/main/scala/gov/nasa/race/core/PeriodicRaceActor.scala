@@ -94,8 +94,11 @@ trait PeriodicRaceActor extends RaceActor {
     super.onTerminateRaceActor(originator)
   }
 
+  // override if starting the scheduler should only happen under certain conditions
+  def isReadyToSchedule: Boolean = true
+
   def startScheduler = {
-    if (schedule.isEmpty && tickInterval.toMillis > 0) {
+    if (schedule.isEmpty && tickInterval.toMillis > 0 && isReadyToSchedule) {
       schedule = Some(scheduler.scheduleWithFixedDelay(tickDelay, tickInterval, self, RaceTick))
     }
   }

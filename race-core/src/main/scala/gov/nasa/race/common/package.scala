@@ -42,6 +42,7 @@ package object common {
   @inline def squareRoot (d: Double): Double = Math.sqrt(d)
   @inline def squared (d: Double): Double = d*d
   @inline def cubed (d: Double): Double = d*d*d
+  @inline def quadrupled (d: Double): Double = d*d*d*d
   @inline def sin2 (d: Double): Double = {
     val x = sin(d)
     x*x
@@ -53,6 +54,7 @@ package object common {
     @inline def ** (e: Double) = Math.pow(d,e)
     @inline def `²` = d*d  // sub/superscript chars are not valid identifiers so we have to quote
     @inline def `³` = d*d*d
+    @inline def `⁴` = d*d*d*d
 
     @inline def within (x: Double, tolerance: Double) = Math.abs(d - x.d) <= tolerance
     @inline def ≈ (x: Double)(implicit Epsilon: Double) = Math.abs(d - x.d) <= Epsilon.d

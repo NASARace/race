@@ -237,19 +237,18 @@ function loadLocalTheme(theme) {
 
 
 function getThemeVars() {
-    //let docStyle = getComputedStyle(document.documentElement);
     let themeVars = {}
 
     if (themeCss) {
+        console.log("@@@ ", themeCss);
         let cssRules = themeCss.cssRules[0]; // themeCss only has custom properties, no rules
         for (var k = 0; k < cssRules.style.length; k++) {
             let name = cssRules.style[k];
             if (name.startsWith('--')) {
                 let k = name.substring(2);
-                //let v = docStyle.getPropertyValue(name).trim(); // might be var() expression
-                //console.log(cssRules.styleMap.get(name));
-                let v = cssRules.styleMap.get(name).toString().trim();
+                let v = cssRules.style.getPropertyValue(name);
                 //console.log(name + " = '" + v + "'");
+
                 themeVars[k] = v;
             }
         }
