@@ -173,10 +173,10 @@ function toggleShowPosition(event) {
     if (cb) {
         let pos = ui.getListItemOfElement(cb);
         if (pos) {
-            if (pos.asset) { // hide
-                clearPositionAsset(pos);
-            } else { // show
-                setPositionAsset(pos);
+            if (ui.isCheckBoxSelected(cb)){
+                if (!pos.asset) setPositionAsset(pos);
+            } else {
+                if (pos.asset) clearPositionAsset(pos);
             }
         }
     }

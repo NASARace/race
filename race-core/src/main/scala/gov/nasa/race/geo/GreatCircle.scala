@@ -250,24 +250,6 @@ object GreatCircle {
     GeoPosition( φ4.toNormalizedLatitude, λ4.toNormalizedLongitude)
   }
 
-
-  def _crossTrackPoint (p: GeoPosition, pStart: GeoPosition, pEnd: GeoPosition): GeoPosition = {
-    val r = MeanEarthRadius
-    val φ = p.φ
-    val λ = p.λ
-    val φ1 = pStart.φ
-    val λ1 = pStart.λ
-    val φ2 = pEnd.φ
-    val λ2 = pEnd.λ
-
-    val h12 = initialBearing( φ1, λ1, φ2, λ2) // initial bearing p1->p2
-    println(s"@@ h12: $h12")
-    val dat = alongTrackDistance( φ,λ, φ1,λ1,Length0, φ2,λ2,Length0)
-    println(s"@@ dat: $dat")
-    endPos(pStart,dat,h12)
-  }
-
-
   /**
    * bearing from crosss track point to p
    */

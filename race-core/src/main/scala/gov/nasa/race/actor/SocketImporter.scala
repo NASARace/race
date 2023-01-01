@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.DataAcquisitionThread
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{RaceActor, RaceContext}
-import gov.nasa.race.ifSome
+import gov.nasa.race.{core, ifSome}
 import gov.nasa.race.util.ThreadUtils
 
 import java.io.IOException
@@ -39,11 +39,13 @@ case class ReconnectSocket (dat: SocketDataAcquisitionThread)
   */
 abstract class SocketDataAcquisitionThread(name: String, sock: Socket) extends DataAcquisitionThread {
   protected var socket: Socket = sock
+  protected var maxErrorCount = 5
+  protected var errorCount = 0
 
   //--- user supplied handler functions (potential blocking points)
   protected var connectionTimeoutHandler: Option[(SocketDataAcquisitionThread)=>Unit] = None
   protected var connectionErrorHandler: Option[(SocketDataAcquisitionThread,Throwable)=>Unit] = None
-  protected var connectionLossHandler: Option[(SocketDataAcquisitionThread,Throwable)=>Unit] = None
+  protected var connectionLossHandler: Option[(SocketDataAcquisitionThread,Option[Throwable])=>Unit] = None
 
   def setSocket (newSock: Socket): Unit = socket = newSock // for error recovery (can be called from respective handlers)
 
@@ -51,8 +53,13 @@ abstract class SocketDataAcquisitionThread(name: String, sock: Socket) extends D
 
   def setConnectionTimeoutHandler (f: (SocketDataAcquisitionThread)=>Unit): Unit = connectionTimeoutHandler = Some(f)
   def setConnectionErrorHandler (f: (SocketDataAcquisitionThread,Throwable)=>Unit): Unit = connectionErrorHandler = Some(f)
-  def setConnectionLossHandler (f: (SocketDataAcquisitionThread,Throwable)=>Unit): Unit = connectionLossHandler = Some(f)
+  def setConnectionLossHandler (f: (SocketDataAcquisitionThread,Option[Throwable])=>Unit): Unit = connectionLossHandler = Some(f)
+  def setMaxErrorCount(n: Int): Unit =  maxErrorCount = n
 
+  def incErrorCount(): Unit = errorCount += 1
+  def resetErrorCount(): Unit = errorCount = 0
+  def getErrorCount: Int = errorCount
+  def maxErrorCountExceeded: Boolean = errorCount >= maxErrorCount
 
   // socket is still open
   protected def handleConnectionTimeout(): Unit = {
@@ -78,7 +85,7 @@ abstract class SocketDataAcquisitionThread(name: String, sock: Socket) extends D
   }
 
   // socket is already closed
-  protected def handleConnectionLoss(x:Throwable): Unit = {
+  protected def handleConnectionLoss(x:Option[Throwable]): Unit = {
     connectionLossHandler match {
       case Some(f) =>
         // note that user provided handler is responsible for calling terminate() if connection loss is non-recoverable
@@ -100,7 +107,7 @@ trait SocketImporter extends RaceActor {
   val port = config.getVaultableIntOrElse("port", defaultPort)
   val initBufferSize = config.getIntOrElse("buffer-size", 4096)
 
-  var socket: Option[Socket] = None
+  var maybeSocket: Option[Socket] = None
   var dataAcquisitionThread: Option[SocketDataAcquisitionThread] = None
   val reconnectInterval: FiniteDuration = config.getFiniteDurationOrElse("reconnect-interval", 30.seconds)
 
@@ -110,6 +117,8 @@ trait SocketImporter extends RaceActor {
   protected def defaultPort: Int = 4242
 
   // those are called during onInitialize
+
+  // NOTE - this is server/application specific, depending on what data is transmitted through the socket
   protected def initializeSocket(sock: Socket): Unit = {}
   protected def initializeDataAcquisitionThread(dat: SocketDataAcquisitionThread): Unit = {}
 
@@ -118,8 +127,12 @@ trait SocketImporter extends RaceActor {
 
   // watch out - executed in the data acquisition thread
   protected def reconnect (dat: SocketDataAcquisitionThread): Unit = {
-    socket = None
-    while (!isTerminating && socket.isEmpty) {
+    ifSome(maybeSocket) { sock=>
+      sock.close() // 'dat' loop needs to see this
+      maybeSocket = None
+    }
+
+    while (!isTerminating && maybeSocket.isEmpty) {
       ThreadUtils.sleepInterruptible(reconnectInterval) // its fine to sleep - this is not a pooled thread
 
       try {
@@ -127,7 +140,7 @@ trait SocketImporter extends RaceActor {
         val maybeSock = createSocket()
         ifSome(maybeSock) { sock =>
           if (sock.isConnected) {
-            socket = maybeSock
+            maybeSocket = maybeSock
             dat.setSocket(sock)
             info("reconnected")
           } else {
@@ -136,8 +149,20 @@ trait SocketImporter extends RaceActor {
         }
       } catch {
         case x: ConnectException => // ignore, try again
+          warning(s"failed to connect: $x")
       }
     }
+  }
+
+  def haveOpenSocketInput: Boolean = {
+    maybeSocket match {
+      case Some(sock) => !(sock.isClosed || sock.isInputShutdown)
+      case None => false
+    }
+  }
+
+  protected def handleSocketTimeout (dat: SocketDataAcquisitionThread): Unit = {
+    // nothing - just try again (dat loop should hande maxErrorCount limit)
   }
 
   override def onInitializeRaceActor(rc: RaceContext, actorConf: Config): Boolean = {
@@ -145,7 +170,7 @@ trait SocketImporter extends RaceActor {
       val maybeSock = createSocket()
       ifSome(maybeSock) { sock =>
         initializeSocket(sock)
-        socket = maybeSock
+        maybeSocket = maybeSock
 
         val maybeDat = createDataAcquisitionThread(sock)
         ifSome(maybeDat) { t =>
@@ -153,11 +178,11 @@ trait SocketImporter extends RaceActor {
           dataAcquisitionThread = maybeDat
         }
       }
-      socket.isDefined && dataAcquisitionThread.isDefined && super.onInitializeRaceActor(rc,actorConf)
+      maybeSocket.isDefined && dataAcquisitionThread.isDefined && super.onInitializeRaceActor(rc,actorConf)
 
     } catch {
       case x: Throwable  =>
-        ifSome (socket) { sock => sock.close }
+        ifSome (maybeSocket) { sock => sock.close }
         error(s"failed to initialize: $x")
         false
     }
@@ -175,9 +200,9 @@ trait SocketImporter extends RaceActor {
       dataAcquisitionThread = None
     }
 
-    ifSome(socket) { sock =>
+    ifSome(maybeSocket) { sock =>
       sock.close // this should interrupt blocked socket reads in the data acquisition thread
-      socket = None
+      maybeSocket = None
     }
 
     super.onTerminateRaceActor(originator)
@@ -191,9 +216,9 @@ trait SocketImporter extends RaceActor {
     */
   def reconnect(): Boolean = {
     if (!isTerminating) {
-      socket = None
+      maybeSocket = None
 
-      ifSome(socket) { sock =>
+      ifSome(maybeSocket) { sock =>
         try {
           sock.close()
         } catch {
@@ -204,7 +229,7 @@ trait SocketImporter extends RaceActor {
       try {
         val newSock = new Socket(host, port)
         if (newSock.isConnected) {
-          socket = Some(newSock)
+          maybeSocket = Some(newSock)
           true
         } else false // couldn't reconnect
       } catch {

@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="32.0px"
+   height="32.0px"
+   viewBox="0 0 32.0 32.0"
+   version="1.1"
+   id="SVGRoot"
+   sodipodi:docname="view-icon.svg"
+   inkscape:version="1.2.1 (9c6d41e, 2022-07-14)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview4367"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="px"
+     showgrid="true"
+     inkscape:zoom="14.276023"
+     inkscape:cx="14.464813"
+     inkscape:cy="10.542152"
+     inkscape:window-width="1806"
+     inkscape:window-height="1199"
+     inkscape:window-x="1195"
+     inkscape:window-y="336"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid4430" />
+  </sodipodi:namedview>
+  <defs
+     id="defs4362">
+    <marker
+       style="overflow:visible"
+       id="SemiCircleIn"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="SemiCircleIn"
+       markerWidth="1.8"
+       markerHeight="3.22105272"
+       viewBox="0 0 3.8 6.8"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:0.6pt"
+         d="m -0.22470421,-0.02741555 c 0,1.65599995 1.34400001,2.99999995 3.00000001,2.99999995 v -6 c -1.656,0 -3.00000001,1.344 -3.00000001,3.00000005 z"
+         id="path180" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="TriangleStart"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="TriangleStart"
+       markerWidth="3.134"
+       markerHeight="3.62312137"
+       viewBox="0 0 5.3244081 6.1553851"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path135" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:none;stroke-width:2.12596;stroke:none"
+       id="rect4649"
+       width="32"
+       height="32"
+       x="0"
+       y="0" />
+    <path
+       style="fill:#f3f3f3;stroke-width:1.32;stroke-linejoin:bevel"
+       d="M 5.0434214,4.9733739 16.67131,8.6158449"
+       id="path373" />
+    <path
+       style="fill:#f3f3f3;stroke-width:1.32;stroke-linejoin:bevel"
+       d="M 4.8332788,4.9733739 17.581927,8.9660825"
+       id="path375" />
+    <path
+       style="fill:#f3f3f3;stroke-width:1.32;stroke-linejoin:bevel"
+       d="M 18.142308,8.6158449 3.2221859,2.8719483"
+       id="path377" />
+    <path
+       style="fill:#525252;fill-opacity:1;stroke:#e2dfdf;stroke-width:1.755;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       id="path1444"
+       sodipodi:type="arc"
+       sodipodi:cx="6.0478053"
+       sodipodi:cy="3.3324091"
+       sodipodi:rx="12.91804"
+       sodipodi:ry="13.135482"
+       sodipodi:start="0"
+       sodipodi:end="1.0813893"
+       sodipodi:arc-type="slice"
+       d="M 18.965846,3.3324091 A 12.91804,13.135482 0 0 1 12.12061,14.92594 L 6.0478053,3.3324091 Z"
+       transform="rotate(14.546232)" />
+    <path
+       style="fill:#e2dfdf;fill-opacity:1;stroke:#e2dfdf;stroke-width:1.86169;stroke-linejoin:bevel;stroke-dasharray:1.86169, 1.86169;stroke-dashoffset:0;stroke-opacity:1;marker-start:url(#SemiCircleIn);marker-end:url(#TriangleStart)"
+       d="m 11.844141,12.588383 9.43533,9.266024"
+       id="path1390" />
+  </g>
+</svg>

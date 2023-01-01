@@ -105,6 +105,8 @@ class LineBuffer (val is: InputStream, val maxBufsize: Int = Int.MaxValue, val i
   // return if we got at least one record (recLimit > recStart)
   @tailrec protected final def fetchMoreData(): Unit = {
     val nFree = buf.length - dataLimit
+    assert(nFree > 0)
+
     val nRead = is.read(buf,dataLimit,nFree)  // <<<<<< this is the blocking point
 
     if (nRead >= 0) {
@@ -122,8 +124,8 @@ class LineBuffer (val is: InputStream, val maxBufsize: Int = Int.MaxValue, val i
         fetchMoreData()  // we didn't get enough data
       }
 
-    } else { // nRead < 0
-      isEnd = true // done here - the underlying InputStream is closed
+    } else { // nRead < 0 means EOS - NOTE this does NOT mean both ends of the socket are closed (isClosed() might return false!
+      isEnd = true
     }
   }
 

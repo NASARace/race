@@ -143,6 +143,9 @@ class AbiHotspotReader extends GoesrDataReader with LogWriter {
         }
       }
 
+      gds.close()
+      ncd.close()
+
       if (hs.nonEmpty) {
         //hs.foreach(_.show)
         val res = hs.toSeq.map( pix=> new GoesrHotspot( data.satId, date, pix, data.product.name))

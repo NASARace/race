@@ -2768,7 +2768,7 @@ function getItemLabel (item) {
     if (item.label) return util.evalProperty(item.label);
     else if (item.name) return util.evalProperty(item.name);
     else if (item.id) return util.evalProperty(item.id);
-    else return item.toString;
+    else return item.toString();
 }
 
 export function setElementColors (e, clr, backClr) {

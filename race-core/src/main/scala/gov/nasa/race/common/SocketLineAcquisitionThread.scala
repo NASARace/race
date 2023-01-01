@@ -30,44 +30,52 @@ import java.net.{Socket, SocketTimeoutException}
   *
   * note also that we don't handle line processing exceptions here
   */
-class SocketLineAcquisitionThread (name: String, sock: Socket, initSize: Int, maxSize: Int, processLine: ByteSlice=>Boolean)
-                                                      extends SocketDataAcquisitionThread(name,sock) with LogWriter {
+class SocketLineAcquisitionThread (name: String, _sock: Socket, initSize: Int, maxSize: Int, processLine: ByteSlice=>Boolean)
+                                                      extends SocketDataAcquisitionThread(name,_sock) with LogWriter {
 
   override def run(): Unit = {
 
     while (!isDone.get()) {
-
-      val sock = socket
+      info(s"(re)setting socket data acquisition loop")
+      val sock = socket // might be re-set by connection loss handler
       val is = sock.getInputStream
       val buf = new CanonicalLineBuffer(is, initSize, maxSize)
 
-      while (!isDone.get() && (sock eq socket) && !sock.isClosed ) {
+      while (!isDone.get() && (socket eq sock) && !sock.isClosed ) {
         try {
-          if (buf.nextLine()) { // this is the blocking point - note LineBuffer fills automatically from its InputStream
+          if (buf.nextLine()) { // this is the blocking point - note LineBuffer fills automatically from input stream
+            resetErrorCount()
             if (!processLine(buf)) isDone.set(true)
+
+          } else { // if we get here the socket input stream returned EOS (but socket might still be open)
+            warning(s"socket data acquisition thread received EOS")
+            handleConnectionLoss(None)
           }
 
         } catch {
-          case ix: InterruptedException => // ignore - the interrupter has to set isDone if we should stop
+          case x: InterruptedException => // ignore - the interrupter has to set isDone if we should stop
 
           //--- note that all handleX() functions are potential blocking points
 
-          case x: SocketTimeoutException =>
+          case stx: SocketTimeoutException =>
+           incErrorCount()
+            warning(s"socket data acquisition thread timeout detected ($getErrorCount)")
             if (!isDone.get()) {
-              if (sock.isClosed) {
-                handleConnectionLoss(x)
+              if (maxErrorCountExceeded || sock.isClosed || sock.isInputShutdown) {
+                handleConnectionLoss(Some(stx))
               } else {
                 handleConnectionTimeout()
               }
             }
 
-          case x: Throwable =>
-            if (!isDone.get()) {
-              if (sock.isClosed) {
-                handleConnectionLoss(x)
-              } else {
-                handleConnectionError(x)
-              }
+          case iox: IOException =>
+            incErrorCount()
+            error(s"I/O exception in socket data acquisition thread $iox ($errorCount)")
+
+            if (maxErrorCountExceeded) {
+              handleConnectionLoss(Some(iox))
+            } else {
+              handleConnectionError(iox)
             }
         }
       }

@@ -83,10 +83,6 @@ object ApproxTest {
     val cp = GeoPosition(cpʹ.φ, cpʹ.λ) // respective ground track (note it has same lat/lon as cpʹ)
     println(s"cpʹ-c x n: ${(c - d).dot(a)}   (should be 0)")
 
-    val cpGc = GreatCircle._crossTrackPoint(p, p0, p1)
-    println(s"cp:    $cp    e: ${GreatCircle.crossTrackDistance(cp,p0,p1)}")
-    println(s"cp-gc: $cpGc  e: ${GreatCircle.crossTrackDistance(cpGc,p0,p1)}")
-
     println(s"t-midpoint: ${GreatCircle.midPoint(p0, p1)}")
   }
 

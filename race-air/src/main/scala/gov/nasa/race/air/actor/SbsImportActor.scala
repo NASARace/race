@@ -38,7 +38,7 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 class SbsImportActor (conf: Config) extends SocketLineImportActor(conf) with SbsImporter {
 
   // drop checks are only approximate - we don't try to catch single drops right away
-  val dropAfter = Milliseconds(config.getFiniteDurationOrElse("drop-after", 10.seconds).toMillis) // Zero means don't check for drop
+  val dropAfter = Milliseconds(config.getFiniteDurationOrElse("drop-after", 20.seconds).toMillis) // Zero means don't check for drop
   val checkAfter = dropAfter/2
   var lastDropCheck = UndefinedDateTime
 
@@ -52,13 +52,18 @@ class SbsImportActor (conf: Config) extends SocketLineImportActor(conf) with Sbs
 
 
   //--- configure socket and data acquisition behavior
+
+  // note - this is here because options depend on what data we transmit through this socket. For sbs we know this is generally 1Hz
+  // the timeout should be less than our drop check interval so that there is a chance we don't loose history
   override protected def initializeSocket(sock: Socket): Unit = {
-    sock.setSoTimeout(conf.getFiniteDurationOrElse("socket-timeout", 30.seconds).toMillis.toInt)
+    sock.setKeepAlive( conf.getBooleanOrElse("socket-keepalive", true))
+    sock.setSoTimeout( conf.getFiniteDurationOrElse("socket-timeout", 15.seconds).toMillis.toInt)
   }
 
   override protected def initializeDataAcquisitionThread(dat: SocketDataAcquisitionThread): Unit = {
-    dat.setConnectionTimeoutHandler( reconnect)
-    dat.setConnectionLossHandler( (dat,x) => reconnect(dat))
+    dat.setLogging(this)
+    dat.setConnectionTimeoutHandler( handleSocketTimeout)
+    dat.setConnectionLossHandler( (dat,_) => reconnect(dat))
   }
 
   // NOTE - this is executed from the data acquisition thread, /not/ the actor thread
