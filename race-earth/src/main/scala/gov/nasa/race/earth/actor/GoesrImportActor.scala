@@ -71,7 +71,7 @@ class GoesrDataAcquisitionThread(val actorRef: ActorRef,
       var lastObj: S3Object = latestObjs.getOrElse(product.name, null)
       var dtLast = if (lastObj != null) DateTime.ofInstant(lastObj.lastModified()) else DateTime.UndefinedDateTime
 
-      val objPrefix = f"${product.name}/${dt.getYear}/${dt.getDayOfYear}/${dt.getHour}%02d/"
+      val objPrefix = f"${product.name}/${dt.getYear}/${dt.getDayOfYear}%03d/${dt.getHour}%02d/"
       info(s"checking for new GOES-R data $objPrefix")
 
       val rb = ListObjectsRequest.builder().bucket(product.bucket).prefix(objPrefix)

@@ -37,7 +37,7 @@ abstract class DataAcquisitionThread extends Thread with LogWriter {
   def terminate(): Unit = {
     info(s"terminating data acquisition thread $getName")
     isDone.set(true)
-    if (isAlive && !isDone.get) interrupt()
+    //if (isAlive) interrupt()  // we should not need this - it's a daemon
   }
 }
 

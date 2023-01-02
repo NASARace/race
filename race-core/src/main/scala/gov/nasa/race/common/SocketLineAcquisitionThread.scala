@@ -69,13 +69,15 @@ class SocketLineAcquisitionThread (name: String, _sock: Socket, initSize: Int, m
             }
 
           case iox: IOException =>
-            incErrorCount()
-            error(s"I/O exception in socket data acquisition thread $iox ($errorCount)")
+            if (!isDone.get()) { // this might be caused by termination
+              incErrorCount()
+              error(s"I/O exception in socket data acquisition thread $iox ($errorCount)")
 
-            if (maxErrorCountExceeded) {
-              handleConnectionLoss(Some(iox))
-            } else {
-              handleConnectionError(iox)
+              if (maxErrorCountExceeded) {
+                handleConnectionLoss(Some(iox))
+              } else {
+                handleConnectionError(iox)
+              }
             }
         }
       }

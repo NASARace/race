@@ -196,7 +196,9 @@ val kafkaVersion = "3.1.0"
   val jakartaMail = "com.sun.mail" % "jakarta.mail" % "2.0.1"
 
   //--- AWS SDK
-  val awsS3 = "software.amazon.awssdk" % "s3" % "2.18.10"
+  val awsS3 = "software.amazon.awssdk" % "s3" % "2.19.8"
+  //val awsS3 = "software.amazon.awssdk" % "s3" % "1.12.376"
+  
 
   //--- NetCDF
   val cdmCore = "edu.ucar" % "cdm-core" % "5.5.3"
