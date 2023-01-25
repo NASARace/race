@@ -34,12 +34,13 @@ import java.util.zip.ZipException
 import scala.util.{Failure, Success, Try}
 
 object GoesR {
-  val GoesWestId = 43226
+  //val GoesWestId = 43226  // Goes-17 phased out as of 01/10/23
+  val GoesWestId = 51850
   val GoesEastId = 41866
 
   def satelliteName(id:Int): Option[String] = {
     id match {
-      case GoesWestId => Some("G17")
+      case GoesWestId => Some("G18")
       case GoesEastId => Some("G16")
       case _ => None
     }
