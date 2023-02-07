@@ -196,5 +196,7 @@ class ChannelTopicProviderSpec extends RaceActorSpec with AnyWordSpecLike {
       }
     }
   }
+
+
 }
 

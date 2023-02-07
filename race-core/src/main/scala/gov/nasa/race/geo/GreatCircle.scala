@@ -213,39 +213,33 @@ object GreatCircle {
     val φ2 = pEnd.φ
     val λ2 = pEnd.λ
 
+    val sin_φ = Sin(φ)
     val cos_φ = Cos(φ)
     val cos_φ1 = Cos(φ1)
     val cos_φ2 = Cos(φ2)
     val sin_φ1 = Sin(φ1)
     val sin_φ2 = Sin(φ2)
 
-    val Δλ12 = λ2 - λ1
-    val Δφ = φ - φ1
-    val Δλ = λ - λ1
+    //val h12 = initialBearing(φ1,λ1, φ2,λ2)
+    val Δλ = λ2 - λ1
+    val h12 = Radians( atan2( Sin(Δλ) * cos_φ2, cos_φ1 * sin_φ2 - sin_φ1 * cos_φ2 * Cos(Δλ)) % π2)
 
-    //--- initialBearing( φ1, λ1, φ2, λ2)
-    val h12 = atan2( Sin(Δλ12) * cos_φ2, cos_φ1 * sin_φ2 - sin_φ1 * cos_φ2 * Cos(Δλ12)) % π2
+    // compute along track distance
+    //val h13 = initialBearing(φ1,λ1, φ,λ)
+    val Δλ1 = λ - λ1
+    val h13 = Radians( atan2( Sin(Δλ1) * cos_φ, cos_φ1 * sin_φ - sin_φ1 * cos_φ * Cos(Δλ1)) % π2)
 
-    //--- alongTrackDistance( φ,λ, φ1,λ1, φ2,λ2)
-    // angularDistance( φ1,λ1, φ,λ)
-    val a = Sin2(Δφ / 2) + cos_φ1 * cos_φ2 * Sin2( Δλ / 2)
-    val d13 = 2.0 * atan2(sqrt(a), sqrt(1.0 - a))
+    val d13 = acos( sin_φ1 * sin_φ + (cos_φ1*cos_φ * Cos(λ1-λ))) // angular distance between p1,p
+    val dxt = asin( sin(d13) * Sin(h13 - h12)) * r
+    val dist = acos(cos(d13)/cos(dxt/r)) * r
 
-    // initialBearing( φ1,λ1, φ,λ)
-    val h13 = atan2( Sin(Δλ) * cos_φ, cos_φ1 * Sin(φ) - sin_φ1 * cos_φ * Cos(Δλ)) % π2
-
-    val dxt = asin( sin(d13) * sin(h13 - h12)) * r // cross track distance
-    val dat = acos( cos(d13) / cos(dxt/r)) * r  // along track distance
-
-    //--- endPos( pStart,dat,h12)
-    val θ = if (dat.isPositive) h12 else h12 + π
-    val δ = dat.abs / r
-
-    val cos_δ = cos(δ)
-    val `cos_φ1×sin_δ` = cos_φ1 * sin(δ)
-
-    val φ4 = Radians( asin( sin_φ1 * cos_δ + `cos_φ1×sin_δ` * cos(θ)))
-    val λ4 = λ1 + Radians( atan2( sin(θ) * `cos_φ1×sin_δ`, cos_δ - sin_φ1 * Sin(φ4)))
+    // compute cross track point p4 (projecting p onto great circle p1-p2)
+    val δ = Radians( dist.abs / r)
+    val cos_δ = Cos(δ)
+    val sin_δ = Sin(δ)
+    val `cos_φ1×sin_δ` = cos_φ1 * sin_δ
+    val φ4 = Radians( asin( sin_φ1 * cos_δ + `cos_φ1×sin_δ` * Cos(h12)))
+    val λ4 = λ1 + Radians( atan2( Sin(h12) * `cos_φ1×sin_δ`, cos_δ - sin_φ1 * sin_φ2))
 
     GeoPosition( φ4.toNormalizedLatitude, λ4.toNormalizedLongitude)
   }

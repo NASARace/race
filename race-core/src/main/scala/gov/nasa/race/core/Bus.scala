@@ -87,6 +87,7 @@ class Bus (val system: ActorSystem) extends ActorEventBus with SubchannelClassif
 
   override def subscribe(sub: Subscriber, to: Classifier): Boolean = {
     info(s"$sub subscribed to $to")
+
     val actors = channelSubscriptions.getOrElse(to, Set[ActorRef]())
     channelSubscriptions += (to -> (actors + sub))
     super.subscribe(sub, to)

@@ -6,6 +6,13 @@ import gov.nasa.race.uom.Length._
 import gov.nasa.race.test.RaceSpec
 import org.scalatest.flatspec.AnyFlatSpec
 
+/**
+ * regression test for FixDB (GisItemDB[Fix]
+ *
+ * to re-create *.rgis run
+ *
+ *   script/geodb -x "searchval=CALIFORNIA" --out tmp/fix-ca.rgis gov.nasa.race.air.gis.FixDB\$
+ */
 class FixDBSpec extends AnyFlatSpec with RaceSpec {
 
   val file = baseResourceFile("fix-ca.rgis")
@@ -20,7 +27,7 @@ class FixDBSpec extends AnyFlatSpec with RaceSpec {
     println(s"number of items: ${db.nItems}")
 
     db.schema shouldBe( classOf[Fix].getName)
-    db.nItems shouldBe( 4481)
+    db.nItems shouldBe( 4713)
   }
 
   "FixDB" should "produce known value for item key lookup" in {

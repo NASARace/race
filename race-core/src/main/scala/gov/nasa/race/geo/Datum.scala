@@ -28,67 +28,57 @@ import scala.language.{postfixOps, reflectiveCalls}
 
 /**
   * functions related to Datum conversion
-  *
-  * conversion between ECEF and WGS84 uses the closed form described in
-  *           https://hal.archives-ouvertes.fr/hal-01704943v2
   */
 object Datum {
 
-  //--- constants and functions
-  val `a²`: Double = 4.0680631590769e+13d
-  val `b²`: Double = 4.04082999828157e+13d
-  val `a/b`: Double = 1.0033640898209764d
-  val `1-a²/b²`: Double = -0.006739496788261468d
-  val `a²/c`: Double = 7.79540464078689228919e+7d
-  val `b²/c²`: Double = 1.48379031586596594555e+2d
-  val `1-e²`: Double = 9.93305620009858682943e-1d
-  val `e⁴`: Double = 4.48147234524044602618e-5d
-  val `(1-e²)/b`: Double = 1.56259921876129741211e-7d
-  val `(1-e²)/a²`: Double = 2.44171631847341700642e-14d
-  val `1/a²`: Double = 2.45817225764733181057e-14d
-  val `𝑙`: Double = 3.34718999507065852867e-3d
-  val `𝑙²`: Double = `𝑙` * `𝑙`
-  val `2𝑙²`: Double = 2 * `𝑙²`
-  val `4𝑙²`: Double = 4 * `𝑙²`
-  val Hmin: Double = 2.25010182030430273673e-14d
-  val `∛2`: Double = 1.259921049894873d
-  val `1/∛2`: Double = 7.93700525984099737380e-1d
-  val `1/3`: Double = 3.33333333333333333333e-1d
-  val `1/6`:Double = 1.66666666666666666667e-1d
-
   @inline final def `√` (x: Double): Double = sqrt(x)
-  @inline final def `∛` (x: Double): Double = pow(x, `1/3`)
-
+  @inline final def `∛` (x: Double): Double = pow(x, 3.33333333333333333333e-1d)
 
   /**
-    * convert geodetic (lat,lon,alt) WGS84 coordinates into geocentric ECI (x,y,z) coordinates
-    *
-    * from Astronomical Almanac pg. K12
-    */
+   * convert geodetic (lat,lon,alt) WGS84 coordinates into geocentric ECI (x,y,z) coordinates
+   */
   def withECEF[U] (φ: Double, λ: Double, alt: Double)(fn: (Double,Double,Double)=>U): U = {
-    val h = alt
-    val cos_φ = cos(φ)
-    val N = `a²/c` / `√`((cos_φ`²`) + `b²/c²`)
-    val d = (N + h) * cos_φ
+    //--- constants
+    val a: Double = 6378137.0  // wgs84 semi-major
+    val `e²`: Double = 0.006694379990197619
+    val `b²/a²`: Double = 9.93305620009858682943e-1d
 
-    val x = d * cos(λ)
-    val y = d * sin(λ)
-    val z = (N * `1-e²` + h) * sin(φ)
+    val h = alt
+    val sin_φ = sin(φ)
+    val cos_φ = cos(φ)
+
+    val `N(φ)` = a / `√`( 1.0 - `e²`* (sin_φ`²`))
+    val `(N(φ)+h)cos(φ)` = (`N(φ)` + h)*cos_φ
+
+    val x = `(N(φ)+h)cos(φ)` *  cos(λ)
+    val y = `(N(φ)+h)cos(φ)` *  sin(λ)
+    val z = (`b²/a²` * `N(φ)` + h) * sin_φ
 
     fn(x,y,z)
   }
 
-  def wgs84ToECEF (pos: GeoPosition): XyzPos = withECEF(pos.lat.toRadians, pos.lon.toRadians, pos.altMeters) { (x,y,z)=>
-    XyzPos.fromMeters(x,y,z)
-  }
-  def wgs84ToECEF (pos: LatLonAlt): XyzPos = withECEF(pos.φ, pos.λ, pos.altitude) { (x,y,z)=>
-    XyzPos.fromMeters(x,y,z)
-  }
-  def wgs84ToECEF (pos: (Double,Double,Double)): XyzPos = withECEF(pos._1, pos._2, pos._3) { (x,y,z)=>
-    XyzPos.fromMeters(x,y,z)
-  }
+  /**
+   * closed form
+   * Osen, K
+   * Accurate Conversion of Earth-Fixed Earth-Centered Coordinates to Geodetic Coordinates
+   * [Research Report] Norwegian University of Science and Technology. 2017
+   * https://hal.archives-ouvertes.fr/hal-01704943v2
+   *
+   * this is more accurate than Olson but takes 1.4x longer
+   */
+    /*
+  def _withWGS84[U](x: Double, y: Double, z: Double)(fun: (Double,Double,Double)=>U): U = {
+    //--- constants
+    val `1/a²`: Double = 2.45817225764733181057e-14d
+    val `(1-e²)/a²`: Double = 2.44171631847341700642e-14d
+    val `1/6`:Double = 1.66666666666666666667e-1d
+    val `𝑙`: Double = 3.34718999507065852867e-3d
+    val `𝑙²`: Double = 1.1203680863101116e-5d
+    val Hmin: Double = 2.25010182030430273673e-14d
+    val `e⁴`: Double = 4.48147234524044602618e-5d
+    val `1/∛2`: Double = 7.93700525984099737380e-1d
+    val `1-e²`: Double = 9.93305620009858682943e-1d
 
-  def withWGS84[U](x: Double, y: Double, z: Double)(f: (Double,Double,Double)=>U): U = {
     val `w²` = x*x + y*y
     val m = `w²` * `1/a²`
     val n = (z`²`) * `(1-e²)/a²`
@@ -106,7 +96,6 @@ object Datum {
     val β = i/3 - C - P/C
     val k = `𝑙²` * (`𝑙²` - `m+n`)
 
-    //val t = `√`( `√`((β`²`) - k) - (β+i)/2) - (signum(m-n) * `√`(abs((β-i)/2)))
     val tl = `√`( `√`((β`²`) - k) - (β+i)/2)
     val tr = `√`(abs((β-i)/2))
     val t =  tl - (if (m < n) -tr else tr)
@@ -132,7 +121,88 @@ object Datum {
 
     val λ = atan2(y,x)
 
-    f( φ, λ, h)
+    fun( φ, λ, h)
+  }
+     */
+
+  /**
+   * Olson, D. K. (1996).
+   * Converting Earth-Centered, Earth-Fixed Coordinates to Geodetic Coordinates.
+   * IEEE Transactions on Aerospace and Electronic Systems, 32(1), 473–476. https://doi.org/10.1109/7.481290
+   *
+   * this is ~1.4x faster than Osen and roundtrip errors are still below 1e-10 so we pick this as default
+   */
+  def withWGS84[U](x: Double, y: Double, z: Double)(fun: (Double,Double,Double)=>U): U = {
+    val a = 6378137.0
+    val e2 = 6.6943799901377997e-3
+    val a1 = 4.2697672707157535e+4
+    val a2 = 1.8230912546075455e+9
+    val a3 = 1.4291722289812413e+2
+    val a4 = 4.5577281365188637e+9
+    val a5 = 4.2840589930055659e+4
+    val a6 = 9.9330562000986220e-1
+
+    val zp = abs(z)
+    val w2 = x*x + y*y
+    val w = `√`(w2)
+    val z2 = z*z
+    val r2 = w2 + z2
+    val r = `√`(r2)
+
+    if (r >= 100000) {
+      val lon = atan2(y,x)
+      val s2 = z2/r2
+      val c2 = w2/r2
+      var u = a2/r
+      var v = a3 - a4/r
+
+      var c = 0.0
+      var s = 0.0
+      var ss = 0.0
+      var lat = 0.0
+
+      if (c2 > 0.3) {
+        s = (zp/r)*(1.0 + c2*(a1 + u + s2*v)/r)
+        lat = asin(s)
+        ss = s*s
+        c = `√`(1.0 - ss)
+      } else {
+        c = (w/r)*(1.0 - s2*(a5 - u - c2*v)/r)
+        lat = acos(c)
+        ss = 1.0 - c*c
+        s = `√`(ss)
+      }
+      val g = 1.0 - e2*ss
+      val rg = a / `√`(g)
+      val rf = a6 * rg
+      u = w - rg * c
+      v = zp - rf * s
+      val f = c * u + s * v
+      val m = c * v - s * u
+      val p = m / (rf / g + f)
+
+      lat += p
+      val h = f + m*p/2.0
+      if (z < 0.0) lat = -lat
+
+      fun( lat, lon, h)
+
+    } else {
+      fun( 0, 0, -1.0e+7)
+    }
+  }
+
+
+  // high level converters
+
+  @inline def wgs84ToECEF (pos: GeoPosition): XyzPos = withECEF(pos.lat.toRadians, pos.lon.toRadians, pos.altMeters) { (x,y,z)=>
+    XyzPos.fromMeters(x,y,z)
+  }
+  @inline def wgs84ToECEF (pos: LatLonAlt): XyzPos = withECEF(pos.φ, pos.λ, pos.altitude) { (x,y,z)=>
+    XyzPos.fromMeters(x,y,z)
+  }
+  @inline def wgs84ToECEF (pos: (Double,Double,Double)): XyzPos = withECEF(pos._1, pos._2, pos._3) { (x,y,z)=>
+    XyzPos.fromMeters(x,y,z)
   }
 
   @inline def ecefToWGS84(pos: (Length,Length,Length)): GeoPosition =  withWGS84(pos._1.toMeters, pos._2.toMeters, pos._3.toMeters) { (φ,λ,h) =>
@@ -168,6 +238,7 @@ object Datum {
   }
 
   def geoCentricLatitude (lat: Angle): Angle = {
+    val `1-e²`: Double = 9.93305620009858682943e-1d
     Radians( atan( `1-e²` * Tan(lat)))
   }
 
@@ -185,6 +256,9 @@ object Datum {
 
   // get earth radius for given cartesian point
   def earthRadius (xyz: Cartesian3): Double = {
+    val `a²`: Double = 4.0680631590769e+13d
+    val `b²`: Double = 4.04082999828157e+13d
+
     val d2 = xyz.length2
     val c0 = (xyz.z `²`) / d2
     val c1 = ((xyz.x `²`) + (xyz.y `²`)) / d2
@@ -202,6 +276,9 @@ object Datum {
   }
 
   def earthRadius (xyz: XyzPos): Length = {
+    val `a²`: Double = 4.0680631590769e+13d
+    val `b²`: Double = 4.04082999828157e+13d
+
     val d2 = xyz.length2
     val c0 = (xyz.z.toMeters `²`) / d2
     val c1 = ((xyz.x.toMeters `²`) + (xyz.y.toMeters `²`)) / d2
@@ -230,6 +307,7 @@ object Datum {
   }
 
   def geodeticToGeocentricLatitude (φ: Angle): Angle = {
+    val `1-e²`: Double = 9.93305620009858682943e-1d
     Radians( atan(`1-e²` * Tan(φ)))
   }
   def gdToGcLatDeg(deg:Double): Double = geodeticToGeocentricLatitude(Degrees(deg)).toDegrees

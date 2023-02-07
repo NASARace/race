@@ -47,6 +47,14 @@ trait RaceSpec extends Suite with Matchers with OptionValues with Inside with Sc
     f
   }
 
+  def executeConditional (cond: => Boolean, msg: String)(f: =>Unit): Unit = {
+    if (cond) {
+      f
+    } else {
+      Console.err.println(s"${scala.Console.RED}$msg ${scala.Console.RESET}")
+    }
+  }
+
   /**
     * NOTE - do not use the same filename in concurrent tests, which would result in race conditions that make them fail
     */

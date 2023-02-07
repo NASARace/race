@@ -20,7 +20,7 @@ import gov.nasa.race.common.{MutXyz, squareRoot, squared}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.RaceActor
 import gov.nasa.race.geo.{Datum, GeoPosition, GreatCircle}
-import gov.nasa.race.{Dated, DatedOrdering, ifTrue, ifTrueCheck}
+import gov.nasa.race.{Dated, DatedOrdering, ifSome, ifTrue, ifTrueCheck}
 import gov.nasa.race.trajectory.{MutAccurateTrajectory, Trajectory}
 import gov.nasa.race.uom.Angle.{Acos, Radians, Sin, π_2}
 import gov.nasa.race.uom.DateTime.UndefinedDateTime
@@ -61,10 +61,13 @@ object OreKit {
   def hasData: Boolean = _hasData
 
   def ensureData(): Unit = synchronized {
-    if (!_hasData) {
-      loadPropertyData() || loadEnvData() || loadClasspathData()
-      if (!_hasData) throw new RuntimeException("failed to locate OreKit data")
+    if (!checkData()) {
+      throw new RuntimeException("failed to locate OreKit data")
     }
+  }
+
+  def checkData(): Boolean = synchronized {
+    _hasData || loadPropertyData() || loadEnvData() || loadClasspathData() || loadPathData()
   }
 
   def loadClasspathData(): Boolean = synchronized {
@@ -75,6 +78,12 @@ object OreKit {
       _hasData = true
       true
     }
+  }
+
+  def loadPathData(): Boolean = {
+    Seq("orekit-data", "orekit-data.jar", "orekit-data.zip").exists(p => {
+      FileUtils.findInPathHierarchy(p).map(loadFSData).isDefined
+    })
   }
 
   def loadFSData (f: File): Boolean = {

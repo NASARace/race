@@ -40,6 +40,8 @@ import scala.concurrent.duration.FiniteDuration
  */
 object FileUtils {
 
+  val currentDir = new File(System.getProperty("user.dir"))
+
   @inline def file (pathName: String): File = new File(pathName)
 
   def resourceContentsAsUTF8String(cls: Class[_],fileName: String): Option[String] = {
@@ -358,6 +360,18 @@ object FileUtils {
     override def visitFile(file: Path, attrs: BasicFileAttributes) = visitPath(file, attrs)
     override def preVisitDirectory(dir: Path, attrs: BasicFileAttributes) = visitPath(dir, attrs)
     override def visitFileFailed(file: Path, exception: IOException) = FileVisitResult.CONTINUE
+  }
+
+  def findInPathHierarchy (fName: String, dir: File = currentDir): Option[File] = {
+    var p = dir
+
+    while (p != null) {
+      val pn = new File(p, fName)
+      if (pn.isFile || pn.isDirectory) return Some(pn)
+      p = p.getParentFile
+    }
+
+    None
   }
 
   def getPath(pathName: String): Path = {

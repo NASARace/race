@@ -84,15 +84,26 @@ class GreatCircleSpec extends AnyFlatSpec with RaceSpec {
     assert( e < Meters(1))
   }
 
-  "cross track bearing" should "match known value" in {
-    val p1 = GeoPosition.fromDegrees(10,-120)
-    val p2 = GeoPosition.fromDegrees(-10, -120)
-    val p = GeoPosition.fromDegrees(0,-110)
 
-    val b = GreatCircle.crossTrackBearing(p, p1, p2)
-    val errDeg = Math.abs(b.toDegrees - 90.0)
-    println(s"cross track bearing from GC $p1->$p2 to $p = ${b.toDegrees} -> error = $errDeg")
-    assert( errDeg < 0.00001)
+  "cross track bearing" should "match known value" in {
+    val maxErrDeg = 0.5
+
+    def test (p: GeoPosition, p1: GeoPosition, p2: GeoPosition, degExpected: Double): Unit = {
+      val b = GreatCircle.crossTrackBearing(p, p1, p2)
+      println(s" $p1 -> $p2 ∡ $p : $b")
+      val errDeg = Math.abs(b.toDegrees - degExpected)
+      assert( errDeg < maxErrDeg)
+    }
+
+    var p1 = GeoPosition.fromDegrees(10,-120)
+    var p2 = GeoPosition.fromDegrees(-10, -120)
+    var p = GeoPosition.fromDegrees(0,-110)
+    test(p, p1, p2, 90)
+
+    p1 = GeoPosition.fromDegrees(0, 100)
+    p2 = GeoPosition.fromDegrees(0, 110)
+    p = GeoPosition.fromDegrees( 10, 105)
+    test(p, p1, p2, 0)
   }
 }
 

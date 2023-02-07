@@ -32,7 +32,7 @@ class DWArchiveReaderSpec extends AnyFlatSpec with RaceSpec {
 
     var n = 0
     while (ar.hasMoreArchivedData){
-      ar.readNextEntry match {
+      ar.readNextEntry() match {
         case Some(e) =>
           println(s"$n: ${e.date}")
           n += 1
@@ -40,7 +40,7 @@ class DWArchiveReaderSpec extends AnyFlatSpec with RaceSpec {
       }
     }
 
-    ar.close
+    ar.close()
     assert(n == 2)
   }
 }

@@ -84,6 +84,7 @@ object TestRaceActorSystem {
 
       case ResetMaster =>
         if (hasChildActors) terminateRaceActors()
+
         if (noMoreChildren) {
           sender() ! MasterReset
         } else {

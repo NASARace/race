@@ -411,12 +411,12 @@ abstract class GisItemDB[T <: GisItem: ClassTag] (data: ByteBuffer) {
     private[GisItemDB]  var y: Double = 0
     private[GisItemDB]  var z: Double = 0
 
-    Datum.withECEF(pos.latDeg, pos.lonDeg, pos.altMeters)(setXyz)
+    Datum.withECEF(pos.lat.toRadians, pos.lon.toRadians, pos.altMeters)(setXyz)
 
     /** NOTE - don't change while processQuery on same query object is running */
     def setPos (newPos: GeoPosition): Unit = {
       pos = newPos
-      Datum.withECEF(pos.latDeg, pos.lonDeg, pos.altMeters)(setXyz)
+      Datum.withECEF(pos.lat.toRadians, pos.lon.toRadians, pos.altMeters)(setXyz)
     }
     def getPos: GeoPosition = pos
 

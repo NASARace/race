@@ -1,6 +1,7 @@
 package gov.nasa.race.geo
 
 import gov.nasa.race.test.RaceSpec
+import gov.nasa.race.uom.Angle
 import gov.nasa.race.uom.Angle.Degrees
 import org.scalacheck.Gen
 import org.scalatest.flatspec.AnyFlatSpec
@@ -35,16 +36,16 @@ class LatLonSpec extends AnyFlatSpec with RaceSpec {
       val llon = latLon.lon         //  -"-
       t += System.nanoTime - t0
 
-      val dlat = lat - llat
-      val dlon = lon - llon
+      val dlat = Angle.absDiff(lat, llat)
+      val dlon = Angle.absDiff(lon, llon)
 
-      avgAbsLatErr += Math.abs(dlat.toDegrees)
-      avgAbsLonErr += Math.abs(dlon.toDegrees)
+      avgAbsLatErr += dlat.toDegrees
+      avgAbsLonErr += dlon.toDegrees
 
       //println(f"lat: ${lat.toDegrees}%.7f - ${llat.toDegrees}%.7f -> e: ${dlat.toDegrees}%+.8f,   lon: ${lon.toDegrees}%12.7f - ${llon.toDegrees}%12.7f -> e: ${dlon.toDegrees}%+.8f")
 
-      assert(Math.abs(dlat.toDegrees) < eps)
-      assert(Math.abs(dlon.toDegrees) < eps)
+      assert(dlat.toDegrees < eps)
+      assert(dlon.toDegrees < eps)
     }
 
     avgAbsLatErr /= nSuccessful

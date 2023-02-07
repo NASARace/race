@@ -78,6 +78,10 @@ class ProbeActor (val config: Config) extends ChannelTopicSubscriber {
       if (alert) print(scala.Console.RESET)
     }
   }
+
+  def getPrefix: Option[String] = {
+    prefix.map { _.replace("$date", raceActorSystem.simClock.dateTime.format_Hms)}
+  }
 }
 
 /**
@@ -90,6 +94,18 @@ class MaybeJsonTranslator (val config: Config) extends ConfigurableTranslator {
   override def translate(src: Any): Option[Any] = {
     src match {
       case js: JsonSerializable => Some(writer.toNewJson(js))
+      case other => Some(other)
+    }
+  }
+}
+
+/**
+ * a probe translator that converts utf8 byte arrays to strings
+ */
+class Utf8DataToStringTranslator (val config: Config) extends ConfigurableTranslator {
+  override def translate(src: Any): Option[Any] = {
+    src match {
+      case a: Array[Byte] => Some(new String(a, 0, a.length))
       case other => Some(other)
     }
   }

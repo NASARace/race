@@ -18,7 +18,7 @@ class HotspotSpec extends AnyFlatSpec with RaceSpec {
     val writer = new JsonWriter()
     writer.readableDateTime(true)
 
-    val parser = new HotspotParser(){}
+    val parser = new ViirsHotspotParser(){}
     if (parser.initialize(input.getBytes)) {
       parser.parseHotspot() match {
         case SuccessValue(hotspot) =>
@@ -28,7 +28,7 @@ class HotspotSpec extends AnyFlatSpec with RaceSpec {
           assert( hotspot.date == DateTime.parseISO("2020-08-16T10:24:00Z"))
           hotspot.position.latDeg shouldBe( 38.61877 +- 0.000001)
           hotspot.position.lonDeg shouldBe( -121.29271 +- 0.000001)
-          hotspot.brightness shouldBe( 308.4 +- 0.01)
+          hotspot.brightness.toKelvin shouldBe( 308.4 +- 0.01)
 
         case race.Failure(msg) => fail(msg)
       }
@@ -41,7 +41,7 @@ class HotspotSpec extends AnyFlatSpec with RaceSpec {
     var nEntries = 0
     var nHotspots = 0
     var d: DateTime = DateTime.UndefinedDateTime
-    val r = new HotspotArchiveReader(is, fileName, 8192)
+    val r = new ViirsHotspotArchiveReader(is, fileName, 8192)
     var next: Option[archive.ArchiveEntry] = r.readNextEntry()
     val writer = new JsonWriter()
     writer.readableDateTime(true)
