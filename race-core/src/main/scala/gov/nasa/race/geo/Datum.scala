@@ -311,4 +311,14 @@ object Datum {
     Radians( atan(`1-e²` * Tan(φ)))
   }
   def gdToGcLatDeg(deg:Double): Double = geodeticToGeocentricLatitude(Degrees(deg)).toDegrees
+
+  // length of 1 degree in N-S direction at latitude φ
+  def latDegreeLength (φ: Angle): Length = {
+    Meters( 111132.92 - 559.82 * Cos(φ * 2) + 1.175 * Cos(φ * 4) - 0.0023 * Cos(φ * 6))
+  }
+
+  // length of 1 degree in W-E direction at latitude φ
+  def lonDegreeLength (φ: Angle): Length = {
+    Meters(111412.84 * Cos(φ) - 93.5 * Cos(φ * 3) + 0.118 * Cos(φ * 5))
+  }
 }

@@ -181,7 +181,6 @@ ui.exportToMain(function selectGoesrDataSet(event) {
 
 function getPeerDataSet (ds) {
     if (hasShowingPeer(ds.sat)) {
-        console.log("@@@ has showing peers ", ds.satId);
         let idx = dataSets.indexOf(ds);
         let ds1 = getPreceedingPeer(ds.satId, idx);
         let ds2 = getFollowingPeer(ds.satId, idx);

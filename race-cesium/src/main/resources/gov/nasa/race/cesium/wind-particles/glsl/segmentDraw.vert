@@ -37,11 +37,12 @@ vec3 convertCoordinate(vec3 lonLatLev) {
 
     float N_Phi = a / sqrt(1.0 - e2 * sinLat * sinLat);
     float h = particleHeight; // it should be high enough otherwise the particle may not pass the terrain depth test
+    float c = (N_Phi + h) * cosLat;
 
     vec3 cartesian = vec3(0.0);
-    cartesian.x = (N_Phi + h) * cosLat * cosLon;
-    cartesian.y = (N_Phi + h) * cosLat * sinLon;
-    cartesian.z = ((b * b) / (a * a) * N_Phi + h) * sinLat;
+    cartesian.x = c * cosLon;
+    cartesian.y = c * sinLon;
+    cartesian.z = ((N_Phi * (b * b) / (a * a)) + h) * sinLat;
     return cartesian;
 }
 
@@ -50,6 +51,9 @@ vec4 calculateProjectedCoordinate(vec3 lonLatLev) {
     // [0, 180] is corresponding to [0, 180] and [180, 360] is corresponding to [-180, 0]
     lonLatLev.x = mod(lonLatLev.x + 180.0, 360.0) - 180.0;
     vec3 particlePosition = convertCoordinate(lonLatLev);
+
+    // czm_modelViewProjection: automatic GLSL uniform representing a 4x4 model-view-projection transformation matrix 
+    // that transforms model coordinates to clip coordinates
     vec4 projectedCoordinate = czm_modelViewProjection * vec4(particlePosition, 1.0);
     return projectedCoordinate;
 }

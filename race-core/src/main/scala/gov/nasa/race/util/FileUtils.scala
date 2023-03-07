@@ -43,6 +43,7 @@ object FileUtils {
   val currentDir = new File(System.getProperty("user.dir"))
 
   @inline def file (pathName: String): File = new File(pathName)
+  @inline def dir (pathName: String): File = new File(pathName)
 
   def resourceContentsAsUTF8String(cls: Class[_],fileName: String): Option[String] = {
     val is = cls.getResourceAsStream(fileName)
@@ -200,6 +201,17 @@ object FileUtils {
       }
     }
   }
+
+  // filename without extension
+  def getBaseName (fn: String): String = {
+    var i0 = fn.lastIndexOf(File.separator)
+    i0 += 1
+    var i1 = fn.lastIndexOf('.', fn.length-1)
+    if (i1 < 0 || i1 < i0) i1 = fn.length
+
+    fn.substring(i0,i1)
+  }
+  def getBaseName(f: File): String = getBaseName(f.getName)
 
   // file extension (without '.')
   def getExtension (fn: String): String = {

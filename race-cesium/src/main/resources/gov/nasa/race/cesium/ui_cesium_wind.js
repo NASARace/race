@@ -406,8 +406,30 @@ function setupEventListeners() {
 //--- data acquisition and translation
 
 async function loadData(windEntry) {
-    await loadNetCDF(windEntry);
+    //await loadNetCDF(windEntry);
+    await loadWindField(windEntry);
     return windEntry.data;
+}
+
+function loadWindField (windEntry) {
+    let url = windEntry.windField.url;
+
+    return new Promise(function(resolve) {
+        var request = new XMLHttpRequest();
+        request.open('GET', url);
+
+        request.onload = function() {
+            let rsp = request.response; // this is JSON
+            if (rsp) {
+                let windField = JSON.parse(rsp);
+                if (windField) {
+                    console.log(windField);
+                }
+            }
+        }
+
+        request.send();
+    });
 }
 
 function loadNetCDF(windEntry) {
@@ -449,7 +471,7 @@ function loadNetCDF(windEntry) {
             data.lat.min = Math.min(...data.lat.array);
             data.lat.max = Math.max(...data.lat.array);
 
-            data.lev = {};
+            data.lev = {}; // levels in lon/lat/U/V (z-axis)
             data.lev.array = new Float32Array(NetCDF.getDataVariable('lev').flat());
             data.lev.min = Math.min(...data.lev.array);
             data.lev.max = Math.max(...data.lev.array);

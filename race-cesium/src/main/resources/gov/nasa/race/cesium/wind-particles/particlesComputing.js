@@ -45,7 +45,7 @@ export class ParticlesComputing {
             })
         };
 
-        var particlesArray = Util.randomizeParticles(data, userInput.maxParticles, viewerParameters)
+        var particlesArray = Util.randomizeParticles(data, userInput.maxParticles, viewerParameters);
         var zeroArray = new Float32Array(4 * userInput.maxParticles).fill(0);
 
         this.particlesTextures = {
