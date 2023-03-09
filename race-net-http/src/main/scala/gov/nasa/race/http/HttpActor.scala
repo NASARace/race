@@ -16,16 +16,23 @@
  */
 package gov.nasa.race.http
 
+import gov.nasa.race.config.ConfigUtils.ConfigWrapper
+import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, PublishingRaceActor, RaceActor, SubscribingRaceActor}
+import gov.nasa.race.uom.DateTime
+import gov.nasa.race.util.FileUtils
+
+import akka.actor.ActorRef
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpEntity, HttpHeader, HttpMethod, HttpMethods, HttpRequest, HttpResponse, RequestEntity}
 import akka.http.scaladsl.settings.{ClientConnectionSettings, ConnectionPoolSettings}
 import akka.stream.{BufferOverflowException, Materializer}
-import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.core.RaceActor
+import com.typesafe.config.Config
 
+import java.io.{File, FileOutputStream}
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.{Failure, Success, Try}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * an actor that uses Akka-http
@@ -79,6 +86,20 @@ trait HttpActor extends RaceActor {
     httpRequest( HttpRequest( method, uri, headers, entity))(f)
   }
 
+  // TODO - add timeout and size bounds
+  def httpRequestFile (uri: String, file: File,
+                         method: HttpMethod = HttpMethods.GET, headers: Seq[HttpHeader] = Nil, entity: RequestEntity = HttpEntity.Empty
+                        ): Future[File] = {
+    val req = HttpRequest( method, uri, headers, entity)
+    http.singleRequest(req, settings = clientSettings).flatMap( resp=> {
+      val stream = resp.entity.dataBytes
+      stream.runFold(new FileOutputStream(file))( (fos,data) => {
+        fos.write(data.toArray)
+        fos
+      }).map( fos=> { fos.close(); file})
+    })
+  }
+
   def httpRequestWithRetry [U] (uri: String,
                                 method: HttpMethod = HttpMethods.GET, headers: Seq[HttpHeader] = Nil, entity: RequestEntity = HttpEntity.Empty,
                                 retries: Int = maxRetry
@@ -120,5 +141,63 @@ trait HttpActor extends RaceActor {
 
   def awaitHttpRequest [U] (req: HttpRequest)(f: PartialFunction[Try[HttpResponse],U]): Unit = {
     Await.ready( http.singleRequest(req, settings = clientSettings).andThen(f), maxRequestTimeout)
+  }
+}
+
+
+/**
+ * file request message objects
+ */
+case class RequestFile (url: String, file: File, publishResult: Boolean = false)
+case class FileRetrieved (req: RequestFile, date: DateTime)
+case class FileRequestFailed (req: RequestFile, reason: String)
+
+/**
+ * an HttpActor that listens on a channel for RequestFile messages and responds to the requester either with a FileRetrieved
+ * message once the download is complete or a FileRequestFailed message in case there is an error
+ */
+trait HttpFileRetriever extends HttpActor with SubscribingRaceActor with PublishingRaceActor with ContinuousTimeRaceActor {
+
+  def handleFileRequestMessage: Receive = {
+    case req:RequestFile => requestFile(req, sender())
+    case BusEvent(_,req:RequestFile,requester) => requestFile(req, requester)
+  }
+
+  override def handleMessage: Receive = handleFileRequestMessage orElse super.handleMessage
+
+  def requestFile (req: RequestFile, requester: ActorRef): Unit = {
+    val url = req.url
+    val file = req.file
+
+    if (FileUtils.ensureWritable(file).isDefined) {
+      info(s"requesting $url -> $file")
+      httpRequestFile(url,file).onComplete {
+        case Success(f) =>
+          info(s"download complete: $f")
+          val msg = FileRetrieved( req, currentSimTime)
+          if (req.publishResult) publish( msg) else requester ! msg
+
+        case Failure(x) =>
+          warning(s"download failed: $x")
+          requester ! FileRequestFailed( req, x.getMessage)
+      }
+    } else {
+      requester ! FileRequestFailed(req, "file not writable")
+    }
+  }
+}
+
+/**
+ * simple test actor
+ */
+class SimpleFileRetriever (val config: Config) extends HttpFileRetriever {
+  val url = config.getString("url")
+  val file = new File(config.getString("file"))
+
+  override def onStartRaceActor(originator: ActorRef): Boolean = {
+    super.onStartRaceActor(originator)
+
+    self ! RequestFile(url,file, true)
+    true
   }
 }
