@@ -16,7 +16,10 @@
  */
 package gov.nasa.race.cesium
 
-import akka.http.scaladsl.model.{ContentType, HttpEntity, MediaTypes, StatusCodes, Uri}
+import akka.http.javadsl.model.headers.ContentEncoding
+import akka.http.scaladsl.coding.Coders
+import akka.http.scaladsl.model.headers.HttpEncoding
+import akka.http.scaladsl.model.{ContentType, HttpEntity, HttpHeader, MediaTypes, StatusCodes, Uri}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
@@ -28,7 +31,7 @@ import gov.nasa.race.cesium.GeoLayer.MODULE_PREFIX
 import gov.nasa.race.common.{JsonProducer, JsonSerializable, JsonWriter}
 import gov.nasa.race.config.NoConfig
 import gov.nasa.race.core.ParentActor
-import gov.nasa.race.http.{DocumentRoute, ResponseData, WSContext}
+import gov.nasa.race.http.{DocumentRoute, FileServerRoute, ResponseData, WSContext}
 import gov.nasa.race.ifSome
 import gov.nasa.race.ui.{extModule, uiIcon, uiKvTable, uiList, uiPanel, uiTreeList, uiWindow}
 import gov.nasa.race.uom.DateTime
@@ -137,7 +140,7 @@ import GeoLayerRoute._
 /**
  * a route that serves configured GeoJSON content
  */
-trait GeoLayerRoute extends CesiumRoute with JsonProducer {
+trait GeoLayerRoute extends CesiumRoute with FileServerRoute with JsonProducer {
   private val defaultRendering = new DefaultGeoJsonRendering(config.getConfigOrElse("geolayer.render", NoConfig))
   private val sources = mutable.LinkedHashMap.from( config.getConfigSeq("geolayer.sources").map(GeoLayer(_)).map(l=> l.pathName -> l))
   private val renderModules = getRenderModules(sources.values)
@@ -163,7 +166,8 @@ trait GeoLayerRoute extends CesiumRoute with JsonProducer {
         extractUnmatchedPath { p =>
           val pathName = NetUtils.decodeUri(p.toString())
           sources.get(pathName) match {
-            case Some(geoLayer) => completeWithFileContent(geoLayer.file, MediaTypes.`application/json`, pathName)
+            case Some(geoLayer) =>
+              completeWithFileContent( geoLayer.file)
             case None => complete(StatusCodes.NotFound, pathName)
           }
         }
@@ -180,45 +184,6 @@ trait GeoLayerRoute extends CesiumRoute with JsonProducer {
         } ~
       fileAssetPath(jsModule) ~
       fileAssetPath(icon)
-    }
-  }
-
-  val StrictFileSizeThreshold = 4 * 1024*1024 // everything larger than 4MB is not served as Strict content
-  val ChunkSize = 65536
-
-  /**
-   * the actual file transfer. Note that we try to avoid loading huge files into server memory or send
-   * compressed data, hence we need to handle such files non-strict. Note also that Strict.withSizeLimit(..) won't help
-   * us since we also try to avoid reading the ByteString into server memory
-   */
-  def completeWithFileContent (file: File, contentType: ContentType, reqPath: String): Route = {
-
-    def readChunk(is: InputStream, buf: Array[Byte]): Option[HttpEntity.ChunkStreamPart] = {
-      val nRead = is.read(buf)
-      if (nRead < 0) None else Some(ByteString.fromArray(buf,0,nRead))
-    }
-
-    def completeChunked (is: InputStream): Route = {
-      val buf = new Array[Byte](ChunkSize)
-      val src = Source.unfoldResource[HttpEntity.ChunkStreamPart,InputStream](
-        () => is,
-        is => readChunk(is, buf),
-        is => is.close()
-      )
-      complete(StatusCodes.OK, HttpEntity.Chunked(contentType, src))
-    }
-
-    if (file.isFile) {
-      if (FileUtils.getExtension(file) == "gz") { // gzipped file content is always chunked - we don't know the size yet
-        completeChunked( new GZIPInputStream( new FileInputStream(file)))
-      } else if (file.length > StrictFileSizeThreshold) {
-        completeChunked( new FileInputStream(file))
-      } else { // not compressed and small enough - send as strict
-        complete( StatusCodes.OK, HttpEntity.Strict( contentType, ByteString.fromArrayUnsafe(FileUtils.fileContentsAsBytes(file).get)))
-      }
-
-    } else {
-      complete(StatusCodes.NotFound, reqPath)
     }
   }
 
@@ -274,3 +239,4 @@ trait GeoLayerRoute extends CesiumRoute with JsonProducer {
 
 
 class CesiumGeoLayerApp (val parent: ParentActor, val config: Config) extends DocumentRoute with GeoLayerRoute
+class CesiumGeoImgApp (val parent: ParentActor, val config: Config) extends DocumentRoute with GeoLayerRoute with ImageryLayerRoute

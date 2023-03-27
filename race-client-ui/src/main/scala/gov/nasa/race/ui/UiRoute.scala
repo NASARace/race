@@ -84,7 +84,7 @@ trait UiRoute extends  RaceRouteInfo with ConfigScriptRoute with CachedFileAsset
         parameterMap { qps =>
           val theme: String = qps.getOrElse("theme", DEFAULT_THEME)
           optionalHeaderValueByType(`User-Agent`) { ua =>
-            complete( ResponseData.css( getFileAssetContent( getThemePathName(theme,ua.map(_.value())))))
+            complete( ResponseData.forExtension( "css", getFileAssetContent( getThemePathName(theme,ua.map(_.value())))))
           }
         }
       }
