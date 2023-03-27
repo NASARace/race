@@ -39,7 +39,7 @@ vec2 mapPositionToNormalizedIndex2D(vec3 lonLatLev) {
     //   0.0------1.0 s
 
     vec2 index2D = vec2(index3D.x, index3D.z * dimension.y + index3D.y);
-    vec2 normalizedIndex2D = vec2(index2D.x / dimension.x, index2D.y / (dimension.y * dimension.z));
+    vec2 normalizedIndex2D = vec2(index2D.x / dimension.x, 1.0 - index2D.y / (dimension.y * dimension.z));
     return normalizedIndex2D;
 }
 
@@ -67,6 +67,7 @@ float interpolateTexture(sampler2D componentTexture, vec3 lonLatLev) {
     float lon_lat0 = mix(lon0_lat0, lon1_lat0, lon - lon0);
     float lon_lat1 = mix(lon0_lat1, lon1_lat1, lon - lon0);
     float lon_lat = mix(lon_lat0, lon_lat1, lat - lat0);
+
     return lon_lat;
 }
 
@@ -74,7 +75,8 @@ vec3 linearInterpolation(vec3 lonLatLev) {
     // https://en.wikipedia.org/wiki/Bilinear_interpolation
     float u = interpolateTexture(U, lonLatLev);
     float v = interpolateTexture(V, lonLatLev);
-    float w = 0.0;
+
+    float w = 0.0;  // TODO - this needs to be calculated from W field
     return vec3(u, v, w);
 }
 
@@ -121,6 +123,10 @@ vec3 calculateSpeedByRungeKutta2(vec3 lonLatLev) {
     return speed;
 }
 
+vec3 calcSpd (vec3 lonLatLev) {
+    return linearInterpolation(lonLatLev) * speedScaleFactor;
+}
+
 float calculateWindNorm(vec3 speed) {
     vec3 percent = vec3(0.0);
     percent.x = (speed.x - uSpeedRange.x) / (uSpeedRange.y - uSpeedRange.x);
@@ -133,7 +139,8 @@ float calculateWindNorm(vec3 speed) {
 void main() {
     // texture coordinate must be normalized
     vec3 lonLatLev = texture2D(currentParticlesPosition, v_textureCoordinates).rgb;
-    vec3 speed = calculateSpeedByRungeKutta2(lonLatLev);
+    //vec3 speed = calculateSpeedByRungeKutta2(lonLatLev);
+    vec3 speed = calcSpd(lonLatLev);
     vec3 speedInLonLat = convertSpeedUnitToLonLat(lonLatLev, speed);
 
     vec4 particleSpeed = vec4(speedInLonLat, calculateWindNorm(speed / speedScaleFactor));

@@ -163,10 +163,12 @@ export class ParticlesComputing {
                         return that.particlesTextures.particlesSpeed;
                     },
                     lonRange: function() {
-                        return viewerParameters.lonRange;
+                        //return viewerParameters.lonRange;
+                        return new Cesium.Cartesian2(data.lon.min, data.lon.max);
                     },
                     latRange: function() {
-                        return viewerParameters.latRange;
+                        //return viewerParameters.latRange;
+                        return new Cesium.Cartesian2(data.lat.min, data.lat.max);
                     },
                     randomCoefficient: function() {
                         var randomCoefficient = Math.random();

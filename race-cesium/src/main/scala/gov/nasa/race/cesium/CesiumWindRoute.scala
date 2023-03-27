@@ -45,7 +45,7 @@ import scala.collection.mutable.SeqMap
   * Ultimately, this structure will be computed by this route and transmitted as a JSON object in order to remove
   * client side netcdfjs dependencies and offload client computation
   */
-trait CesiumWindRoute extends CesiumRoute with QueryProxyRoute with FSCachedProxyRoute with PushWSRaceRoute with CachedFileAssetRoute {
+trait CesiumWindRoute extends CesiumRoute with QueryProxyRoute with FSCachedProxyRoute with FileServerRoute with PushWSRaceRoute with CachedFileAssetRoute {
 
   //--- init wind fields
 
@@ -73,7 +73,6 @@ trait CesiumWindRoute extends CesiumRoute with QueryProxyRoute with FSCachedProx
   }
 
   def windFieldMessage(layer: CesiumLayer): TextMessage.Strict = {
-    //val msg = s"""{"windField":{"name":"${layer.name}","date":${layer.date.toEpochMillis},"url":"${layer.url}","show":${layer.show}}}"""
     val msg = s"""{"windField":{"name":"${layer.name}","date":${DateTime.now.toEpochMillis},"url":"${layer.url}","show":${layer.show}}}"""
     TextMessage.Strict(msg)
   }
@@ -99,22 +98,13 @@ trait CesiumWindRoute extends CesiumRoute with QueryProxyRoute with FSCachedProx
         pathPrefix("wind-data") {
           extractUnmatchedPath { p =>
             val file = new File(s"$windDir/$p")
-            FileUtils.fileContentsAsBytes(file) match {
-              case Some(content) => complete( ResponseData.bytes(content))
-              case None => complete(StatusCodes.NotFound, p.toString())
-            }
+            completeWithFileContent(file)
           }
         } ~
         pathPrefix("wind-particles" ~ Slash) { // this is the client side shader code, not the dynamic wind data
           extractUnmatchedPath { p =>
             val pathName = s"wind-particles/$p"
-            if (pathName.endsWith(".js")) {
-              complete( ResponseData.js( getFileAssetContent(pathName)))
-            } else if (pathName.endsWith(".frag") || pathName.endsWith(".vert")) {
-              complete( ResponseData.glsl( getFileAssetContent(pathName)))
-            } else {
-              complete(StatusCodes.NotFound, pathName)
-            }
+            complete( ResponseData.forPathName(pathName, getFileAssetContent(pathName)))
           }
         } ~
         path("proxy") {  // TODO this is going away
@@ -174,4 +164,4 @@ trait CesiumWindRoute extends CesiumRoute with QueryProxyRoute with FSCachedProx
 /**
   * a single page application that processes track channels
   */
-class CesiumWindApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumWindRoute
+class CesiumWindApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumWindRoute with ImageryLayerRoute

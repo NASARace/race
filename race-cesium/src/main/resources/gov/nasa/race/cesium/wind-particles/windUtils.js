@@ -22,10 +22,11 @@ export function getFullscreenQuad() {
                 //  |     |
                 //  |     |
                 //  v0----v1
-                values: new Float32Array([-1, -1, 0, // v0
-                    1, -1, 0, // v1
-                    1, 1, 0, // v2
-                    -1, 1, 0, // v3
+                values: new Float32Array([
+                    -1, -1, 0, // v0
+                     1, -1, 0, // v1
+                     1,  1, 0, // v2
+                    -1,  1, 0, // v3
                 ])
             }),
             st: new Cesium.GeometryAttribute({
@@ -135,8 +136,10 @@ export function randomizeParticles(data, maxParticles, viewerParameters) {
     var array = new Float32Array(4 * maxParticles);
     for (var i = 0; i < maxParticles; i++) {
         const j = 4*i;
-        array[j] = Cesium.Math.randomBetween(viewerParameters.lonRange.x, viewerParameters.lonRange.y);
-        array[j + 1] = Cesium.Math.randomBetween(viewerParameters.latRange.x, viewerParameters.latRange.y);
+        //array[j] = Cesium.Math.randomBetween(viewerParameters.lonRange.x, viewerParameters.lonRange.y);
+        //array[j + 1] = Cesium.Math.randomBetween(viewerParameters.latRange.x, viewerParameters.latRange.y);
+        array[j] = Cesium.Math.randomBetween(data.lon.min, data.lon.max);
+        array[j + 1] = Cesium.Math.randomBetween(data.lat.min, data.lat.max);
         array[j + 2] = Cesium.Math.randomBetween(data.lev.min, data.lev.max);
         array[j + 3] = 0.0;
     }

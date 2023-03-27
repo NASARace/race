@@ -92,7 +92,8 @@ ui.registerLoadFunction(function initialize() {
         homeButton: false,
         timeline: false,
         animation: false,
-        requestRenderMode: requestRenderMode
+        requestRenderMode: requestRenderMode,
+        //contextOptions: { requestWebgl1: true }  // in case shaders are not WebGL 2 compatible (e.g. wind)
     });
 
     positionSets = getPositionSets();

@@ -39,7 +39,7 @@ import java.util.TimeZone
 object CesiumRoute {
   val terrainPrefix = "terrain"
 
-  val defaultCesiumJsVersion = "1.101"
+  val defaultCesiumJsVersion = "1.101" // TODO can't move past 1.101 yet since wind shaders are not WebGL2 compatible
 
   val cesiumPathMatcher = PathMatchers.separateOnSlashes("Build/Cesium/")
   def cesiumJsUrl (version: String): String = {

@@ -50,6 +50,7 @@ class WindEntry {
         this.windField = windField; // the server configured spec - what we get through the web socket
         this.data = undefined; // the wind field data - loaded from server
         this.userInput = {...userInputDefaults };
+
         this.particleSystem = undefined; // not set before we show
         this.primitives = [];
 
@@ -92,13 +93,20 @@ class WindEntry {
     }
 
     load() {
-        if (this.data) {
-            this.createParticleSystem(this.data);
-        } else {
-            loadData(this).then(data => {
-                this.createParticleSystem(data);
-                this.data = data;
-            });
+        if (this.windField.url.endsWith(".nc")) {
+            if (this.data) {
+                this.createParticleSystem(this.data);
+            } else {
+                loadData(this).then(data => {
+                    this.createParticleSystem(data);
+                    this.data = data;
+                });
+            }
+        } else if (this.windField.url.endsWith("_vector.csv.gz")) {
+            loadCsvVector(this);
+
+        } else if (this.windField.url.endsWith("_grid.csv.gz")) {
+            loadCsvGrid(this);
         }
     }
 
@@ -206,7 +214,7 @@ function initUserInputControls() {
     ui.setSliderValue(e, userInputDefaults.particleHeight);
 
     e = ui.getSlider("wind.fade_opacity");
-    ui.setSliderRange(e, 0.9, 1.0, 0.01, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }));
+    ui.setSliderRange(e, 0.8, 1.0, 0.01, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }));
     ui.setSliderValue(e, userInputDefaults.fadeOpacity);
 
     e = ui.getSlider("wind.drop");
@@ -218,7 +226,7 @@ function initUserInputControls() {
     ui.setSliderValue(e, userInputDefaults.dropRateBump);
 
     e = ui.getSlider("wind.speed");
-    ui.setSliderRange(e, 0.0, 0.3, 0.05, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }));
+    ui.setSliderRange(e, 0.0, 0.3, 0.02, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }));
     ui.setSliderValue(e, userInputDefaults.speedFactor);
 
     e = ui.getSlider("wind.width");
@@ -405,9 +413,282 @@ function setupEventListeners() {
 
 //--- data acquisition and translation
 
+//--- CSV (local wind vectors)
+
+const polyLineColorAppearance = new Cesium.PolylineColorAppearance();
+
+const csvVectorPrefixLine = /^# *length: *(\d+)$/;
+
+function getColor(spd) {
+    if (spd < 4.6) return Cesium.Color.BLUE;
+    if (spd < 9.19) return Cesium.Color.GREEN;
+    if (spd < 13.79) return Cesium.Color.YELLOW;
+    if (spd < 18.39) return Cesium.Color.ORANGE;
+    return Cesium.Color.RED;
+}
+
+async function loadCsvVector(windEntry) {
+    let points = new Cesium.PointPrimitiveCollection();
+    let vectors = [];
+    let i = 0;
+
+    const procLine = (line) => {
+        if (i > 1) { // vector line
+            let values = util.parseCsvValues(line);
+            if (values.length == 7) {
+                let p0 = new Cesium.Cartesian3(values[0],values[1],values[2]);
+                let p1 = new Cesium.Cartesian3(values[3],values[4],values[5]);
+
+                let spd = values[6];
+                let clr = Cesium.Color.YELLOW; //getColor(spd);
+        
+                points.add({
+                    position: p0,
+                    pixelSize: 3,
+                    color: clr
+                });
+        
+                vectors[i-2] = new Cesium.GeometryInstance({
+                    geometry: new Cesium.SimplePolylineGeometry({
+                        positions: [p0,p1],
+                        colors: [clr]
+                    })
+                });
+            }
+        } else if (i > 0) { // header line (ignore)
+        } else { // prefix comment line "# columns: X, rows: Y"
+            let m = line.match(csvVectorPrefixLine);
+            if (m) {
+                let len = parseInt(m[1]);
+                vectors = Array(len);
+            }
+        }
+        i++;
+    };
+
+    await util.forEachTextLine(windEntry.windField.url, procLine);
+    console.log("loaded ", i-2, " vectors from ", windEntry.windField.url);
+
+    uiCesium.addPrimitive(points);
+    uiCesium.addPrimitive( new Cesium.Primitive({
+        geometryInstances: vectors,
+        appearance: polyLineColorAppearance
+    }));
+
+    return windEntry.data;
+}
+
+//--- CSV grid
+
+function lonMeters(lat) {
+    let latitude = lat * Math.PI / 180;
+    let term5 = 111412.84 * Math.cos(latitude);
+    let term6 = 93.5 * Math.cos(3.0 * latitude);
+    let term7 = 0.118 * Math.cos(5.0 * latitude);
+    return term5 - term6 + term7;
+}
+function latMeters(lat) {
+    let latitude = lat * Math.PI / 180;
+    let term1 = 111132.92;
+    let term2 = 559.82 * Math.cos(2.0 * latitude);
+    let term3 = 1.175 * Math.cos(4.0 * latitude);
+    let term4 = 0.0023 * Math.cos(6.0 * latitude);
+    return term1 - term2 + term3 - term4;
+}
+
+const csvGridPrefixLine = /^# *nx: *(\d+), *x0: *(.+) *, *dx: *(.+) *, *ny: *(\d+), *y0: *(.+) *, *dy: *(.+)$/;
+
+async function _loadCsvGrid(windEntry) {
+    let nx, x0, dx, ny, y0, dy; // grid bounds and cell size
+    let points = new Cesium.PointPrimitiveCollection();
+    let vectors = [];
+    let i = 0;
+
+    const procLine = (line) => {
+        if (i > 1) { // grid data line
+            let values = util.parseCsvValues(line);
+            if (values.length == 5) {
+                const h = values[0];
+                const u = values[1]; // east-ward (in m)
+                const v = values[2]; // north-ward (in m)
+                const w = values[3];
+                const spd = values[4];
+
+                let clr = Cesium.Color.CYAN;
+
+                let k = i-2;
+                let lon = x0 + (k % nx)*dx;
+                let lat = y0 + (k / nx)*dy;
+
+                let vp = (lonMeters(lat) / latMeters(lat)) * v;
+                let dLon = dx/2 * (0.000000001 + u / 4.0);
+                let dLat = dy/2 * (0.000000001 + vp / 4.0);
+
+                let p0 = Cesium.Cartesian3.fromDegrees(lon,lat,h);
+                let p1 = Cesium.Cartesian3.fromDegrees(lon + dLon, lat - dLat, h); // approx
+        
+                points.add({
+                    position: p0,
+                    pixelSize: 3,
+                    color: clr
+                });
+        
+                vectors[k] = new Cesium.GeometryInstance({
+                    geometry: new Cesium.SimplePolylineGeometry({
+                        positions: [p0,p1],
+                        colors: [clr]
+                    })
+                });
+        
+            }
+        } else if (i > 0) { // ignore header line
+        } else { // prefix comment line with grid bounds
+            let m = line.match(csvGridPrefixLine);
+            if (m && m.length == 7) {
+                nx = parseInt(m[1]);
+                x0 = Number(m[2]);
+                dx = Number(m[3]);
+                ny = parseInt(m[4]);
+                y0 = Number(m[5]);
+                dy = Number(m[6]);
+
+                vectors = Array(nx*ny);
+            }
+        }
+        i++;
+    };
+
+    await util.forEachTextLine(windEntry.windField.url, procLine);
+
+    uiCesium.addPrimitive(points);
+    
+    uiCesium.addPrimitive( new Cesium.Primitive({
+        geometryInstances: vectors,
+        appearance: polyLineColorAppearance
+    }));
+    
+}
+
+async function loadCsvGrid(windEntry) {
+    let nx, x0, dx, ny, y0, dy; // grid bounds and cell size
+    let hs, us, vs, ws; // the data arrays
+    let hMin = 1e6, uMin = 1e6, vMin = 1e6, wMin = 1e6;
+    let hMax = -1e6, uMax = -1e6, vMax = -1e6, wMax = -1e6;
+
+    let i = 0;
+
+    const procLine = (line) => {
+        if (i > 1) { // grid data line
+            let values = util.parseCsvValues(line);
+            if (values.length == 5) {
+                const h = values[0];
+                const u = values[1];
+                const v = values[2];
+                const w = values[3];
+
+                if (h < hMin) hMin = h;
+                if (h > hMax) hMax = h;
+                if (u < uMin) uMin = u;
+                if (u > uMax) uMax = u;
+                if (v < vMin) vMin = v;
+                if (v > vMax) vMax = v;
+                if (w < wMin) wMin = w;
+                if (w > wMax) wMax = w;
+
+                const j = i-2;
+                hs[j] = h;
+                us[j] = u;
+                vs[j] = v;
+                ws[j] = w;
+            }
+        } else if (i > 0) { // ignore header line
+        } else { // prefix comment line with grid bounds
+            let m = line.match(csvGridPrefixLine);
+            if (m && m.length == 7) {
+                nx = parseInt(m[1]);
+                x0 = Number(m[2]);
+                dx = Number(m[3]);
+                ny = parseInt(m[4]);
+                y0 = Number(m[5]);
+                dy = Number(m[6]);
+
+                let len = nx * ny;
+                hs = new Float32Array(len);
+                us = new Float32Array(len);
+                vs = new Float32Array(len);
+                ws = new Float32Array(len);
+            }
+        }
+        i++;
+    };
+
+    await util.forEachTextLine(windEntry.windField.url, procLine);
+    console.log("loaded ", i-2, " grid points from ", windEntry.windField.url);
+
+    let data = {
+        dimensions: gridDimensions(nx,ny,1),
+        lon: axisData(nx, x0 < 0 ? 360 + x0 : x0, dx),  // normalize to 0..360
+        lat: axisData(ny, y0, dy),
+        lev: levelData(),
+        U: cellData(us, uMin, uMax),
+        V: cellData(vs, vMin, vMax)
+        //W: cellData(ws, wMin, wMax)
+    };
+    //console.log("@@ data:", data);
+
+    windEntry.data = data;
+    windEntry.createParticleSystem(data);
+}
+
+function gridDimensions (nx,ny,nz) {
+    return {
+        lon: nx,
+        lat: ny,
+        lev: nz
+    };
+}
+
+function axisData (nv,v0,dv) {
+    let a = new Float32Array(nv);
+    for (let i=0, v=v0; i<nv; i++, v += dv) { a[i] = v; }
+    let vMin, vMax;
+    if (dv < 0) {
+        vMin = a[nv-1];
+        vMax = a[0];
+    } else {
+        vMin = a[0];
+        vMax = a[nv-1];
+    }
+
+    return {
+        array: a,
+        min: vMin,
+        max: vMax
+    };
+}
+
+
+function levelData () { // this is NOT h but a 3d grid dimension
+    return {
+        array: new Float32Array([1]),
+        min: 1,
+        max: 1
+    };
+}
+
+function cellData (vs, vMin, vMax) {
+    return {
+        array: vs,
+        min: vMin,
+        max: vMax
+    };
+}
+
+//--- NC grid (HRRR)
+
 async function loadData(windEntry) {
-    //await loadNetCDF(windEntry);
-    await loadWindField(windEntry);
+    await loadNetCDF(windEntry);
+    //await loadWindField(windEntry);
     return windEntry.data;
 }
 
@@ -485,6 +766,8 @@ function loadNetCDF(windEntry) {
             data.V.array = new Float32Array(NetCDF.getDataVariable('V').flat());
             data.V.min = vAttributes['min'].value;
             data.V.max = vAttributes['max'].value;
+
+            console.log("@@ data: ", data);
 
             windEntry.data = data;
             resolve(data);
