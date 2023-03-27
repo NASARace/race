@@ -25,6 +25,10 @@ import gov.nasa.race.util.FileUtils
   */
 object ResponseData {
 
+  val byteContentType: ContentType = ContentType(MediaTypes.`application/octet-stream`)
+  val jsContentType: ContentType = ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`) 
+  val glslContentType: ContentType = ContentType(MediaTypes.`text/plain`, HttpCharsets.`UTF-8`)
+
   val map: Map[String,ContentType] = Map(
     "html" -> ContentType(MediaTypes.`text/html`, HttpCharsets.`UTF-8`),
     "xml" -> ContentType(MediaTypes.`text/xml`, HttpCharsets.`UTF-8`),
@@ -32,7 +36,7 @@ object ResponseData {
     "json" -> MediaTypes.`application/json`,
     "geojson" -> MediaTypes.`application/json`,  // ?? why is there no application/geo+json
     "csv" -> ContentType(MediaTypes.`text/csv`, HttpCharsets.`UTF-8`),
-    "js" -> ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`),
+    "js" -> jsContentType,
     "css" -> ContentType(MediaTypes.`text/css`, HttpCharsets.`UTF-8`),
     "svg" -> MediaTypes.`image/svg+xml`,
     "png" -> ContentType( MediaType.customBinary("image", "png", Compressible)),
@@ -40,9 +44,9 @@ object ResponseData {
     "glb" -> ContentType(MediaType.customBinary("model","gltf-binary",Compressible)),
     "kml" -> ContentType(MediaTypes.`application/vnd.google-earth.kml+xml`, HttpCharsets.`UTF-8`),
     "kmz" -> ContentType(MediaTypes.`application/vnd.google-earth.kmz`),
-    "frag" -> ContentType(MediaTypes.`text/plain`, HttpCharsets.`UTF-8`),
-    "vert" -> ContentType(MediaTypes.`text/plain`, HttpCharsets.`UTF-8`),
-    "nc" -> ContentType(MediaTypes.`application/octet-stream`),
+    "frag" -> glslContentType,
+    "vert" -> glslContentType,
+    "nc" -> byteContentType,
     "webp" -> ContentType(MediaTypes.`image/webp`)
 
     //... and many more to follow
@@ -62,4 +66,12 @@ object ResponseData {
   def forPathName (pathName: String, content: Array[Byte]): HttpEntity.Strict = {
     forExtension( FileUtils.getExtension(pathName), content)
   }
+
+  def bytes (content: Array[Byte]): HttpEntity.Strict = HttpEntity( byteContentType, content)
+
+  def js (content: Array[Byte]): HttpEntity.Strict = HttpEntity( jsContentType, content)
+
+  def glsl (content: Array[Byte]): HttpEntity.Strict = HttpEntity( glslContentType, content)
+
+  //... and the others to follow
 }
