@@ -440,7 +440,7 @@ async function loadCsvVector(windEntry) {
                 let p1 = new Cesium.Cartesian3(values[3],values[4],values[5]);
 
                 let spd = values[6];
-                let clr = Cesium.Color.YELLOW; //getColor(spd);
+                let clr = getColor(spd);
         
                 points.add({
                     position: p0,
@@ -612,7 +612,7 @@ async function loadCsvGrid(windEntry) {
                 y0 = Number(m[5]);
                 dy = Number(m[6]);
 
-                let len = nx * ny;
+                let len = (nx * ny);
                 hs = new Float32Array(len);
                 us = new Float32Array(len);
                 vs = new Float32Array(len);

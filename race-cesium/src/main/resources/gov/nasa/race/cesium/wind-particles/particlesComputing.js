@@ -9,12 +9,13 @@ export class ParticlesComputing {
         this.createComputingPrimitives(data, userInput, viewerParameters);
     }
 
-    createWindTextures(context, data) {
+    createWindTextures(context, data) {        
         var windTextureOptions = {
             context: context,
             width: data.dimensions.lon,
             height: data.dimensions.lat * data.dimensions.lev,
-            pixelFormat: Cesium.PixelFormat.LUMINANCE,
+            //pixelFormat: Cesium.PixelFormat.LUMINANCE, // not a valid combination for WebGL 2
+            pixelFormat: Cesium.PixelFormat.RED, // single component or WebGL will complain about not enough data
             pixelDatatype: Cesium.PixelDatatype.FLOAT,
             flipY: false,
             sampler: new Cesium.Sampler({
