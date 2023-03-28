@@ -14,6 +14,9 @@ uniform float aspect;
 uniform float pixelSize;
 uniform float lineWidth;
 
+uniform vec3 minimum; // minimum of each dimension
+uniform vec3 maximum; // maximum of each dimension
+
 struct adjacentPoints {
     vec4 previous;
     vec4 current;
@@ -150,5 +153,12 @@ void main() {
 
             }
         }
+    }
+
+    // simplistic clipping to (geographic) wind field area
+    float x = currentPosition.x;
+    float y = currentPosition.y;
+    if (x < minimum.x || x > maximum.x || y < minimum.y || y > maximum.y) {
+        gl_Position.w = 0.0;
     }
 }

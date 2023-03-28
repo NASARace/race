@@ -6,7 +6,7 @@ export class ParticlesRendering {
     constructor(context, data, userInput, viewerParameters, particlesComputing) {
         this.createRenderingTextures(context, data);
         this.createRenderingFramebuffers(context);
-        this.createRenderingPrimitives(context, userInput, viewerParameters, particlesComputing);
+        this.createRenderingPrimitives(context, data, userInput, viewerParameters, particlesComputing);
     }
 
     createRenderingTextures(context, data) {
@@ -114,8 +114,11 @@ export class ParticlesRendering {
         return geometry;
     }
 
-    createRenderingPrimitives(context, userInput, viewerParameters, particlesComputing) {
+    createRenderingPrimitives(context, data, userInput, viewerParameters, particlesComputing) {
         const that = this;
+        const minimum = new Cesium.Cartesian3(data.lon.min, data.lat.min, data.lev.min);
+        const maximum = new Cesium.Cartesian3(data.lon.max, data.lat.max, data.lev.max);
+
         this.primitives = {
             segments: new CustomPrimitive({
                 commandType: 'Draw',
@@ -146,6 +149,12 @@ export class ParticlesRendering {
                     },
                     particleHeight: function() {
                         return userInput.particleHeight;
+                    },
+                    minimum: function() {
+                        return minimum;
+                    },
+                    maximum: function() {
+                        return maximum;
                     }
                 },
                 vertexShaderSource: new Cesium.ShaderSource({
