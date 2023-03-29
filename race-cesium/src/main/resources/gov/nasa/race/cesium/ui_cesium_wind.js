@@ -173,6 +173,8 @@ class WindEntry {
 
 
 ui.registerLoadFunction(function initialize() {
+    createWindow();
+
     windView = initWindView();
     ws.addWsHandler(config.wsUrl, handleWsWindMessages);
 
@@ -181,6 +183,26 @@ ui.registerLoadFunction(function initialize() {
 
     console.log("ui_cesium_wind initialized");
 });
+
+function createWindow() {
+    ui.Window("Wind", "wind", "wind-icon.svg", [
+        ui.List("wind.list", 10, "main.selectWind(event)"),
+        ui.Row([
+            ui.CheckBox("show wind", "main.toggleWind(event)", "wind.show")
+        ]),
+        ui.Panel("display", false,null, [
+            ui.ColumnContainer("align_right", null,null,false, [
+              ui.Slider("max particles", "wind.max_particles", "main.windMaxParticlesChanged(event)"),
+              ui.Slider("height", "wind.height", "main.windHeightChanged(event)"),
+              ui.Slider("fade opacity", "wind.fade_opacity", "main.windFadeOpacityChanged(event)"),
+              ui.Slider("drop", "wind.drop", "main.windDropRateChanged(event)"),
+              ui.Slider("drop bump", "wind.drop_bump", "main.windDropRateBumpChanged(event)"),
+              ui.Slider("speed", "wind.speed", "main.windSpeedChanged(event)"),
+              ui.Slider("width", "wind.width", "main.windWidthChanged(event)")
+            ])
+        ])
+    ]);
+}
 
 function initWindView() {
     let view = ui.getList("wind.list");

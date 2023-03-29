@@ -127,7 +127,6 @@ trait CesiumWindRoute extends CesiumRoute with QueryProxyRoute with FSCachedProx
       ),
       uiPanel("display", false)(
         uiColumnContainer("align_right")(
-          //uiChoice("max particles", "wind.max_particles", "main.windMaxParticlesChanged(event)"),
           uiSlider("max particles", "wind.max_particles", "main.windMaxParticlesChanged(event)"),
           uiSlider("height", "wind.height", "main.windHeightChanged(event)"),
           uiSlider("fade opacity", "wind.fade_opacity", "main.windFadeOpacityChanged(event)"),
@@ -156,7 +155,8 @@ trait CesiumWindRoute extends CesiumRoute with QueryProxyRoute with FSCachedProx
     extModule("ui_cesium_wind.js")
   )
 
-  override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiWindWindow(), uiWindIcon)
+  //override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiWindWindow(), uiWindIcon)
+  override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiWindIcon)
 
   //--- client config
 }

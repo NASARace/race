@@ -210,7 +210,7 @@ package object ui {
 
   def uiTreeList (eid: UiID, maxRows: Int, maxWidthInRem: Int = 0, minWidthInRem: Int = 0,
                   selectAction: String=NoAction, clickAction: String=NoAction, contextMenuAction: String=NoAction, dblClickAction: String=NoAction): Text.TypedTag[String] = {
-    genList(eid,"ui_tree", maxRows,maxWidthInRem,minWidthInRem,selectAction,clickAction,contextMenuAction,dblClickAction)
+    genList(eid,"tree", maxRows,maxWidthInRem,minWidthInRem,selectAction,clickAction,contextMenuAction,dblClickAction)
   }
 
   def uiListControls (listId: UiID, first: String=NoAction, up: String=NoAction, down: String=NoAction, last: String=NoAction, clear: String=NoAction): Text.TypedTag[String] = {
