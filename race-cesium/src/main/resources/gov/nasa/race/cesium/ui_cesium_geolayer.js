@@ -144,7 +144,7 @@ function loadSource(sourceEntry) {
             let data = request.response;
             if (data) {
                 let renderOpts = collectRenderOpts(sourceEntry);
-                new Cesium.GeoJsonDataSource.load(data, renderOpts).then(
+                new Cesium.GeoJsonDataSource.load(data, renderOpts).then(  // TODO - does that support streams? 
                     ds => {
                         sourceEntry.dataSource = ds;
                         postProcessDataSource(sourceEntry, renderOpts);

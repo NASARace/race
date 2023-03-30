@@ -101,9 +101,9 @@ trait MainDocumentRoute extends DocumentRoute {
   def mainResourceRoute: Route = {
     get {
       path(mainCss) {
-        complete( ResponseData.css( mainCssContent))
+        complete( ResponseData.forExtension("css", mainCssContent))
       } ~ path(mainModule) {
-        complete( ResponseData.js( mainModuleContent))
+        complete( ResponseData.forExtension("js", mainModuleContent))
       }
     }
   }

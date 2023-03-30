@@ -16,7 +16,6 @@
  */
 package gov.nasa.race.http
 
-import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.MediaType.Compressible
 import akka.http.scaladsl.model.{ContentType, HttpCharsets, HttpEntity, MediaType, MediaTypes}
 import gov.nasa.race.util.FileUtils
@@ -26,103 +25,53 @@ import gov.nasa.race.util.FileUtils
   */
 object ResponseData {
 
-  val map: Map[String,Array[Byte]=>HttpEntity.Strict] = Map(
-    "html" -> html,
-    "xml" -> xml,
-    "txt" -> txt,
-    "json" -> json,
-    "geojson" -> json,
-    "csv" -> csv,
-    "js" -> js,
-    "css" -> css,
-    "svg" -> svg,
-    "png" -> png,
-    "jpeg" -> jpeg,
-    "glb" -> glb,
-    "kml" -> kml,
-    "kmz" -> kmz,
-    "frag" -> glsl,
-    "vert" -> glsl,
-    "nc" -> bytes,
-    "webp" -> webp
+  val byteContentType: ContentType = ContentType(MediaTypes.`application/octet-stream`)
+  val jsContentType: ContentType = ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`) 
+  val glslContentType: ContentType = ContentType(MediaTypes.`text/plain`, HttpCharsets.`UTF-8`)
 
-    //... and many more
+  val map: Map[String,ContentType] = Map(
+    "html" -> ContentType(MediaTypes.`text/html`, HttpCharsets.`UTF-8`),
+    "xml" -> ContentType(MediaTypes.`text/xml`, HttpCharsets.`UTF-8`),
+    "txt" -> ContentType(MediaTypes.`text/plain`, HttpCharsets.`UTF-8`),
+    "json" -> MediaTypes.`application/json`,
+    "geojson" -> MediaTypes.`application/json`,  // ?? why is there no application/geo+json
+    "csv" -> ContentType(MediaTypes.`text/csv`, HttpCharsets.`UTF-8`),
+    "js" -> jsContentType,
+    "css" -> ContentType(MediaTypes.`text/css`, HttpCharsets.`UTF-8`),
+    "svg" -> MediaTypes.`image/svg+xml`,
+    "png" -> ContentType( MediaType.customBinary("image", "png", Compressible)),
+    "jpeg" -> ContentType( MediaType.customBinary("image", "jpeg", Compressible)),
+    "glb" -> ContentType(MediaType.customBinary("model","gltf-binary",Compressible)),
+    "kml" -> ContentType(MediaTypes.`application/vnd.google-earth.kml+xml`, HttpCharsets.`UTF-8`),
+    "kmz" -> ContentType(MediaTypes.`application/vnd.google-earth.kmz`),
+    "frag" -> glslContentType,
+    "vert" -> glslContentType,
+    "nc" -> byteContentType,
+    "webp" -> ContentType(MediaTypes.`image/webp`)
+
+    //... and many more to follow
   )
 
-  def forExtension (ext: String, content: Array[Byte]): HttpEntity.Strict = {
+  def contentTypeForExtension (ext: String): ContentType = {
     map.get(ext) match {
-      case Some(f) => f(content)
-      case None => HttpEntity(ContentType(MediaTypes.`application/octet-stream`), content)
+      case Some(contentType) => contentType
+      case None => ContentType(MediaTypes.`application/octet-stream`)
     }
+  }
+
+  def forExtension (ext: String, content: Array[Byte]): HttpEntity.Strict = {
+    HttpEntity( contentTypeForExtension(ext), content)
   }
 
   def forPathName (pathName: String, content: Array[Byte]): HttpEntity.Strict = {
     forExtension( FileUtils.getExtension(pathName), content)
   }
 
-  def html (content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( ContentType(MediaTypes.`text/html`, HttpCharsets.`UTF-8`), content)
-  }
+  def bytes (content: Array[Byte]): HttpEntity.Strict = HttpEntity( byteContentType, content)
 
-  def xml (content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( ContentType(MediaTypes.`text/xml`, HttpCharsets.`UTF-8`), content)
-  }
+  def js (content: Array[Byte]): HttpEntity.Strict = HttpEntity( jsContentType, content)
 
-  def txt (content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( ContentType(MediaTypes.`text/plain`, HttpCharsets.`UTF-8`), content)
-  }
+  def glsl (content: Array[Byte]): HttpEntity.Strict = HttpEntity( glslContentType, content)
 
-  def csv (content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( ContentType(MediaTypes.`text/csv`, HttpCharsets.`UTF-8`), content)
-  }
-
-  def json (content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( MediaTypes.`application/json`, content)
-  }
-
-  def js(content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( ContentType(MediaTypes.`application/javascript`, HttpCharsets.`UTF-8`), content)
-  }
-
-  def css(content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( ContentType(MediaTypes.`text/css`, HttpCharsets.`UTF-8`), content)
-  }
-
-  def svg(content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( MediaTypes.`image/svg+xml`,content)
-  }
-
-  def png(content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( ContentType( MediaType.customBinary("image", "png", Compressible)),content)
-  }
-
-  def jpeg(content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( ContentType( MediaType.customBinary("image", "jpeg", Compressible)),content)
-  }
-
-  def glb(content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( ContentType(MediaType.customBinary("model","gltf-binary",Compressible)), content)
-  }
-
-  def kml(content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( ContentType(MediaTypes.`application/vnd.google-earth.kml+xml`, HttpCharsets.`UTF-8`), content)
-  }
-
-  def kmz(content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( ContentType(MediaTypes.`application/vnd.google-earth.kmz`), content)
-  }
-
-  def glsl(content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( ContentType(MediaTypes.`text/plain`, HttpCharsets.`UTF-8`), content) // ?? not sure there is one for frag
-  }
-
-  def webp(content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity( ContentType(MediaTypes.`image/webp`), content)
-  }
-
-  def bytes(content: Array[Byte]): HttpEntity.Strict = {
-    HttpEntity(ContentType(MediaTypes.`application/octet-stream`), content)
-  }
-
-  //... and (many) more to follow
+  //... and the others to follow
 }

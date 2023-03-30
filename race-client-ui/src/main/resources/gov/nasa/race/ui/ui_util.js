@@ -610,3 +610,71 @@ export function evalProperty(p) {
 export function copyArrayIfSame (oldArr,newArr) {
     return (oldArr === newArr) ? [...oldArr] : newArr;
 }
+
+
+async function* textLineIterator (url) {
+    const decoder = new TextDecoder("utf-8");
+    const response = await fetch(url);
+    const reader = response.body.getReader();
+
+    let { value: chunk, done: readerDone } = await reader.read();
+    chunk = chunk ? decoder.decode(chunk) : "";
+
+    const newline = /\r?\n/gm;
+    let i0 = 0;
+
+    while (true) {
+        const result = newline.exec(chunk);
+        if (!result) {
+            if (readerDone) break;
+
+            const leftOver = chunk.substring(i0);
+            ({ value: chunk, done: readerDone } = await reader.read());
+            chunk = leftOver + (chunk ? decoder.decode(chunk) : "");
+            i0 = newline.lastIndex = 0;
+            continue;
+        }
+
+        yield chunk.substring(i0, result.index);
+        i0 = newline.lastIndex;
+    }
+
+    if (i0 < chunk.length) { // last line had no newline
+        yield chunk.substring(i0);
+    }
+}
+
+export async function forEachTextLine (url, processLine, skip=0) {
+    let i = 0;
+    for await (const line of textLineIterator(url)) {
+        if (++i > skip) processLine(line);
+    }
+}
+
+export function parseCsvValue(s) {
+    if (!s) {  // undefined
+        return null;
+
+    } else if (s[0] == '"') { // string
+      s = s.substring(1,s.length-1);
+      s = s.replaceAll('""', '"');
+      return s;
+
+    } else { // number
+      return Number(s);
+    }
+}
+
+const csvRegEx = /(?:,|\n|^)("(?:(?:"")*[^"]*)*"|[^",\n]*|(?:\n|$))/g;
+
+export function parseCsvValues(line) {
+    const regex = new RegExp(csvRegEx);
+    let values = []
+    var matches = null;
+    while (matches = regex.exec(line)) {
+        if (matches.length > 1) {
+            values.push( parseCsvValue( matches[1]));
+        }
+    }
+    return values;
+}

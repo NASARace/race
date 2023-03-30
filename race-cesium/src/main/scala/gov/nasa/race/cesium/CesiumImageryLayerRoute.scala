@@ -72,18 +72,20 @@ class DefaultImageryRendering (conf: Config) extends ImageryRendering(conf) {
 }
 
 object ImgLayer {
+  // this is the top parser for 'source' config entries
   def apply (conf: Config): ImgLayer = {
     val pathName = conf.getString( "pathname")
     val info = conf.getString("info")
     val provider = ClassLoaderUtils.newInstance[CesiumImageryProvider]( this, conf.getString("provider-class"),
-      Array(classOf[Config]), Array(conf)).get
+      Array(classOf[Config]), Array(conf)).get // the secondary (provider specific) parser
     val exclusive = conf.getStringSeq("exclusive")
     val colorMap = conf.getOptionalString("color-map")
     val proxy = conf.getBooleanOrElse("proxy", false)
+    val dir = conf.getOptionalString(("dir"))
     val show = conf.getBooleanOrElse("show", false)
     val renderCfg = conf.getOptionalConfig("render").map( new ImageryRendering(_))
 
-    ImgLayer(pathName, info, provider, exclusive, proxy, show, colorMap, renderCfg)
+    ImgLayer(pathName, info, provider, exclusive, proxy, show, colorMap, dir, renderCfg)
   }
 }
 
@@ -93,6 +95,7 @@ object ImgLayer {
 case class ImgLayer (pathName: String, info: String, provider: CesiumImageryProvider,
                      exclusive: Seq[String], proxy: Boolean, show: Boolean,
                      colorMap: Option[String],
+                     dir: Option[String],
                      render: Option[ImageryRendering]) extends JsConvertible {
 
   val id = pathName.replace('/', '-') // unique id has to be a single url component
@@ -115,6 +118,9 @@ object ImageryLayerRoute {
   val clrMapPrefix = "imagery-cmap"
   val clrMapPrefixMatcher = PathMatcher(clrMapPrefix / "[^/?]+".r) // match the resource prefix plus the imagery id
 
+  val tmsPrefix = s"tms"
+  val tmsPrefixMatcher = PathMatcher(tmsPrefix / "[^/?]+".r)
+
   val jsModule = "ui_cesium_imglayer.js"
   val icon = "globe-icon.svg"
   val windowId = "imglayer"
@@ -130,6 +136,7 @@ trait ImageryLayerRoute extends CesiumRoute with JsonProducer {
 
   private val proxyMap = createProxyMap(sources) // proxy-name -> external url
   private val colorMap = createColorMap(sources) // pathName -> internal path
+  private val tmsMap = createTmsMap(sources) // url -> tile root dirs
 
   def createProxyMap (imgLayers: Seq[ImgLayer]): Map[String,String] = {
     imgLayers.foldLeft(Map.empty[String,String]) { (map, layer) =>
@@ -151,6 +158,16 @@ trait ImageryLayerRoute extends CesiumRoute with JsonProducer {
     }
   }
 
+  def createTmsMap (imgLayers: Seq[ImgLayer]): Map[String,String] = {
+    val prefix = s"$tmsPrefix/"
+    imgLayers.foldLeft(Map.empty[String,String]) { (map, layer) =>
+      val url = layer.provider.url
+      if (url.startsWith(prefix) && layer.dir.isDefined) {
+        map + (url.substring(prefix.length) -> layer.dir.get)
+      } else map
+    }
+  }
+
   //--- route
   override def route: Route = imgLayerRoute ~ super.route
 
@@ -160,6 +177,19 @@ trait ImageryLayerRoute extends CesiumRoute with JsonProducer {
           proxyMap.get(layerId) match {
             case Some(url) => completeProxied(url)
             case None => complete(StatusCodes.NotFound, s"$imageryPrefix/$layerId")
+          }
+        } ~
+        pathPrefix(tmsPrefixMatcher) { layerId =>
+          extractUnmatchedPath { p =>
+            val path = p.toString()
+            tmsMap.get(layerId) match {
+              case Some(dir) =>
+                FileUtils.fileContentsAsBytes(new File(dir, path)) match {
+                  case Some(data) => complete( ResponseData.forExtension( FileUtils.getExtension(path),data))
+                  case None => complete(StatusCodes.NotFound, s"$tmsPrefix/$layerId$p") // no such file in layer dir
+                }
+              case None => complete(StatusCodes.NotFound, s"$tmsPrefix/$layerId$p") // unknown layer
+            }
           }
         } ~
         pathPrefix(clrMapPrefixMatcher) { cmapId =>
@@ -282,7 +312,7 @@ class WebMapTileServiceImageryProvider (val config: Config) extends CesiumImager
 
 class TileMapServiceImageryProvider (val config: Config) extends CesiumImageryProvider {
   def appendJs (sb: StringBuilder): Unit = {
-    sb.append("new Cesium.Cesium.TileMapServiceImageryProvider({")
+    sb.append("new Cesium.TileMapServiceImageryProvider({")
     appendJsStringMember(sb, "url", clientUrl)
     sb.append("})")
   }
