@@ -1,4 +1,4 @@
-/*
+"""
  * Copyright (c) 2022, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
@@ -13,7 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+"""
 import gdal2tiles
 import sys
 import os
