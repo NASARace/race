@@ -579,6 +579,25 @@ export function getLatLonArrayBoundingRect(pts) {
     return { west: w, south: s, east: e, north: n };
 }
 
+// length of longitude degree at given latitude in meters
+export function lonDegMeters(lat) {
+    let latitude = lat * Math.PI / 180;
+    let term5 = 111412.84 * Math.cos(latitude);
+    let term6 = 93.5 * Math.cos(3.0 * latitude);
+    let term7 = 0.118 * Math.cos(5.0 * latitude);
+    return term5 - term6 + term7;
+}
+
+// length of latitude degree at given latitude in meters
+export function latDegMeters(lat) {
+    let latitude = lat * Math.PI / 180;
+    let term1 = 111132.92;
+    let term2 = 559.82 * Math.cos(2.0 * latitude);
+    let term3 = 1.175 * Math.cos(4.0 * latitude);
+    let term4 = 0.0023 * Math.cos(6.0 * latitude);
+    return term1 - term2 + term3 - term4;
+}
+
 export function getRectCenter (rect) {
     let x = (rect.west + rect.east)/2;
     let y = (rect.north + rect.south)/2;

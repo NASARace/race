@@ -173,6 +173,7 @@ class WindEntry {
 
 
 ui.registerLoadFunction(function initialize() {
+    createIcon();
     createWindow();
 
     windView = initWindView();
@@ -184,24 +185,28 @@ ui.registerLoadFunction(function initialize() {
     console.log("ui_cesium_wind initialized");
 });
 
+function createIcon() {
+    return ui.Icon("wind-icon.svg", "main.toggleWindow(event,'wind')", "wind_icon");
+}
+
 function createWindow() {
-    ui.Window("Wind", "wind", "wind-icon.svg", [
+    return ui.Window("Wind", "wind", "wind-icon.svg")(
         ui.List("wind.list", 10, "main.selectWind(event)"),
-        ui.Row([
+        ui.RowContainer()(
             ui.CheckBox("show wind", "main.toggleWind(event)", "wind.show")
-        ]),
-        ui.Panel("display", false,null, [
-            ui.ColumnContainer("align_right", null,null,false, [
-              ui.Slider("max particles", "wind.max_particles", "main.windMaxParticlesChanged(event)"),
-              ui.Slider("height", "wind.height", "main.windHeightChanged(event)"),
-              ui.Slider("fade opacity", "wind.fade_opacity", "main.windFadeOpacityChanged(event)"),
-              ui.Slider("drop", "wind.drop", "main.windDropRateChanged(event)"),
-              ui.Slider("drop bump", "wind.drop_bump", "main.windDropRateBumpChanged(event)"),
-              ui.Slider("speed", "wind.speed", "main.windSpeedChanged(event)"),
-              ui.Slider("width", "wind.width", "main.windWidthChanged(event)")
-            ])
-        ])
-    ]);
+        ),
+        ui.Panel("display")(
+            ui.ColumnContainer("align_right")(
+                ui.Slider("max particles", "wind.max_particles", "main.windMaxParticlesChanged(event)"),
+                ui.Slider("height", "wind.height", "main.windHeightChanged(event)"),
+                ui.Slider("fade opacity", "wind.fade_opacity", "main.windFadeOpacityChanged(event)"),
+                ui.Slider("drop", "wind.drop", "main.windDropRateChanged(event)"),
+                ui.Slider("drop bump", "wind.drop_bump", "main.windDropRateBumpChanged(event)"),
+                ui.Slider("speed", "wind.speed", "main.windSpeedChanged(event)"),
+                ui.Slider("width", "wind.width", "main.windWidthChanged(event)")
+            )
+        )
+    );
 }
 
 function initWindView() {
@@ -435,6 +440,7 @@ function setupEventListeners() {
 
 //--- data acquisition and translation
 
+
 //--- CSV (local wind vectors)
 
 const polyLineColorAppearance = new Cesium.PolylineColorAppearance();
@@ -502,94 +508,7 @@ async function loadCsvVector(windEntry) {
 
 //--- CSV grid
 
-function lonMeters(lat) {
-    let latitude = lat * Math.PI / 180;
-    let term5 = 111412.84 * Math.cos(latitude);
-    let term6 = 93.5 * Math.cos(3.0 * latitude);
-    let term7 = 0.118 * Math.cos(5.0 * latitude);
-    return term5 - term6 + term7;
-}
-function latMeters(lat) {
-    let latitude = lat * Math.PI / 180;
-    let term1 = 111132.92;
-    let term2 = 559.82 * Math.cos(2.0 * latitude);
-    let term3 = 1.175 * Math.cos(4.0 * latitude);
-    let term4 = 0.0023 * Math.cos(6.0 * latitude);
-    return term1 - term2 + term3 - term4;
-}
-
 const csvGridPrefixLine = /^# *nx: *(\d+), *x0: *(.+) *, *dx: *(.+) *, *ny: *(\d+), *y0: *(.+) *, *dy: *(.+)$/;
-
-async function _loadCsvGrid(windEntry) {
-    let nx, x0, dx, ny, y0, dy; // grid bounds and cell size
-    let points = new Cesium.PointPrimitiveCollection();
-    let vectors = [];
-    let i = 0;
-
-    const procLine = (line) => {
-        if (i > 1) { // grid data line
-            let values = util.parseCsvValues(line);
-            if (values.length == 5) {
-                const h = values[0];
-                const u = values[1]; // east-ward (in m)
-                const v = values[2]; // north-ward (in m)
-                const w = values[3];
-                const spd = values[4];
-
-                let clr = Cesium.Color.CYAN;
-
-                let k = i-2;
-                let lon = x0 + (k % nx)*dx;
-                let lat = y0 + (k / nx)*dy;
-
-                let vp = (lonMeters(lat) / latMeters(lat)) * v;
-                let dLon = dx/2 * (0.000000001 + u / 4.0);
-                let dLat = dy/2 * (0.000000001 + vp / 4.0);
-
-                let p0 = Cesium.Cartesian3.fromDegrees(lon,lat,h);
-                let p1 = Cesium.Cartesian3.fromDegrees(lon + dLon, lat - dLat, h); // approx
-        
-                points.add({
-                    position: p0,
-                    pixelSize: 3,
-                    color: clr
-                });
-        
-                vectors[k] = new Cesium.GeometryInstance({
-                    geometry: new Cesium.SimplePolylineGeometry({
-                        positions: [p0,p1],
-                        colors: [clr]
-                    })
-                });
-        
-            }
-        } else if (i > 0) { // ignore header line
-        } else { // prefix comment line with grid bounds
-            let m = line.match(csvGridPrefixLine);
-            if (m && m.length == 7) {
-                nx = parseInt(m[1]);
-                x0 = Number(m[2]);
-                dx = Number(m[3]);
-                ny = parseInt(m[4]);
-                y0 = Number(m[5]);
-                dy = Number(m[6]);
-
-                vectors = Array(nx*ny);
-            }
-        }
-        i++;
-    };
-
-    await util.forEachTextLine(windEntry.windField.url, procLine);
-
-    uiCesium.addPrimitive(points);
-    
-    uiCesium.addPrimitive( new Cesium.Primitive({
-        geometryInstances: vectors,
-        appearance: polyLineColorAppearance
-    }));
-    
-}
 
 async function loadCsvGrid(windEntry) {
     let nx, x0, dx, ny, y0, dy; // grid bounds and cell size
@@ -689,7 +608,6 @@ function axisData (nv,v0,dv) {
     };
 }
 
-
 function levelData () { // this is NOT h but a 3d grid dimension
     return {
         array: new Float32Array([1]),
@@ -706,95 +624,3 @@ function cellData (vs, vMin, vMax) {
     };
 }
 
-//--- NC grid (HRRR)
-
-async function loadData(windEntry) {
-    await loadNetCDF(windEntry);
-    //await loadWindField(windEntry);
-    return windEntry.data;
-}
-
-function loadWindField (windEntry) {
-    let url = windEntry.windField.url;
-
-    return new Promise(function(resolve) {
-        var request = new XMLHttpRequest();
-        request.open('GET', url);
-
-        request.onload = function() {
-            let rsp = request.response; // this is JSON
-            if (rsp) {
-                let windField = JSON.parse(rsp);
-                if (windField) {
-                    console.log(windField);
-                }
-            }
-        }
-
-        request.send();
-    });
-}
-
-function loadNetCDF(windEntry) {
-    let url = windEntry.windField.url;
-
-    return new Promise(function(resolve) {
-        var request = new XMLHttpRequest();
-        request.open('GET', url);
-        request.responseType = 'arraybuffer';
-
-        request.onload = function() {
-            var arrayToMap = function(array) {
-                return array.reduce(function(map, object) {
-                    map[object.name] = object;
-                    return map;
-                }, {});
-            }
-
-            var NetCDF = new netcdfjs(request.response);
-            let data = {};
-
-            var dimensions = arrayToMap(NetCDF.dimensions);
-            data.dimensions = {};
-            data.dimensions.lon = dimensions['lon'].size;
-            data.dimensions.lat = dimensions['lat'].size;
-            data.dimensions.lev = dimensions['lev'].size;
-
-            var variables = arrayToMap(NetCDF.variables);
-            var uAttributes = arrayToMap(variables['U'].attributes);
-            var vAttributes = arrayToMap(variables['V'].attributes);
-
-            data.lon = {};
-            data.lon.array = new Float32Array(NetCDF.getDataVariable('lon').flat());
-            data.lon.min = Math.min(...data.lon.array);
-            data.lon.max = Math.max(...data.lon.array);
-
-            data.lat = {};
-            data.lat.array = new Float32Array(NetCDF.getDataVariable('lat').flat());
-            data.lat.min = Math.min(...data.lat.array);
-            data.lat.max = Math.max(...data.lat.array);
-
-            data.lev = {}; // levels in lon/lat/U/V (z-axis)
-            data.lev.array = new Float32Array(NetCDF.getDataVariable('lev').flat());
-            data.lev.min = Math.min(...data.lev.array);
-            data.lev.max = Math.max(...data.lev.array);
-
-            data.U = {};
-            data.U.array = new Float32Array(NetCDF.getDataVariable('U').flat());
-            data.U.min = uAttributes['min'].value;
-            data.U.max = uAttributes['max'].value;
-
-            data.V = {};
-            data.V.array = new Float32Array(NetCDF.getDataVariable('V').flat());
-            data.V.min = vAttributes['min'].value;
-            data.V.max = vAttributes['max'].value;
-
-            console.log("@@ data: ", data);
-
-            windEntry.data = data;
-            resolve(data);
-        };
-
-        request.send();
-    });
-}

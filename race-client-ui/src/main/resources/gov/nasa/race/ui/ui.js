@@ -44,8 +44,8 @@ export function registerPostLoadFunction(func) {
 
 // this has to be the first moduleInitializer so that all modules can rely on expanded elements
 registerLoadFunction(function initialize() {
-    _initializeIcons();
-    _initializeWindows();
+    initializeIcons();
+    initializeWindows();
  
     _initializeMenus(); /* has to be last in case widgets add menus */
 });
@@ -104,29 +104,29 @@ export function notifyThemeChangeHandlers() {
 var topWindowZ = _rootVarInt('--window-z');
 var windows = [];
 
-export function Window (title, eid, icon, children) {
-    let e = _createElement("DIV", "ui_window");
-    e._uiInitialize = initializeWindow;
-    
-    e.setAttribute("data-title", title);
-    if (eid) e.setAttribute("id", eid);
-    if (icon) e.setAttribute("data-icon", icon);
+export function Window (title, eid, icon) {
+    return function (...children) { 
+        let e = _createElement("DIV", "ui_window");
+        e._uiInitialize = initializeWindow;
+        
+        e.setAttribute("data-title", title);
+        if (eid) e.setAttribute("id", eid);
+        if (icon) e.setAttribute("data-icon", icon);
 
-    children.forEach( c=> e.appendChild(c));
+        for (const c of children) e.appendChild(c);
 
-    initializeWindow(e); // ? do we want to do this automatically ?
-    return e;
-}
-
-// this is only called for server-created elements
-function _initializeWindows() {
-    for (let e of _getDocumentElementsByClassName("ui_window")) {
-        initializeWindow(e);
+        initializeWindow(e); // we have to do this ourselves here
+        return e;
     }
 }
 
+// this is only called for server-created elements that are already in the DOM
+function initializeWindows() {
+    for (const e of _getDocumentElementsByClassName("ui_window")) initializeWindow(e);
+}
+
 export function initializeWindow(e) {
-    console.log("@@ initializing window: ", e.id);
+    console.log("initializing window: ", e.id);
 
     if (e.children.length == 0 || !e.children[0].classList.contains("ui_titlebar")) {
         createWindowComponents(e, e.dataset.title, true, e.dataset.icon); // document windows are always permanent
@@ -142,8 +142,6 @@ export function initializeWindow(e) {
 }
 
 function initializeRecursive (e) {
-    console.log("@@@ init c: ", e.classList.value);
-
     switch (_getUiClass(e)) {
         case "ui_panel": initializePanel(e); break;
         case "ui_container": initializeContainer(e); break;
@@ -158,9 +156,11 @@ function initializeRecursive (e) {
         case "ui_clock": initializeClock(e); break;
         case "ui_timer": initializeTimer(e); break;
         case "ui_kvtable": initializeKvTable(e); break;
+        case "ui_menuitem": initializeMenuItem(e); break;
+        // default does not need initialization
     }
 
-    for (let c of _getChildren(e)) initializeRecursive(c);
+    for (const c of _getChildren(e)) initializeRecursive(c);
 }
 
 export function createWindow(title, isPermanent, closeAction, icon) {
@@ -206,11 +206,11 @@ function createWindowComponents(e, title, isPermanent, icon) {
 }
 
 function setWindowEventHandlers(e) {
-    _makeDraggable(e);
+    makeWindowDraggable(e);
     e.onclick = function() { raiseWindowToTop(e); };
 }
 
-function _makeDraggable(e) {
+function makeWindowDraggable(e) {
     var p1 = e.offsetLeft,
         p2 = e.offsetTop,
         p3 = p1,
@@ -245,7 +245,7 @@ function _makeDraggable(e) {
     }
 }
 
-function _setWindowZs() {
+function updateWindowZorder() {
     let z = topWindowZ;
     for (let i = windows.length - 1; i >= 0; i--) {
         windows[i].style.zIndex = z;
@@ -253,9 +253,9 @@ function _setWindowZs() {
     }
 }
 
-function _addWindowOnTop(w) {
+function addWindowOnTop(w) {
     windows.push(w);
-    _setWindowZs();
+    updateWindowZorder();
 }
 
 export function raiseWindowToTop(o) {
@@ -269,16 +269,16 @@ export function raiseWindowToTop(o) {
                 windows[i] = windows[i + 1];
             }
             windows[iTop] = w;
-            _setWindowZs();
+            updateWindowZorder();
         }
     }
 }
 
-function _removeWindowFromStack(w) {
+function removeWindowFromStack(w) {
     var idx = windows.indexOf(w);
     if (idx >= 0) {
         windows.splice(idx, 1);
-        _setWindowZs();
+        updateWindowZorder();
         w.style.zIndex = -1;
     }
 }
@@ -287,7 +287,7 @@ export function showWindow(o) {
     let e = getWindow(o);
     if (e) {
         _addClass(e, "show");
-        _addWindowOnTop(e);
+        addWindowOnTop(e);
     }
 }
 
@@ -295,7 +295,7 @@ export function closeWindow(o) {
     let e = getWindow(o);
     if (e) {
         _removeClass(e, "show");
-        _removeWindowFromStack(e);
+        removeWindowFromStack(e);
         if (e.closeAction) e.closeAction();
     }
 }
@@ -304,7 +304,7 @@ export function removeWindow(o) {
     let e = getWindow(o);
     if (e) {
         _removeClass(e, "show")
-        _removeWindowFromStack(e);
+        removeWindowFromStack(e);
         e.parentElement.removeChild(e);
         if (e.closeAction) e.closeAction();
     }
@@ -456,26 +456,21 @@ function genContainer (containerCls, align, eid, title, isBordered, children) {
     if (eid) e.setAttribute("id", eid);
     if (title) e.setAttribute("data-title", title);
 
-    children.forEach( c=> e.appendChild(c));
+    for (const c of children) e.appendChild(c);
 
     return e;
 }
 
-// we don't go through the hassle of implementing our own overloading
-export function Row (children) {
-    return genContainer("row",null,null,null,false,children);
+export function RowContainer (align=null, eid=null, title=null, isBordered=false) {
+    return function (...children) {
+        return genContainer( "row", align, eid, title, isBordered, children);
+    };
 }
 
-export function Column (children) {
-    return genContainer("column",null,null,null,false,children);
-}
-
-export function RowContainer (align, eid, title, isBordered, children) {
-    return genContainer( "row", align, eid, title, isBordered, children);
-}
-
-export function ColumnContainer (align, eid, title, isBordered, children) {
-    return genContainer( "column", align, eid, title, isBordered, children);
+export function ColumnContainer (align=null, eid=null, title=null, isBordered=false) {
+    return function (...children) {
+        return genContainer( "column", align, eid, title, isBordered, children);
+    };
 }
 
 function initializeContainer (e) {
@@ -494,18 +489,20 @@ function initializeContainer (e) {
 
 //--- panels
 
-export function Panel (title, isExpanded, eid, children) {
-    let e = _createElement("DIV", "ui_panel");
-    e._uiInitialize = initializePanel;
+export function Panel (title, isExpanded=false, eid=null) {
+    return function (...children) {
+        let e = _createElement("DIV", "ui_panel");
+        e._uiInitialize = initializePanel;
 
-    e.classList.add(isExpanded ? "expanded" : "collapsed");
-    
-    e.setAttribute("data-title", title);
-    if (eid) e.setAttribute("id", eid);
+        e.classList.add(isExpanded ? "expanded" : "collapsed");
+        
+        e.setAttribute("data-title", title);
+        if (eid) e.setAttribute("id", eid);
 
-    children.forEach( c=> e.appendChild(c));
+        for (const c of children) e.appendChild(c);
 
-    return e;
+        return e;
+    }
 }
 
 function initializePanel (e) {
@@ -563,34 +560,41 @@ function _resetPanelMaxHeight(ce) {
 
 //--- icon functions
 
-function _initializeIcons() {
-    var iconBox = undefined;
-    let allIcons = [];
+const iconBox = getIconBox();
 
-    // note we can't re-parent while we iterate over DOM nodes
-    for (let icon of document.getElementsByClassName("ui_icon")) {
-        allIcons.push(icon);
-    }
+export function Icon (src, action, eid=null) {
+    let e = _createElement( "DIV", "ui_icon");
 
-    for (let icon of allIcons) {
-        // if icon is not positioned add it to the iconBox
+    e.setAttribute("data-src", src);
+    e.setAttribute("onclick", action);
+    if (eid) e.setAttribute("id", eid);
 
-        if (!iconBox) iconBox = getIconBox();
-        let parent = icon.parentElement;
-        if (parent) parent.removeChild(icon);
-        iconBox.appendChild(icon);
+    initializeIcon(e);
+    return e;
+}
 
-        let src = icon.dataset.src;
+function initializeIcon (icon) {
+    // if icon is not positioned add it to the iconBox
 
-        let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        icon.appendChild(svg);
-        svg.setAttribute("viewBox", "0 0 32 32");
+    if (!iconBox) iconBox = getIconBox();
+    let parent = icon.parentElement;
+    if (parent) parent.removeChild(icon);
+    iconBox.appendChild(icon);
 
-        let use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-        use.classList.add("ui_icon_svg");
-        use.setAttribute("href", src + "#layer1");
-        svg.appendChild(use);
-    }
+    let src = icon.dataset.src;
+
+    let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.appendChild(svg);
+    svg.setAttribute("viewBox", "0 0 32 32");
+
+    let use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.classList.add("ui_icon_svg");
+    use.setAttribute("href", src + "#layer1");
+    svg.appendChild(use);
+}
+
+function initializeIcons() {
+    for (const icon of _getDocumentElementsByClassName("ui_icon")) initializeIcon(icon);
 }
 
 export function setIconOn(event) {
@@ -1738,6 +1742,19 @@ export function TreeList (eid, maxRows, selectAction, clickAction, contextMenuAc
     return genList("tree", eid, maxRows, selectAction, clickAction, contextMenuAction, dblClickAction);
 }
 
+export function ListWithPopup (eid, maxRows, selectAction, clickAction, contextMenuAction, dblClickAction) {
+    return function (...menuItems) {
+        let e = genList(null, eid, maxRows, selectAction, clickAction, contextMenuAction, dblClickAction);
+
+        if (menuItems.length > 0) {
+            let popup = PopupMenu()(menuItems);
+            e.appendChild(popup)
+        }
+
+        return e;
+    }
+}
+
 function initializeList (e) {
     let itemHeight = getRootVar("--list-item-height");
     let itemPadding = getRootVar("--list-item-padding");
@@ -2397,23 +2414,59 @@ export function getButton (o) {
 //--- menus
 
 var _uiActivePopupMenus = [];
+window.addEventListener("click", _windowPopupHandler);
 
-function _initializeMenus() {
-    window.addEventListener("click", _windowPopupHandler);
+export function PopupMenu (eid=null) {
+    return function (children) {
+        const e = _createElement("DIV", "ui_popup_menu");
+        if (eid) e.setAttribute("id", eid);
 
-    for (let e of document.getElementsByClassName("ui_menuitem")) {
-        _initMenuItem(e);
-    }
+        for (const c of children) e.appendChild(c);
 
-    for (let e of document.getElementsByClassName("disabled")) {
-        if (e.classList.contains("ui_menuitem")) {
-            e._uiSuspendedOnClickHandler = e.onclick;
-            e.onclick = null;
-        }
+        //initializePopupMenu(e); // done by enclosing Window
+        return e;
     }
 }
 
-function _initMenuItem(e) {
+function createMenuItem (text, action=null, eid=null, isChecked=false, isDisabled=false) {
+    const e = _createElement("DIV", "ui_menuitem");
+
+    if (isDisabled) e.classList.add("disabled");
+    if (isChecked) e.classList.add("checked");
+
+    if (action) e.setAttribute("onclick", action);
+    if (eid) e.setAttribute("id", eid);
+    e.appendChild( document.createTextNode(text)); 
+
+    return e;
+}
+
+export function MenuItem (text, action=null, eid=null, isChecked=false, isDisabled=false) {
+    return createMenuItem(text, action, eid, isChecked, isDisabled);
+}
+
+export function SubMenu (text, action=null, eid=null, isChecked=false, isDisabled=false) {
+    return function (...subItems) {
+        const e = createMenuItem(text, action, eid, isChecked, isDisabled);
+        for (const c of subItems) e.appendChild(c);
+
+        return e;
+    }
+}
+
+
+function _initializeMenus() {
+    for (let e of document.getElementsByClassName("ui_menuitem")) {
+        initializeMenuItem(e);
+    }
+}
+
+function initializePopupMenu (e) {
+    // nothing yet for ourselves
+    for (let c of _getChildren(e)) initializeRecursive(c);
+}
+
+function initializeMenuItem(e) {
     e.addEventListener("mouseenter", _menuItemHandler);
     e.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -2422,6 +2475,11 @@ function _initMenuItem(e) {
         }
         _uiActivePopupMenus = [];
     });
+
+    if (e.classList.contains("disabled")) {
+        e._uiSuspendedOnClickHandler = e.onclick;
+        e.onclick = null;
+    }
 }
 
 function _windowPopupHandler(event) {

@@ -10,7 +10,7 @@ const LINE_PATH = "~";
 const WALL_PATH = "≈";
 
 const tracks = new Map(); // map of objects received from server
-const displayTracks = new SkipList((a, b) => a.id < b.id, (a, b) => a.id == b.id); // sorted list of objects to display
+const displayTracks = new SkipList(3, (a, b) => a.id < b.id, (a, b) => a.id == b.id); // sorted list of objects to display
 
 _initTracks(tracks);
 
@@ -39,38 +39,36 @@ function _initTracks(map) {
 
 //--- ui initialization and callbacks
 
-app.initialize = function() {
-    if (ui.initialize()) {
-        console.log("initializing data");
+ui.registerLoadFunction( function initialize() {
+    console.log("initializing data");
 
-        ui.setField("console.position.latitude", "37.54323");
-        ui.setField("console.position.longitude", "-121.87432");
+    ui.setField("console.position.latitude", "37.54323");
+    ui.setField("console.position.longitude", "-121.87432");
 
-        let slider = ui.getSlider("console.position.zoom");
-        ui.setSliderRange(slider, 0, 100, 1);
-        ui.setSliderValue(slider, 50);
-        //ui.setSliderRange(slider, 400000, 1000000, 100000, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }));
-        //ui.setSliderValue(slider, 400000);
+    let slider = ui.getSlider("console.position.zoom");
+    ui.setSliderRange(slider, 0, 100, 1);
+    ui.setSliderValue(slider, 50);
+    //ui.setSliderRange(slider, 400000, 1000000, 100000, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }));
+    //ui.setSliderValue(slider, 400000);
 
-        ui.setListItemDisplayColumns("console.tracks.list", ["fit"], [
-            { name: "path", width: "1rem", attrs: [], map: track => track.path },
-            { name: "id", width: "5rem", attrs: ["alignLeft"], map: track => track.id },
-            { name: "date", width: "5rem", attrs: ["fixed"], map: track => util.toLocalTimeString(track.date) }
-        ]);
-        //ui.setListItemDisplay("console.tracks.list", "8rem", ["alignLeft"], track => track.id); // single column
-        ui.setListItems("console.tracks.list", displayTracks);
+    ui.setListItemDisplayColumns("console.tracks.list", ["fit"], [
+        { name: "path", width: "1rem", attrs: [], map: track => track.path },
+        { name: "id", width: "5rem", attrs: ["alignLeft"], map: track => track.id },
+        { name: "date", width: "5rem", attrs: ["fixed"], map: track => util.toLocalTimeString(track.date) }
+    ]);
+    //ui.setListItemDisplay("console.tracks.list", "8rem", ["alignLeft"], track => track.id); // single column
+    ui.setListItems("console.tracks.list", displayTracks);
 
-        ui.setChoiceItems("console.tracks.channel", ["SFDPS", "TAIS", "ASDE-X"], 0);
+    ui.setChoiceItems("console.tracks.channel", ["SFDPS", "TAIS", "ASDE-X"], 0);
 
-        //let d = new Date(Date.now());
-        //ui.setClock("console.time.localClock", d);
-        //ui.setClock("console.time.utcClock", d);
+    //let d = new Date(Date.now());
+    //ui.setClock("console.time.localClock", d);
+    //ui.setClock("console.time.utcClock", d);
 
-        ui.startTime();
-    }
-}
+    ui.startTime();
+});
 
-app.selectTrack = function(event) {
+ui.exportToMain( function selectTrack (event) {
     let track = ui.getSelectedListItem(event);
     console.log("selected " + JSON.stringify(track));
 
@@ -88,28 +86,28 @@ app.selectTrack = function(event) {
         ui.setCheckBox("console.tracks.showPath", false);
         ui.clearRadiosOf("console.tracks.options");
     }
-}
+});
 
-app.doSomethingWithSelectedTrack = function() {
+ui.exportToMain(  function doSomethingWithSelectedTrack() {
     console.log("exec doSomethingWithSelectedTrack");
-}
+});
 
-app.toggleCheck = function(event) {
+ui.exportToMain( function toggleCheck(event) {
     let isChecked = ui.toggleMenuItemCheck(event);
     ui.setMenuItemDisabled("console.tracks.list.condMenuItem", isChecked);
     console.log("checked: " + isChecked);
-}
+});
 
-app.doSomethingDifferent = function() {
+ui.exportToMain(  function doSomethingDifferent() {
     console.log("and now to something completely different");
-}
+});
 
-app.doSomethingConditional = function() {
+ui.exportToMain( function doSomethingConditional() {
     if (ui.isMenuItemDisabled("console.tracks.list.condMenuItem")) throw "this should have been disabled!";
     else console.log("do something if unchecked");
-}
+});
 
-app.showTrackPath = function(event) {
+ui.exportToMain(  function showTrackPath(event) {
     let isChecked = ui.toggleCheckbox(event);
     let track = ui.getSelectedListItem("console.tracks.list");
 
@@ -127,9 +125,9 @@ app.showTrackPath = function(event) {
     } else {
         console.log("no track selected");
     }
-}
+});
 
-app.resetTracks = function() {
+ui.exportToMain(  function resetTracks() {
     ui.clearListSelection("console.tracks.list");
     ui.setCheckBox("console.tracks.showPath", false);
     ui.clearRadiosOf("console.tracks.options");
@@ -140,7 +138,7 @@ app.resetTracks = function() {
     });
 
     console.log("Reset tracks");
-}
+});
 
 function selectPath(event, pathType, pathSymbol) {
     if (ui.selectRadio(event)) {
@@ -153,24 +151,24 @@ function selectPath(event, pathType, pathSymbol) {
     }
 }
 
-app.selectLinePath = function(event) {
+ui.exportToMain(  function selectLinePath(event) {
     selectPath(event, "line", LINE_PATH);
-}
+});
 
-app.selectWallPath = function(event) {
+ui.exportToMain(  function selectWallPath(event) {
     selectPath(event, "wall", WALL_PATH);
-}
+});
 
-app.queryTracks = function(event) {
+ui.exportToMain(  function queryTracks(event) {
     let input = ui.getFieldValue(event);
     console.log("query tracks: " + input);
-}
+});
 
-app.selectChannel = function(event) {
+ui.exportToMain(  function selectChannel(event) {
     let input = ui.getSelectedChoiceValue(event);
     console.log("select channel: " + input);
-}
+});
 
-app.zoomChanged = function(event) {
+ui.exportToMain(  function zoomChanged(event) {
     console.log("new zoom level: " + ui.getSliderValue(event.target));
-}
+});

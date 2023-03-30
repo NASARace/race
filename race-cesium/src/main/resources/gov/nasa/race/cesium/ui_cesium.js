@@ -93,7 +93,6 @@ ui.registerLoadFunction(function initialize() {
         timeline: false,
         animation: false,
         requestRenderMode: requestRenderMode,
-        //contextOptions: { requestWebgl1: true }  // in case shaders are not WebGL 2 compatible (e.g. wind)
     });
 
     positionSets = getPositionSets();
@@ -652,9 +651,10 @@ export function saveCamera() {
         roll: util.toDegrees(camera.roll)
     };
 
+    // TODO - this should be triggered by a copy-to-clipboard button
     let spec = `{ lat: ${util.fmax_4.format(lastCamera.lat)}, lon: ${util.fmax_4.format(lastCamera.lon)}, alt: ${Math.round(lastCamera.alt)} }`;
-    //navigator.clipboard.writeText(spec);  // this is still experimental in browsers and needs to be enabled explicitly for sec reasons
-    console.log(spec);
+    navigator.clipboard.writeText(spec);  // this is still experimental in browsers and needs to be enabled explicitly for sec reasons
+    //console.log(spec);
 }
 ui.exportToMain(saveCamera);
 
