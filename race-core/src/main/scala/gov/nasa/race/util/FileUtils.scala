@@ -29,7 +29,9 @@ import scala.io.BufferedSource
 import StringUtils._
 import gov.nasa.race._
 import gov.nasa.race.uom.DateTime
+import gov.nasa.race.util.OsUtils.pathDirs
 
+import java.util
 import scala.annotation.tailrec
 import scala.collection.immutable.HashSet
 import scala.collection.mutable
@@ -224,6 +226,9 @@ object FileUtils {
 
   def hasExtension (fn: String): Boolean = fn.lastIndexOf('.') >= 0
   def hasExtension (file: File): Boolean = hasExtension(file.getName)
+
+  def hasPath (fn: String): Boolean = (fn.indexOf(File.separatorChar) >= 0)
+  def hasPath (file: File): Boolean = hasPath(file.getPath)
 
   def lastModification (file: File): DateTime = DateTime.ofEpochMillis(file.lastModified) // Date0 if not exist
 
@@ -546,6 +551,43 @@ object FileUtils {
 
     f = new File(pathName)
     if (f.isFile) f.renameTo(fLast)
+  }
+
+  def checkFileHeader (file: File, header: Array[Byte]): Boolean = {
+    val buf = new Array[Byte](header.length)
+    val is = new FileInputStream(file)
+    var res = false
+    try {
+      res = (is.read(buf) == buf.length && ArrayUtils.haveEqualElements(buf, header))
+    } finally {
+      is.close()
+    }
+    res
+  }
+  def checkFileHeader (file: File, header: String): Boolean = checkFileHeader(file, header.getBytes)
+
+  def findExecutableFile (exeName: String, dirs: Array[String] = pathDirs): Option[File] = {
+    val fname = OsUtils.executableName(exeName)
+
+    if (hasPath(fname)) {
+      val file = new File(fname)
+      if (file.isFile() && file.canExecute()) return Some(file)
+
+    } else {
+      dirs.foreach { dirName =>
+        val file = new File(dirName, fname)
+        if (file.isFile() && file.canExecute()) return Some(file)
+      }
+    }
+
+    None
+  }
+
+  def getExecutableFile (exeName: String, dirs: Array[String] = pathDirs): File = {
+    findExecutableFile(exeName, dirs) match {
+      case Some(file) => file
+      case None => throw new RuntimeException(s"executable not found: $exeName")
+    }
   }
 }
 

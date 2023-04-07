@@ -749,3 +749,35 @@ for (let i = 0; i < 15; i++) _rand(); // warm up shuffle
 export function pseudoRandom() {
     return _rand();
 }
+
+//--- array utilities
+
+export function sortIn (list, e, compareFunc) {
+    for (let i=0; i<list.length; i++) {
+        if (compareFunc(list[i],e) > 0) {
+            list.splice(i,0,e);
+            return i;
+        }
+    }
+
+    list.push(e);
+    return list.length-1;
+}
+
+export function sortInUnique (list, e, compareFunc, replace=false) {
+    for (let i=0; i<list.length; i++) {
+        switch (compareFunc(list[i],e)) {
+            case -1: continue;
+            case 0: 
+                if (replace) {
+                    list.splice(i,1,e); return i;
+                } else {
+                    return -1;
+                }
+            case 1: list.splice(i,0,e); return i;
+        }
+    }
+
+    list.push(e);
+    return list.length-1;
+}

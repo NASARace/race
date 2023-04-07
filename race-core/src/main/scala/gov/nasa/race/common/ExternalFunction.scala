@@ -48,6 +48,14 @@ trait ExternalProc[T] extends ExternalFunction[T] {
   def cwd: Option[File] = None // optional working dir to change to before executing child process
   def env: Seq[(String,String)] = Seq.empty  // optional child proc environment vars
 
+  def reset(): this.type = {
+    args = Seq.empty
+    lastError = None
+    this
+  }
+
+  def canRun: Boolean = true // override if we have to check if all required arguments are specified
+
   // build command from above elements
   protected def buildCommand: String = (prog.getPath +: args).mkString(" ")
 
@@ -86,33 +94,30 @@ trait ExternalProc[T] extends ExternalFunction[T] {
   protected def getErrorMessage(exitCode: Int): String = s"$prog returned error code $exitCode"
 
   override def execSync(): ResultValue[T] = {
-    try {
-      lastError = None
-      outputBuffer.clear()
-
-      val exitCode = log match {  // this blocks until child process returns
-        case Some(logger) => Process(buildCommand, cwd, env: _*).!(logger)
-        case None => Process(buildCommand, cwd, env: _*).!
-      }
-
-      if (exitCode == successExitCode){
+    if (canRun) {
+      try {
         lastError = None
-        SuccessValue(getSuccessValue)
-      } else {
-        val msg = getErrorMessage(exitCode)
-        lastError = Some(msg)
-        Failure(msg)
-      }
-    } catch {
-      case x: Throwable =>
-        val msg = x.getMessage
-        lastError = Some(msg)
-        Failure(msg)
-    }
-  }
+        outputBuffer.clear()
 
-  def reset(): Unit = {
-    args = Seq.empty
-    lastError = None
+        val exitCode = log match { // this blocks until child process returns
+          case Some(logger) => Process(buildCommand, cwd, env: _*).!(logger)
+          case None => Process(buildCommand, cwd, env: _*).!
+        }
+
+        if (exitCode == successExitCode) {
+          lastError = None
+          SuccessValue(getSuccessValue)
+        } else {
+          val msg = getErrorMessage(exitCode)
+          lastError = Some(msg)
+          Failure(msg)
+        }
+      } catch {
+        case x: Throwable =>
+          val msg = x.getMessage
+          lastError = Some(msg)
+          Failure(msg)
+      }
+    } else Failure("not enough arguments")
   }
 }

@@ -44,6 +44,7 @@ object DateTime {
   final val MsecPerHour: Long = 1000*60*60
 
   final val utcId = ZoneId.of("UTC")
+  final val localId = ZoneId.systemDefault
 
   //--- the constructors
 
@@ -592,6 +593,10 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
   def format_yMd: String = {
     val (year,month,day) = getYMD
     f"$year%4d-$month%02d-$day%02d"
+  }
+  def format_yyyyMMdd: String = {
+    val (year,month,day) = getYMD
+    f"$year%4d$month%02d$day%02d"
   }
 
   def format_E_Mdy (zdt: ZonedDateTime): String = {

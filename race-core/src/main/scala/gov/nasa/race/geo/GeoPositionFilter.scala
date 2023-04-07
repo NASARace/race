@@ -18,6 +18,7 @@ package gov.nasa.race.geo
 
 import com.typesafe.config.Config
 import gov.nasa.race.Filter
+import gov.nasa.race.common.{JsonSerializable, JsonWriter}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 
 object GeoPositionFilter {
@@ -52,9 +53,24 @@ object PassNoneGeoFilter extends GeoPositionFilter {
   */
 trait GeoPositionFilter extends Filter[GeoPosition]
 
-class BoundingBoxGeoFilter (val nwBounds: GeoPosition, val seBounds: GeoPosition) extends GeoPositionFilter {
+object BoundingBoxGeoFilter {
+  def fromConfig(conf: Config): BoundingBoxGeoFilter = {
+    new BoundingBoxGeoFilter(conf.getGeoPosition("nw"), conf.getGeoPosition("se"))
+  }
+}
+
+class BoundingBoxGeoFilter (val nw: GeoPosition, val se: GeoPosition) extends GeoPositionFilter with JsonSerializable {
   override def pass(pos: GeoPosition): Boolean = {
-    (pos.φ >= seBounds.φ) && (pos.φ <= nwBounds.φ) && (pos.λ >= nwBounds.λ) && (pos.λ <= seBounds.λ)
+    (pos.φ >= se.φ) && (pos.φ <= nw.φ) && (pos.λ >= nw.λ) && (pos.λ <= se.λ)
+  }
+
+  override def toString(): String = s"{nw:($nw),se:($se)}"
+
+  override def serializeMembersTo(writer: JsonWriter): Unit = {
+    writer.writeMemberName("nw")
+    nw.serializeTo(writer)
+    writer.writeMemberName( "se")
+    se.serializeTo(writer)
   }
 }
 

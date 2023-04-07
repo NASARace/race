@@ -408,6 +408,10 @@ export function dayOfYear (d) {
     return (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 24 / 60 / 60 / 1000;
 }
 
+export function hoursBetween (d1,d2) {
+    return (d2 - d1) / 3600000;
+}
+
 //--- string interning support
 
 const _uiInterned = new Map();
@@ -429,6 +433,10 @@ export function prependElement(e, array) {
 }
 
 //--- type tests
+
+export function isDefined(v) {
+    return !(typeof v === 'undefined');
+}
 
 export function isNumber(v) {
     return Number.isFinite(v);
@@ -579,6 +587,17 @@ export function getLatLonArrayBoundingRect(pts) {
     return { west: w, south: s, east: e, north: n };
 }
 
+export const EPSG_4326 = "epsg:4326";  // WGS84 geographic (lat/lon)
+export const EPSG_4978 = "epsg:4978";  // WGS84 ECEF (x,y,z)
+
+export const SRS = {
+    _4326: EPSG_4326,
+    GEO: EPSG_4326,
+    _4978: EPSG_4978,
+    ECEF:  EPSG_4978,
+    //... more to follow
+}
+
 // length of longitude degree at given latitude in meters
 export function lonDegMeters(lat) {
     let latitude = lat * Math.PI / 180;
@@ -697,3 +716,16 @@ export function parseCsvValues(line) {
     }
     return values;
 }
+
+//--- comparators
+
+export function dateCompare (a,b) {
+    let va = a.valueOf();
+    let vb = b.valueOf();
+    return (va < vb) ? -1 : (va == vb) ? 0 : 1;
+}
+
+export function compare (a,b) {
+    return (a < b) ? -1 : (a == b) ? 0 : 1;
+}
+

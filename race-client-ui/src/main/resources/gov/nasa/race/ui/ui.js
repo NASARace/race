@@ -634,6 +634,16 @@ function getIconBox() {
 
 //--- input element functions
 
+export function Button (text, onClickAction) {
+    let e = _createElement("INPUT", "ui_button");
+    e.type = "button"
+    e.value = text;
+
+    if (onClickAction) e.onclick = onClickAction;
+
+    return e;
+}
+
 export function setInputDisabled(o, isDisabled) {
     let e = _elementOf(o);
     if (e) {
@@ -1421,7 +1431,7 @@ export function CheckBox (label, action, eid, isSelected) {
     if (isSelected) _addClass(e, "checked");
 
     e.setAttribute("data-label", label);
-    if (action) e.setAttribute("onclick", action);
+    if (action) e.onclick = action;
     if (eid) e.setAttribute("id", eid);
 
     return e;
@@ -1516,6 +1526,14 @@ export function isCheckBoxSelected(o) {
 }
 
 //--- radios
+
+export function Radio (label,action,eid=null) {
+    let e = _createElement("DIV", "ui_radio");
+    e.setAttribute("data-label", label);
+    if (eid) e.setAttribute("id", eid);
+    if (action) e.onclick = action;
+    return e;
+}
 
 function initializeRadio (e) {
     let labelText = e.dataset.label;
@@ -2356,13 +2374,7 @@ function initializeListControls(e) {
 }
 
 function createListControlButton ( text, onClickAction) {
-    let e = _createElement("INPUT", "ui_button");
-    e.type = "button"
-    e.value = text;
-
-    e.onclick = onClickAction;
-
-    return e;
+    return Button(text,onClickAction);
 }
 
 //--- tooltips
@@ -2611,6 +2623,13 @@ export function createImage(src, placeholder, w, h) {
     return e;
 }
 
+//--- spacers
+
+export function HorizontalSpacer (minWidthInRem) {
+    let e = _createElement("DIV", "spacer");
+    e.style = `min-width:${minWidthInRem}rem`;
+    return e;
+}
 
 //--- general event processing
 

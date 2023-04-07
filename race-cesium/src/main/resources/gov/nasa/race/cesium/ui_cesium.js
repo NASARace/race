@@ -84,6 +84,7 @@ ui.registerLoadFunction(function initialize() {
 
     viewer = new Cesium.Viewer('cesiumContainer', {
         //terrainProvider: config.cesium.terrainProvider,
+        terrainProvider: Cesium.createWorldTerrain(), // required for terrain articulation
         skyBox: false,
         infoBox: false,
         baseLayerPicker: false,  // if true primitives don't work anymore ?? 

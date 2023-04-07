@@ -16,23 +16,25 @@
  */
 package gov.nasa.race.cesium
 
-import akka.http.scaladsl.model.StatusCodes
+import akka.actor.Actor.Receive
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
+import gov.nasa.race.common.JsonProducer
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.core.ParentActor
+import gov.nasa.race.core.{BusEvent, ParentActor, PipedRaceDataClient, RaceDataClient}
+import gov.nasa.race.earth.WindFieldAvailable
 import gov.nasa.race.http._
+import gov.nasa.race.ifSome
 import gov.nasa.race.ui._
 import gov.nasa.race.uom.DateTime
-import gov.nasa.race.util.FileUtils
 import scalatags.Text
 
 import java.io.File
 import scala.collection.mutable
-import scala.collection.mutable.SeqMap
+import scala.collection.mutable.{ArrayBuffer, SeqMap, SortedMap}
 
 
 /**
@@ -45,35 +47,48 @@ import scala.collection.mutable.SeqMap
   * Ultimately, this structure will be computed by this route and transmitted as a JSON object in order to remove
   * client side netcdfjs dependencies and offload client computation
   */
-trait CesiumWindRoute extends CesiumRoute with QueryProxyRoute with FSCachedProxyRoute with FileServerRoute with PushWSRaceRoute with CachedFileAssetRoute {
+trait CesiumWindRoute extends CesiumRoute with FileServerRoute with PushWSRaceRoute with CachedFileAssetRoute with JsonProducer with PipedRaceDataClient {
 
-  //--- init wind fields
+  // we only keep the newest wf for each area/forecast time
+  case class WindFieldEntry (date: DateTime, areas: SortedMap[String,WindFieldAvailable])
 
-  val windDir: String = config.getString("wind-dir")
+  val windFieldEntries: ArrayBuffer[WindFieldEntry] // sorted by forecastDate
 
-  val windFields: mutable.SeqMap[String,CesiumLayer] = config.getConfigSeq("wind-fields").foldLeft(SeqMap.empty[String,CesiumLayer]) { (map, layerConf) =>
-    val name = layerConf.getString("name")
-    val url = layerConf.getString("url")
-    val file = getFileFromRequestUri(url)
-    val show = layerConf.getBooleanOrElse("show", false)
-    map += name -> CesiumLayer(name,url,file,show)
+  //--- obtaining and updating wind fields
+
+  override def receiveData: Receive = receiveWindFieldData orElse super.receiveData
+
+  def receiveWindFieldData: Receive = {
+    case BusEvent(_,wf:WindFieldAvailable,_) =>
+      if (addWindField(wf)) push(windFieldMessage(wf))
+
   }
 
-  override def onRaceStarted(server: HttpServer): Boolean = {
-    windFields.values.foreach { wf =>
-      getFileFromRequestUri(wf.url) match {
-        case Some(file) =>
-          fetchFile(file, wf.url){
-            push(windFieldMessage(wf))
-          }
-        case None => // ignore
+  def addWindField(wf:WindFieldAvailable): Boolean = {
+    val date = wf.forecastDate
+    var i = 0
+    while (i < windFieldEntries.length) {
+      val e = windFieldEntries(i)
+      if (e.date == date) {
+        ifSome(e.areas.get(wf.area)) { prevWf=>
+          if (prevWf.baseDate > wf.baseDate) return false // we already had a newer one
+        }
+        e.areas += (wf.area -> wf) // replace or add
+        return true
+
+      } else if (e.date > date) {
+        windFieldEntries.insert(i, WindFieldEntry(date, SortedMap( (wf.area -> wf))))
+        return true
       }
+      i += 1
     }
-    super.onRaceStarted(server)
+
+    windFieldEntries += WindFieldEntry(date, SortedMap( (wf.area -> wf)))
+    true
   }
 
-  def windFieldMessage(layer: CesiumLayer): TextMessage.Strict = {
-    val msg = s"""{"windField":{"name":"${layer.name}","date":${DateTime.now.toEpochMillis},"url":"${layer.url}","show":${layer.show}}}"""
+  def windFieldMessage(e: WindFieldAvailable): TextMessage.Strict = {
+    val msg = s"""{"windField":{}}"""
     TextMessage.Strict(msg)
   }
 
@@ -86,8 +101,8 @@ trait CesiumWindRoute extends CesiumRoute with QueryProxyRoute with FSCachedProx
 
   def initializeWindConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
     val remoteAddr = ctx.remoteAddress
-    windFields.values.foreach{ layer=>
-      pushTo( remoteAddr, queue, windFieldMessage(layer))
+    windFieldEntries.foreach{ we=>
+      we.areas.foreach( e=> pushTo( remoteAddr, queue, windFieldMessage(e._2)))
     }
   }
 

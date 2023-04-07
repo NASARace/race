@@ -69,6 +69,13 @@ object Time {
     }
   }
 
+  def parseHHmm (spec: CharSequence): Time = {
+    spec match {
+      case DateTimeUtils.hhmmRE(hh,mm) => HMS(hh.toInt, mm.toInt, 0)
+      case _ => throw new RuntimeException(s"not a valid HH:mm time spec: $spec")
+    }
+  }
+
   def parseDuration (spec: CharSequence): Time = {
     spec match {
       case DateTimeUtils.hhmmssRE(hh,mm,ss) => HMS(hh.toInt, mm.toInt, ss.toInt)
@@ -131,6 +138,7 @@ class Time protected[uom] (val millis: Long) extends AnyVal
   def toDays: Double = if (millis != UNDEFINED_TIME) millis / MillisInDay.toDouble else Double.NaN
 
   def toFullDays: Long =  if (millis != UNDEFINED_TIME) millis / MillisInDay else -1  // note this only truncates
+  def toFullHours: Long = if (millis != UNDEFINED_TIME) millis / MillisInHour else -1
 
   def toHMSms: (Long,Long,Long,Long) = {
     val s = (millis / 1000) % 60

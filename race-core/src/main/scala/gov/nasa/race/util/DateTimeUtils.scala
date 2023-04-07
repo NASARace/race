@@ -27,6 +27,8 @@ import scala.language.implicitConversions
  */
 object DateTimeUtils {
 
+  val hhmmRE = """(\d{2})(?:[:, -/]*)(\d{2})""".r
+
   val hhmmssRE = """(\d+):(\d+):(\d+)""".r
 
   val durationRE = """(\d+) *([hsm]|hour|hours|min|minute|minutes|sec|second|seconds|ms|msec|millis|millisecond|milliseconds|ns|nsec|nanos|nanosecond|nanoseconds)""".r
@@ -136,4 +138,36 @@ object DateTimeUtils {
   @inline def hourOfDay(t: Long): Int = (t % MsecPerDay).toInt / MsecPerHour
   @inline def hours (d: Long): Double = d.toDouble / MsecPerHour
 
+  def monthOfYear(mon: String): Int = {
+    if (mon.length == 3) {
+      if (mon.equalsIgnoreCase("Jan")) return 1
+      else if (mon.equalsIgnoreCase("Feb")) return 2
+      else if (mon.equalsIgnoreCase("Mar")) return 3
+      else if (mon.equalsIgnoreCase("Apr")) return 4
+      else if (mon.equalsIgnoreCase("May")) return 5
+      else if (mon.equalsIgnoreCase("Jun")) return 6
+      else if (mon.equalsIgnoreCase("Jul")) return 7
+      else if (mon.equalsIgnoreCase("Aug")) return 8
+      else if (mon.equalsIgnoreCase("Sep")) return 9
+      else if (mon.equalsIgnoreCase("Oct")) return 10
+      else if (mon.equalsIgnoreCase("Nov")) return 11
+      else if (mon.equalsIgnoreCase("Dec")) return 12
+
+    } else if (mon.length > 3) {
+      if (mon.equalsIgnoreCase("January")) return 1
+      else if (mon.equalsIgnoreCase("February")) return 2
+      else if (mon.equalsIgnoreCase("March")) return 3
+      else if (mon.equalsIgnoreCase("April")) return 4
+      //else if (mon.equalsIgnoreCase("May")) 5
+      else if (mon.equalsIgnoreCase("June")) return 6
+      else if (mon.equalsIgnoreCase("July")) return 7
+      else if (mon.equalsIgnoreCase("August")) return 8
+      else if (mon.equalsIgnoreCase("September")) return 9
+      else if (mon.equalsIgnoreCase("October")) return 10
+      else if (mon.equalsIgnoreCase("November")) return 11
+      else if (mon.equalsIgnoreCase("December")) return 12
+    }
+
+    throw new RuntimeException(s"not a valid month spec: '$mon'")
+  }
 }

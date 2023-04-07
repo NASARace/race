@@ -41,6 +41,11 @@ export class ParticleSystem {
         );
     }
 
+    forEachPrimitive(func) {
+        for (let p of this.particlesComputing.primitives) func(p);
+        for (let p of this.particlesRendering.primitives) func(p);
+    }
+
     release() {
         this.particlesComputing.destroyParticlesTextures();
         // TODO - frameBuffers and particlesRendering resources ?
