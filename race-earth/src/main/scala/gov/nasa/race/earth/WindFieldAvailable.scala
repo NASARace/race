@@ -17,6 +17,7 @@
 package gov.nasa.race.earth
 
 import gov.nasa.race.common.FileAvailable
+import gov.nasa.race.geo.BoundingBoxGeoFilter
 import gov.nasa.race.uom.DateTime
 
 import java.io.File
@@ -25,6 +26,18 @@ import java.io.File
  * event indicating availability of a wind field data file with associated forecast and reference time stamps, plus
  * information about respective forecast area and data types (grid, vector etc.)
  */
-case class WindFieldAvailable(area: String, wfType: String, wfSrs: String, baseDate: DateTime, forecastDate: DateTime, file: File) extends FileAvailable {
+case class WindFieldAvailable ( area: String,                   // name of the area
+                                bounds: BoundingBoxGeoFilter,   // geographic boundaries
+                                wfType: String,                 // wind field type (vector, grid, contour,.. - (used by client)
+                                wfSrs: String,                  // spec of spatial reference system
+                                baseDate: DateTime,             // time on which this forecast is based
+                                forecastDate: DateTime,         // time this forecast is for
+                                file: File                      // file that holds the data
+                              ) extends FileAvailable {
   def date: DateTime = forecastDate
+
+
+  def toJsonWithUrl (url: String): String = {
+    s"""{"windField":{"area":"$area","bounds":${bounds.toJson2D},"forecastDate":${forecastDate.toEpochMillis},"baseDate":${baseDate.toEpochMillis},"wfType":"$wfType","wfSrs":"$wfSrs","url":"$url"}"""
+  }
 }

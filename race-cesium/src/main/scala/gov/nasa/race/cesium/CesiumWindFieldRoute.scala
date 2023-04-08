@@ -17,79 +17,88 @@
 package gov.nasa.race.cesium
 
 import akka.actor.Actor.Receive
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
-import gov.nasa.race.common.JsonProducer
-import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.core.{BusEvent, ParentActor, PipedRaceDataClient, RaceDataClient}
+import gov.nasa.race.core.{BusEvent, ParentActor, PipedRaceDataClient}
 import gov.nasa.race.earth.WindFieldAvailable
 import gov.nasa.race.http._
 import gov.nasa.race.ifSome
 import gov.nasa.race.ui._
 import gov.nasa.race.uom.DateTime
+import gov.nasa.race.util.FileUtils
 import scalatags.Text
 
 import java.io.File
-import scala.collection.mutable
-import scala.collection.mutable.{ArrayBuffer, SeqMap, SortedMap}
+import scala.collection.mutable.{ArrayBuffer, SortedMap}
 
 
 /**
-  * a CesiumRoute that displays wind fields
-  *
-  * this is strongly based on https://github.com/RaymanNg/3D-Wind-Field, using shader resources to compute and animate
-  * particles that are put in a wind field that is derived from a client-side NetCDF structure.
-  * See also https://cesium.com/blog/2019/04/29/gpu-powered-wind/
-  *
-  * Ultimately, this structure will be computed by this route and transmitted as a JSON object in order to remove
-  * client side netcdfjs dependencies and offload client computation
-  */
-trait CesiumWindRoute extends CesiumRoute with FileServerRoute with PushWSRaceRoute with CachedFileAssetRoute with JsonProducer with PipedRaceDataClient {
+ * a CesiumRoute that displays wind fields
+ *
+ * this is strongly based on https://github.com/RaymanNg/3D-Wind-Field, using shader resources to compute and animate
+ * particles that are put in a wind field that is derived from a client-side NetCDF structure.
+ * See also https://cesium.com/blog/2019/04/29/gpu-powered-wind/
+ *
+ * Ultimately, this structure will be computed by this route and transmitted as a JSON object in order to remove
+ * client side netcdfjs dependencies and offload client computation
+ *
+ * TODO - both windFieldEntries and urlMap still need re-org
+ */
+trait CesiumWindFieldRoute extends CesiumRoute with FileServerRoute with PushWSRaceRoute with CachedFileAssetRoute with PipedRaceDataClient {
+
+  case class WindField (wfa: WindFieldAvailable) {
+    val ext = FileUtils.getGzExtension( wfa.file)
+    val urlName = f"${wfa.area}-${wfa.wfType}-${wfa.forecastDate.format_yyyyMMdd}-t${wfa.forecastDate.getHour}%02dz.$ext"
+    val json = wfa.toJsonWithUrl(s"wind-data/$urlName")
+  }
 
   // we only keep the newest wf for each area/forecast time
-  case class WindFieldEntry (date: DateTime, areas: SortedMap[String,WindFieldAvailable])
+  case class WindFieldAreas(date: DateTime, areas: SortedMap[String,WindField])
 
-  val windFieldEntries: ArrayBuffer[WindFieldEntry] // sorted by forecastDate
+  protected val windFields: ArrayBuffer[WindFieldAreas] = ArrayBuffer.empty// sorted by forecastDate
+  protected var urlMap: Map[String,File] = Map.empty // url-filename -> file. watch out - updated from receiveData and accessed from route
 
   //--- obtaining and updating wind fields
 
   override def receiveData: Receive = receiveWindFieldData orElse super.receiveData
 
   def receiveWindFieldData: Receive = {
-    case BusEvent(_,wf:WindFieldAvailable,_) =>
-      if (addWindField(wf)) push(windFieldMessage(wf))
-
+    case BusEvent(_,wfa:WindFieldAvailable,_) =>
+      ifSome(addWindField(wfa)) { wf=>
+        urlMap = urlMap + (wf.urlName -> wfa.file)
+        //push( TextMessage(wf.json))
+        println(s"@@@ ${wf.json}")
+      }
   }
 
-  def addWindField(wf:WindFieldAvailable): Boolean = {
-    val date = wf.forecastDate
+  def addWindField(wfa:WindFieldAvailable): Option[WindField] = {
+    val date = wfa.forecastDate
     var i = 0
-    while (i < windFieldEntries.length) {
-      val e = windFieldEntries(i)
+    while (i < windFields.length) {
+      val e = windFields(i)
       if (e.date == date) {
-        ifSome(e.areas.get(wf.area)) { prevWf=>
-          if (prevWf.baseDate > wf.baseDate) return false // we already had a newer one
+        ifSome(e.areas.get(wfa.area)) { prevWf=>
+          if (prevWf.wfa.baseDate > wfa.baseDate) return None // we already had a newer one
         }
-        e.areas += (wf.area -> wf) // replace or add
-        return true
+        val wf = WindField(wfa)
+        e.areas += (wfa.area -> wf) // replace or add
+        return Some(wf)
 
       } else if (e.date > date) {
-        windFieldEntries.insert(i, WindFieldEntry(date, SortedMap( (wf.area -> wf))))
-        return true
+        val wf = WindField(wfa)
+        windFields.insert(i, WindFieldAreas(date, SortedMap( (wfa.area -> wf))))
+        return Some(wf)
       }
       i += 1
     }
 
-    windFieldEntries += WindFieldEntry(date, SortedMap( (wf.area -> wf)))
-    true
-  }
-
-  def windFieldMessage(e: WindFieldAvailable): TextMessage.Strict = {
-    val msg = s"""{"windField":{}}"""
-    TextMessage.Strict(msg)
+    val wf = WindField(wfa)
+    windFields += WindFieldAreas(date, SortedMap( (wfa.area -> wf)))
+    Some(wf)
   }
 
   //--- websocket
@@ -101,8 +110,8 @@ trait CesiumWindRoute extends CesiumRoute with FileServerRoute with PushWSRaceRo
 
   def initializeWindConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
     val remoteAddr = ctx.remoteAddress
-    windFieldEntries.foreach{ we=>
-      we.areas.foreach( e=> pushTo( remoteAddr, queue, windFieldMessage(e._2)))
+    windFields.foreach{ we=>
+      we.areas.foreach( e=> pushTo( remoteAddr, queue, TextMessage(e._2.json)))
     }
   }
 
@@ -112,8 +121,11 @@ trait CesiumWindRoute extends CesiumRoute with FileServerRoute with PushWSRaceRo
     get {
         pathPrefix("wind-data") {
           extractUnmatchedPath { p =>
-            val file = new File(s"$windDir/$p")
-            completeWithFileContent(file)
+            val pathName = p.toString()
+            urlMap.get(pathName) match {
+              case Some(file) => completeWithFileContent(file)
+              case None => complete(StatusCodes.NotFound, pathName)
+            }
           }
         } ~
         pathPrefix("wind-particles" ~ Slash) { // this is the client side shader code, not the dynamic wind data
@@ -121,9 +133,6 @@ trait CesiumWindRoute extends CesiumRoute with FileServerRoute with PushWSRaceRo
             val pathName = s"wind-particles/$p"
             complete( ResponseData.forPathName(pathName, getFileAssetContent(pathName)))
           }
-        } ~
-        path("proxy") {  // TODO this is going away
-          completeProxied
         } ~
         fileAssetPath("ui_cesium_wind.js") ~
         fileAssetPath("wind-icon.svg")
@@ -147,6 +156,6 @@ trait CesiumWindRoute extends CesiumRoute with FileServerRoute with PushWSRaceRo
 }
 
 /**
-  * a single page application that processes track channels
+  * a single page application that processes wind channels
   */
-class CesiumWindApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumWindRoute with ImageryLayerRoute
+class CesiumWindFieldApp(val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumWindFieldRoute with ImageryLayerRoute

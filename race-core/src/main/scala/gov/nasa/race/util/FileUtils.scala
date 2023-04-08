@@ -222,6 +222,23 @@ object FileUtils {
   }
   def getExtension (file: File): String = getExtension(file.getName)
 
+  // get potentially gzipped extension - if it ends with .gz add the previous . group (e.g. *.csv.gz)
+  def getGzExtension (fn: String): String = {
+    var i = fn.lastIndexOf('.')
+    if (i < 0) {
+      ""
+    } else {
+      val ext = fn.substring(i+1).toLowerCase
+      if (ext == "gz") {
+        i = fn.lastIndexOf('.', i-1)
+        if (i < 0) ext else fn.substring(i+1).toLowerCase
+      } else {
+        ext
+      }
+    }
+  }
+  def getGzExtension (file: File): String = getGzExtension(file.getName)
+
   def hasAnyExtension( f: File, exts: String*): Boolean = exts.contains(getExtension(f))
 
   def hasExtension (fn: String): Boolean = fn.lastIndexOf('.') >= 0

@@ -28,6 +28,7 @@ import gov.nasa.race.util.FileUtils
 import gov.nasa.race.{Failure, SuccessValue, allDefined, earth, ifSome}
 
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.mutable.Queue
 
 object WindNinjaArea {
@@ -67,6 +68,7 @@ class WindNinjaActor (val config: Config) extends SubscribingRaceActor with Publ
   val huvwVectorCmd = new HuvwCsvVectorCommand( huvwVectorProg, outputDir)
 
   protected var queue: Queue[(HrrrFileAvailable,WindNinjaArea)] = Queue.empty
+  val pendingRun: AtomicBoolean = new AtomicBoolean(false)
 
   def handleWindNinjaMessages: Receive = {
     case BusEvent(_,hrrr: HrrrFileAvailable,_) =>
@@ -75,7 +77,7 @@ class WindNinjaActor (val config: Config) extends SubscribingRaceActor with Publ
       if (queue.size == 1) self ! ProcessNext
 
     case ProcessNext =>
-      if (queue.nonEmpty) {
+      if (queue.nonEmpty && !pendingRun.getAndSet(true)) {
         val (hrrr,area) = queue.dequeue()
         runWindNinja( hrrr, area)
       }
@@ -118,19 +120,23 @@ class WindNinjaActor (val config: Config) extends SubscribingRaceActor with Publ
     info(s"WindNinja processing: ${hrrr.file}")
     windNinjaCmd.exec { // WATCH OUT - begin non-actor thread
       case SuccessValue(wnResult) =>
+        if (!wnResult.huvw.isFile) println(s"@@@@ ARGHH - no ${wnResult.huvw}")
+
         ifSome(createGridFile(area.name, hrrr, wnResult)) { file =>
           info(s"publishing ${huvwGridCmd.wfType} file $file")
-          publish( WindFieldAvailable(area.name, huvwGridCmd.wfType, huvwGridCmd.wfSrs, hrrr.baseDate, hrrr.forecastDate, file))
+          publish( WindFieldAvailable(area.name, area.bounds, huvwGridCmd.wfType, huvwGridCmd.wfSrs, hrrr.baseDate, hrrr.forecastDate, file))
         }
 
         ifSome(createVectorFile(area.name, hrrr, wnResult)) { file =>
           info(s"publishing ${huvwVectorCmd.wfType} file $file")
-          publish( earth.WindFieldAvailable(area.name, huvwVectorCmd.wfType, huvwVectorCmd.wfSrs, hrrr.baseDate, hrrr.forecastDate, file))
+          publish( earth.WindFieldAvailable(area.name, area.bounds, huvwVectorCmd.wfType, huvwVectorCmd.wfSrs, hrrr.baseDate, hrrr.forecastDate, file))
         }
 
+        pendingRun.set(false)
         self ! ProcessNext
 
       case Failure(msg) =>
+        pendingRun.set(false)
         warning(s"WindNinja execution failed: $msg")
     } // end of non-actor thread
   }

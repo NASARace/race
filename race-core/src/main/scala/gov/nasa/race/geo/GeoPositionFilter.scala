@@ -72,6 +72,8 @@ class BoundingBoxGeoFilter (val nw: GeoPosition, val se: GeoPosition) extends Ge
     writer.writeMemberName( "se")
     se.serializeTo(writer)
   }
+
+  def toJson2D: String = s"""{"nw":${nw.toJson2D},"se":${se.toJson2D}}"""
 }
 
 

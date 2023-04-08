@@ -67,9 +67,9 @@ class WindFieldEntry {
 
     constructor(windField) {
         //--- those come from the server message
-        this.id = windField.id;
-        this.date = windField.date; // forecast time for this windfield
-        this.originDate = windField.originDate; // when the windfield was created
+        this.id = windField.area;
+        this.date = windField.forecastDate; // forecast time for this windfield
+        this.originDate = windField.baseDate; // when the windfield was created
         this.wfType = windField.wfType;  // grid or vector
         this.wfSrs = windField.srs; // the underlying spatial reference system
         this.url = windField.url; // wherer to get the data

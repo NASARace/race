@@ -110,6 +110,8 @@ trait GeoPosition extends JsonSerializable {
     if (altitude.isDefined) w.writeDoubleMember(ALT, altitude.toMeters)
   }
 
+  def toJson2D: String = f"""{"$LAT":$latDeg%.5f,"$LON":$lonDeg%.5f}"""
+
   def to2d: GeoPosition = GeoPosition(φ,λ)
 }
 

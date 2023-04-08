@@ -30,7 +30,7 @@ class CesiumApp (val parent: ParentActor, val config: Config) extends DocumentRo
   with CesiumBldgRoute
   with CesiumTrackRoute
   with CesiumLayerRoute
-  with CesiumWindRoute
+  with CesiumWindFieldRoute
   with CesiumHotspotRoute
 
 

@@ -160,10 +160,10 @@ class WindNinjaWxModelSingleRun(val prog: File, val outputPath: File) extends Ex
     val baseName = f"${FileUtils.getBaseName(demFile.get)}_${ymdt._2}%02d-${ymdt._3}%02d-${ymdt._1}%4d_${ymdt._4}%02d00_${meshResolution.toMeters.round}m_"
 
     val huvwFile = new File(outputPath, baseName + "huvw.tif")
-    if (!huvwFile.isFile) throw new RuntimeException(s"output file not found: $huvwFile")
+    if (!huvwFile.isFile) throw new RuntimeException(s"windninja output file not found: $huvwFile")
 
     val huvw0File = new File(outputPath, baseName + "huvw_0.tif")
-    if (!huvw0File.isFile) throw new RuntimeException(s"output file not found: $huvw0File")
+    if (!huvw0File.isFile) throw new RuntimeException(s"windninja output file not found: $huvw0File")
 
     WindNinjaWxModelResults(huvwFile,huvw0File)
   }
