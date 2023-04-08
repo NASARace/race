@@ -38,6 +38,6 @@ case class WindFieldAvailable ( area: String,                   // name of the a
 
 
   def toJsonWithUrl (url: String): String = {
-    s"""{"windField":{"area":"$area","bounds":${bounds.toJson2D},"forecastDate":${forecastDate.toEpochMillis},"baseDate":${baseDate.toEpochMillis},"wfType":"$wfType","wfSrs":"$wfSrs","url":"$url"}"""
+    s"""{"windField":{"area":"$area","bounds":${bounds.toJson2D},"forecastDate":${forecastDate.toEpochMillis},"baseDate":${baseDate.toEpochMillis},"wfType":"$wfType","wfSrs":"$wfSrs","url":"$url"}}"""
   }
 }

@@ -16,8 +16,9 @@
  */
 package gov.nasa.race.earth.actor
 
+import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.common.ExternalProc
+import gov.nasa.race.common.{ActorDataAcquisitionThread, DataAcquisitionThread, ExternalProc}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.earth.{VegetationType, WindFieldAvailable, WindNinjaWxModelResults, WindNinjaWxModelSingleRun}
@@ -28,6 +29,7 @@ import gov.nasa.race.util.FileUtils
 import gov.nasa.race.{Failure, SuccessValue, allDefined, earth, ifSome}
 
 import java.io.File
+import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue}
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.mutable.Queue
 
@@ -43,50 +45,26 @@ object WindNinjaArea {
 case class WindNinjaArea (name: String, bounds: BoundingBoxGeoFilter, demFile: File, vegetationType: VegetationType)
 
 /**
- * actor that listens on a channel with HrrrFileAvailable events, runs WindNinja on respective input
- * files and publishes WindNinjaFileAvailable events generated from its results
- *
- * All files are processed in the order in which they are received. All programs used to process HRRR files
- * are executed outside the actor thread. The order in which WindNinjaFileAvailable events are published corresponds
- * to the order in which respective HRRR files are received
+ * background thread to run external commands on HrrrFileAvailable/Area queue entries
+ * this has to be outside the actor since we run a sequence of external programs on each queue entry
+ * since this can consume a lot of memory and CPU we process queue entries one at a time
  */
-class WindNinjaActor (val config: Config) extends SubscribingRaceActor with PublishingRaceActor {
+class WindNinjaThread ( client: ActorRef,
+                        queue: BlockingQueue[(HrrrFileAvailable,WindNinjaArea)],
+                        outputDir: File,
+                        windNinjaCmd: WindNinjaWxModelSingleRun,
+                        huvwGridCmd: HuvwCommand,
+                        huvwVectorCmd: HuvwCommand
+                      ) extends ActorDataAcquisitionThread(client) {
 
-  object ProcessNext
-
-  val windNinjaProg = FileUtils.getExecutableFile( config.getStringOrElse("windninja-prog", "WindNinja_cli"))
-  val huvwGridProg = FileUtils.getExecutableFile( config.getStringOrElse("huvw-grid-prog", "huvw_csv_grid"))
-  val huvwVectorProg = FileUtils.getExecutableFile( config.getStringOrElse("huvw-vector-prog", "huvw_csv_vector"))
-
-  val areas: Seq[WindNinjaArea] = config.getConfigSeq("areas").map(WindNinjaArea.fromConfig)
-
-  val outputDir: File = FileUtils.ensureWritableDir( config.getStringOrElse("directory", "tmp/windninja")).get
-  val windHeight: Length = config.getLengthOrElse("wind-height", Meters(10))
-
-  val windNinjaCmd = new WindNinjaWxModelSingleRun( windNinjaProg, outputDir)
-  val huvwGridCmd = new HuvwCsvGridCommand( huvwGridProg, outputDir)
-  val huvwVectorCmd = new HuvwCsvVectorCommand( huvwVectorProg, outputDir)
-
-  protected var queue: Queue[(HrrrFileAvailable,WindNinjaArea)] = Queue.empty
-  val pendingRun: AtomicBoolean = new AtomicBoolean(false)
-
-  def handleWindNinjaMessages: Receive = {
-    case BusEvent(_,hrrr: HrrrFileAvailable,_) =>
-      info(s"received: $hrrr")
-      areas.foreach( area=> queue.enqueue((hrrr,area)))
-      if (queue.size == 1) self ! ProcessNext
-
-    case ProcessNext =>
-      if (queue.nonEmpty && !pendingRun.getAndSet(true)) {
-        val (hrrr,area) = queue.dequeue()
-        runWindNinja( hrrr, area)
-      }
+  override def run(): Unit = {
+    while (!isDone.get()) {
+      val (hrrr,area) = queue.take() // this is blocking
+      runWindNinja( hrrr, area)
+    }
   }
-  override def handleMessage: Receive = handleWindNinjaMessages orElse super.handleMessage
 
-  //--- internal functions
-
-  def runWindNinja (hrrr: HrrrFileAvailable, area: WindNinjaArea): Unit = {
+  private def runWindNinja (hrrr: HrrrFileAvailable, area: WindNinjaArea): Unit = {
 
     def createGridFile(area: String, hrrr: HrrrFileAvailable, wnResult: WindNinjaWxModelResults): Option[File] = {
       val bd = hrrr.baseDate
@@ -97,6 +75,7 @@ class WindNinjaActor (val config: Config) extends SubscribingRaceActor with Publ
       huvwGridCmd.reset()
         .setInputFile( wnResult.huvw)
         .setOutputFile( outputFile)
+        .ignoreConsoleOutput()
         .execSync().asOption
     }
 
@@ -109,6 +88,7 @@ class WindNinjaActor (val config: Config) extends SubscribingRaceActor with Publ
       huvwVectorCmd.reset()
         .setInputFile( wnResult.huvw)
         .setOutputFile( outputFile)
+        .ignoreConsoleOutput()
         .execSync().asOption
     }
 
@@ -116,31 +96,70 @@ class WindNinjaActor (val config: Config) extends SubscribingRaceActor with Publ
       .setDemFile(area.demFile)
       .setVegetationType(area.vegetationType)
       .setHrrrForecast(hrrr.file, hrrr.forecastDate)
+      .ignoreConsoleOutput()
 
     info(s"WindNinja processing: ${hrrr.file}")
-    windNinjaCmd.exec { // WATCH OUT - begin non-actor thread
+    windNinjaCmd.execSync() match { // WATCH OUT - begin non-actor thread
       case SuccessValue(wnResult) =>
-        if (!wnResult.huvw.isFile) println(s"@@@@ ARGHH - no ${wnResult.huvw}")
-
         ifSome(createGridFile(area.name, hrrr, wnResult)) { file =>
           info(s"publishing ${huvwGridCmd.wfType} file $file")
-          publish( WindFieldAvailable(area.name, area.bounds, huvwGridCmd.wfType, huvwGridCmd.wfSrs, hrrr.baseDate, hrrr.forecastDate, file))
+          sendToClient( WindFieldAvailable(area.name, area.bounds, huvwGridCmd.wfType, huvwGridCmd.wfSrs, hrrr.baseDate, hrrr.forecastDate, file))
         }
 
         ifSome(createVectorFile(area.name, hrrr, wnResult)) { file =>
           info(s"publishing ${huvwVectorCmd.wfType} file $file")
-          publish( earth.WindFieldAvailable(area.name, area.bounds, huvwVectorCmd.wfType, huvwVectorCmd.wfSrs, hrrr.baseDate, hrrr.forecastDate, file))
+          sendToClient( WindFieldAvailable(area.name, area.bounds, huvwVectorCmd.wfType, huvwVectorCmd.wfSrs, hrrr.baseDate, hrrr.forecastDate, file))
         }
 
-        pendingRun.set(false)
-        self ! ProcessNext
-
       case Failure(msg) =>
-        pendingRun.set(false)
         warning(s"WindNinja execution failed: $msg")
     } // end of non-actor thread
   }
 }
+
+/**
+ * actor that listens on a channel with HrrrFileAvailable events, runs WindNinja on respective input
+ * files and publishes WindNinjaFileAvailable events generated from its results
+ *
+ * All files are processed in the order in which they are received. All programs used to process HRRR files
+ * are executed outside the actor thread. The order in which WindNinjaFileAvailable events are published corresponds
+ * to the order in which respective HRRR files are received
+ */
+class WindNinjaActor (val config: Config) extends SubscribingRaceActor with PublishingRaceActor {
+
+  val areas: Seq[WindNinjaArea] = config.getConfigSeq("areas").map(WindNinjaArea.fromConfig)
+  val outputDir: File = FileUtils.ensureWritableDir(config.getStringOrElse("directory", "tmp/windninja")).get
+  val windNinjaCmd = new WindNinjaWxModelSingleRun( config.getExecutableFile("windninja-prog", "WindNinja_cli"), outputDir)
+  val huvwGridCmd = new HuvwCsvGridCommand( config.getExecutableFile("huvw-grid-prog", "huvw_csv_grid"), outputDir)
+  val huvwVectorCmd = new HuvwCsvVectorCommand( config.getExecutableFile("huvw-vector-prog", "huvw_csv_vector"), outputDir)
+
+  protected var queue = new ArrayBlockingQueue[(HrrrFileAvailable, WindNinjaArea)](config.getIntOrElse("queue-size", 256))
+  protected val wnThread = new WindNinjaThread(self,queue,outputDir,windNinjaCmd,huvwGridCmd,huvwVectorCmd).setLogging(this)
+
+  override def onStartRaceActor(originator: ActorRef): Boolean = {
+    wnThread.start()
+    super.onStartRaceActor(originator)
+  }
+
+  override def onTerminateRaceActor(originator: ActorRef): Boolean = {
+    wnThread.terminate()
+    super.onTerminateRaceActor(originator)
+  }
+
+  override def handleMessage: Receive = handleWindNinjaMessages orElse super.handleMessage
+
+  def handleWindNinjaMessages: Receive = {
+    case BusEvent(_, hrrr: HrrrFileAvailable, _) =>
+      areas.foreach { area=>
+        if (!queue.offer( (hrrr,area))) {
+          warning(s"queue full")
+        }
+      }
+
+    case wfa: WindFieldAvailable => publish(wfa)
+  }
+}
+
 
 /**
  * command to translate WindNinja huvw*.tif datasets into RACE specific formats

@@ -500,6 +500,18 @@ object ConfigUtils {
       }
     }
 
+    def getExecutableFile (key: String, filename: String): File = {
+      FileUtils.executableFile( getStringOrElse( key, filename))
+    }
+
+    def getExecutableFileOrElse (key: String, filename: String, fallbackAction: => File): File = {
+      try {
+        FileUtils.executableFile( getStringOrElse(key, filename))
+      }catch {
+        case _: Throwable => fallbackAction
+      }
+    }
+
     def translateFile[T] (key: String)(f: Array[Byte]=>Option[T]): Option[T] = {
       val file = new File(conf.getString(key))
 

@@ -600,7 +600,7 @@ object FileUtils {
     None
   }
 
-  def getExecutableFile (exeName: String, dirs: Array[String] = pathDirs): File = {
+  def executableFile(exeName: String, dirs: Array[String] = pathDirs): File = {
     findExecutableFile(exeName, dirs) match {
       case Some(file) => file
       case None => throw new RuntimeException(s"executable not found: $exeName")

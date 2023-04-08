@@ -32,16 +32,18 @@ trait LogWriter {
   protected var _warning: LogFunc = msg => println(s"WARN: $msg")
   protected var _error: LogFunc   = msg => println(s"ERROR: $msg")
 
-  def setLogging (infoLogger: LogFunc, warningLogger: LogFunc, errorLogger: LogFunc): Unit = {
+  def setLogging (infoLogger: LogFunc, warningLogger: LogFunc, errorLogger: LogFunc): this.type = {
     _info = infoLogger
     _warning = warningLogger
     _error = errorLogger
+    this
   }
 
-  def setLogging (logger: Loggable): Unit = {
+  def setLogging (logger: Loggable): this.type = {
     _info = logger.info
     _warning = logger.warning
     _error = logger.error
+    this
   }
 
   // invocation is public

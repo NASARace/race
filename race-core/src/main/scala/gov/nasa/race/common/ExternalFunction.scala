@@ -63,25 +63,25 @@ trait ExternalProc[T] extends ExternalFunction[T] {
   protected var outputBuffer = new StringBuilder
   protected var logFile: Option[File] = None
 
-  def ignoreOutput: this.type = {
+  def ignoreConsoleOutput(): this.type = {
     log = Some( ProcessLogger( line => {} ))
     this
   }
 
-  def captureOutputToString: this.type = {
+  def captureConsoleOutputToString(): this.type = {
     log = Some( ProcessLogger( line => { outputBuffer.append(line).append('\n') } ))
     this
   }
 
-  def captureOutputToFile (file: File): this.type = {
+  def captureConsoleOutputToFile(file: File): this.type = {
     logFile = Some(file)
     log = Some( ProcessLogger(file))
     this
   }
 
   //--- output accessors
-  def stringOutput: String = outputBuffer.toString()
-  def fileOutput: Option[File] = logFile
+  def consoleOutputAsString: String = outputBuffer.toString()
+  def consoleOutputAsFile: Option[File] = logFile
 
   var lastError: Option[String] = None
 

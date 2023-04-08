@@ -250,7 +250,7 @@ object NetUtils {
 
   def blockingHttpsPost (urlString: String, paramString: String): Either[String,String] = {
     try {
-      val url = new URL(urlString)
+      val url = new URI(urlString).toURL
       val con = url.openConnection.asInstanceOf[HttpsURLConnection]
       con.setRequestMethod("POST")
       con.setRequestProperty("User-Agent", "Mozilla/5.0")
