@@ -3,6 +3,7 @@ import * as config from "./config.js";
 import * as util from "./ui_util.js";
 import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
+import * as uiData from "./ui_data.js";
 import * as windUtils from "./wind-particles/windUtils.js";
 import { ParticleSystem } from "./wind-particles/particleSystem.js"
 
@@ -52,44 +53,30 @@ class WindFieldEntry {
         throw "unknown windField type: " + windField.wfType;
     }
 
-    static compare (a,b) {  // order: date -> wfType -> originDate
-        switch (uiDate.dateCompare(a.date, b.date)) {
+    static compareFiltered (a,b) {
+        switch (util.compare(a.forecastDate,b.forecastDate)) {
             case -1: return -1;
-            case 0:
-                if (a.wfType == b.wfType) {
-                    return util.dateCompare(a.originDate, b.originDate);
-                } else {
-                    return util.compare(a.wfType, b.wfType);
-                }
+            case 0: return util.compare(a.wfSource, b.wfSource);
             case 1: return 1;
         }
     }
 
     constructor(windField) {
         //--- those come from the server message
-        this.id = windField.area;
-        this.date = windField.forecastDate; // forecast time for this windfield
-        this.originDate = windField.baseDate; // when the windfield was created
+        this.area = windField.area;
+        this.forecastDate = windField.forecastDate; // forecast time for this windfield
+        this.baseDate = windField.baseDate; // when the windfield was created
         this.wfType = windField.wfType;  // grid or vector
-        this.wfSrs = windField.srs; // the underlying spatial reference system
+        this.wfSrs = windField.wfSrs; // the underlying spatial reference system
+        this.wfSource = windField.wfSource; // HRRR or station
         this.url = windField.url; // wherer to get the data
-        this.boundaries = windField.boundaries; // rectangle in which windfield was computed
+        this.bounds = windField.bounds; // rectangle in which windfield was computed
 
         //--- local data
         this.status = REMOTE;
-        this.fHandle = null; // where we store the data locally once it was retrieved from the server
-
-        //--- local display
+        this.show = false;
         this.userInput = {...userInputDefaults };
-        this.boundaryEntity = undefined;
-    }
-
-    succeeds (other) {
-        return (this.date == other.date && this.wfType == other.wfType && this.originDate > other.originDate);
-    }
-
-    getFilename() {
-        return `${this.id}-${this.wfType}-${this.date}`;
+        // assets (such as primitives) are subclass specific
     }
 
     setStatus (newStatus) {
@@ -98,58 +85,47 @@ class WindFieldEntry {
     }
 
     replaceWith (other) {
-        if (this.isAreaShowing()){ this.showArea(false); other.showArea(true); }
-        if (this.isAnimShowing()){ this.showAnim(false); other.showAnim(true); }
-        if (this.isVectorShowing()){ this.showVector(false); other.showVector(true); }
-        if (this.isSpeedShowing()){ this.showSpeed(false); other.showSpeed(true); }
+        console.log("not yet.");
     }
 
     // override respective methods in subclasses
-
-    showAreaBtn() { return ui.createCheckBox( util.isDefined(this.boundaryEntity), toggleShowWindFieldArea) }
-    showAnimBtn() { return ""; } // override if we can display wind animation
-    showVectorBtn() { return ""; } // override if we can display wind vectors
-    showSpeedBtn() { return ""; } // override if we can display wind speed areas
-
-    isAreaShowing() { return util.isDefined(this.boundaryEntity); }
-    isAnimShowing() { return false; }
-    isVectorShowing() { return false; }
-    isSpeedShowing() { return false; }
-
-    showArea (showIt) {}
-    showAnim (showIt) {}
-    showVector (showIt) {}
-    showSpeed (showIt) {}
+    setVisible (showIt) {}
 }
 
 class GridFieldEntry extends WindFieldEntry {
     constructor (windField) {
         super(windField);
-
         this.particleSystem = undefined; // only lives while we show the grid animation, owns a number of CustomPrimitives
     }
 
-    showAnimBtn() { return ui.createCheckBox(this.isAnimShowing(), toggleShowWindFieldAnim); }
+    static animShowing = 0;
 
-    isAnimShowing() {  return util.isDefined(this.particleSystem); }
-
-    showAnim (showIt) {
-        if (showIt) {
-            if (!this.particleSystem) {
-                if (fHandle) {
-                    loadParticleSystemFromFile(); // async
+    setVisible (showIt) {
+        if (showIt != this.show) {
+            if (showIt) {
+                GridFieldEntry.animShowing++;
+                if (!this.particleSystem) {
+                    this.loadParticleSystemFromUrl(); // async
                 } else {
-                    loadParticleSystemFromUrl(); // async
+                    this.particleSystem.forEachPrimitive( p=> p.show = true);
+                    uiCesium.setRequestRenderMode(false);
+
                 }
-            } 
-        } else {
-            if (this.particleSystem) {
-                // TODO - do we have to stop rendering first ?
-                this.particleSystem.forEachPrimitive( p=> uiCesium.removePrimitive(p));
-                this.particleSystem.release();
-                this.particleSystem = undefined;
-                this.setStatus( LOADED);
+                this.setStatus( SHOWING);
+
+            } else {
+                GridFieldEntry.animShowing--;
+                if (this.particleSystem) {
+                    // TODO - do we have to stop rendering first ?
+                    this.particleSystem.forEachPrimitive( p=> p.show = false);
+                    if (GridFieldEntry.animShowing == 0) {
+                        uiCesium.setRequestRenderMode(true);
+                        uiCesium.requestRender();
+                    }
+                    this.setStatus( LOADED);
+                }
             }
+            this.show = showIt;
         }
     }
 
@@ -222,8 +198,8 @@ class GridFieldEntry extends WindFieldEntry {
         }
     
         this.setStatus( LOADING);
-        await util.forEachTextLine(url, procLine);
-        console.log("loaded ", i-2, " grid points from ", windEntry.windField.url);
+        await util.forEachTextLine(this.url, procLine);
+        console.log("loaded ", i-2, " grid points from ", this.url);
     
         let data = {
             dimensions: { lon: nx, lat: ny, lev:1 },
@@ -237,13 +213,8 @@ class GridFieldEntry extends WindFieldEntry {
         //console.log("@@ data:", data);
     
         this.particleSystem = new ParticleSystem(uiCesium.viewer.scene.context, data, this.userInput, viewerParameters);
-
-        this.setStatus( SHOWING);
         this.particleSystem.forEachPrimitive( p=> uiCesium.addPrimitive(p));
-    }
-
-    async loadParticleSystemFromFile() {
-        console.log("not yet.");
+        uiCesium.setRequestRenderMode(false);
     }
 
     applyDisplayParameters() {
@@ -265,28 +236,25 @@ class GridFieldEntry extends WindFieldEntry {
 class VectorFieldEntry extends WindFieldEntry {
     constructor (windField) {
         super(windField);
-
         this.vectorPrimitives = undefined; // Cesium.Primitive instantiated when showing the static vector field
     }
 
-    showVectorBtn() { return ui.createCheckBox(this.isVectorShowing(), toggleShowWindFieldVector); }
-
-    isVectorShowing() {  return util.isDefined(this.vectorPrimitives); }
-
-    showVector (showIt) {
-        if (showIt) {
-            if (!this.vectorPrimitives) {
-                if (fHandle) {
-                    this.loadVectorsFromFile();
+    setVisible (showIt) {
+        if (showIt != this.show) {
+            this.show = showIt;
+            if (showIt) {
+                if (!this.vectorPrimitives) {
+                    this.loadVectorsFromUrl(); // this is async, it will set vectorPrimitives when done
                 } else {
-                    this.loadVectorsFromUrl();
+                    uiCesium.showPrimitives(this.vectorPrimitives, true);
                 }
-            }
-        } else {
-            if (this.vectorPrimitives) {
-                this.vectorPrimitives.forEach( p=> uiCesium.removePrimitive(p));
-                this.vectorPrimitives = null;
-                this.setStatus( LOADED);
+                this.setStatus( SHOWING);
+
+            } else {
+                if (this.vectorPrimitives) {
+                    uiCesium.showPrimitives(this.vectorPrimitives, false);
+                    this.setStatus( LOADED);
+                }
             }
         }
     }
@@ -306,18 +274,21 @@ class VectorFieldEntry extends WindFieldEntry {
                     let spd = values[6];
                     let clr = getColor(spd);
             
-                    points.add({
+                    let pp = points.add({
                         position: p0,
-                        pixelSize: 3,
+                        pixelSize: 4,
                         color: clr
                     });
+                    pp.distanceDisplayCondition = new Cesium.DistanceDisplayCondition(0,150000);
+                    // pp.scaleByDistance = new Cesium.NearFarScalar(1.5e2, 15, 8.0e6, 0.0);
             
                     vectors[i-2] = new Cesium.GeometryInstance({
-                        geometry: new Cesium.SimplePolylineGeometry({
+                        geometry: new Cesium.PolylineGeometry({
                             positions: [p0,p1],
-                            colors: [clr]
-                            // set distanceDisplayCondition here
-                        })
+                            colors: [clr],
+                            width: 1.5,
+                        }),
+                        attributes: {  distanceDisplayCondition: new Cesium.DistanceDisplayConditionGeometryInstanceAttribute(0,50000) }
                     });
                 }
             } else if (i > 0) { // header line (ignore)
@@ -333,18 +304,15 @@ class VectorFieldEntry extends WindFieldEntry {
     
         this.setStatus( LOADING);
         await util.forEachTextLine( this.url, procLine);
-        console.log("loaded ", i-2, " vectors from ", windEntry.windField.url);
+        console.log("loaded ", i-2, " vectors from ", this.url);
     
-        let vectorPrimtive = new Cesium.Primitive({ geometryInstances: vectors, appearance: polyLineColorAppearance});
-        this.vectorPrimitives = [ points, vectorPrimitive ];
+        let lines = new Cesium.Primitive({ 
+            geometryInstances: vectors, 
+            appearance: polyLineColorAppearance
+        });
 
-        uiCesium.addPrimitive(points);
-        uiCesium.addPrimitive( vectorPrimitive);
-        this.setStatus( SHOWING);
-    }
-
-    async loadVectorsFromFile() {
-        console.log("not yet.");
+        this.vectorPrimitives = [points,lines];
+        uiCesium.addPrimitives(this.vectorPrimitives);
     }
 
     applyDisplayParameters() {
@@ -354,13 +322,32 @@ class VectorFieldEntry extends WindFieldEntry {
     }
 }
 
+class WindFieldArea {
+    constructor (area, bounds) {
+        this.label = area;
+        this.bounds = bounds;
+        this.show = false;
+        this.entity = undefined; // display
+    }
+
+    setVisible (showIt) {
+
+    }
+
+    static compare (a,b) { return util.compare(a.label, b.label); }
+}
+
 //--- module data
 
-const dates = []; // populated from windFieldMessages - this is displayed in timesView
-var dateView = undefined; // the list showing available windField times
-var selectedDate = undefined;
+const windFieldEntries = new Map(); // unique-key -> WindFieldEntry
 
-const entries = new Map();  // populated from windFieldMessages: id->[time+type sorted entries]
+var areas = [] // sorted list of areas
+var areaView = undefined;
+var selectedArea = undefined;
+
+var selectedType = undefined;
+
+var displayEntries = [];  // time/source sorted entries for selected area and type
 var entryView = undefined; // the list showing available wind fields for the selected time
 var selectedEntry = undefined;
 
@@ -370,9 +357,10 @@ ui.registerLoadFunction(function initialize() {
     createIcon();
     createWindow();
 
-    dateView = initDateView();
+    areaView = ui.getChoice("wind.areas");
     entryView = initEntryView();
     initUserInputControls();
+    selectedType = "vector";
 
     ws.addWsHandler(config.wsUrl, handleWsWindMessages);
     setupEventListeners();
@@ -381,65 +369,52 @@ ui.registerLoadFunction(function initialize() {
 });
 
 function createIcon() {
-    return ui.Icon("wind-icon.svg", "main.toggleWindow(event,'wind')", "wind_icon");
+    return ui.Icon("wind-icon.svg", (e)=> ui.toggleWindow(e,'wind'), "wind_icon");
 }
 
 function createWindow() {
     return ui.Window("Wind", "wind", "wind-icon.svg")(
-        ui.Panel("wind-fields")(
+        ui.Panel("wind-fields", true)(
             ui.RowContainer()(
-                ui.ColumnContainer(null,null,"times")(
-                    ui.List("wind.dates", 10, "main.selectWindFieldDate(event)"),
-                    ui.RowContainer()(
-                        ui.Button("next", "main.setNextWindFieldDate()")
-                    )
-                ),
-                ui.HorizontalSpacer(0.5),
-                ui.ColumnContainer(null,null,"data sets")(
-                    ui.List("wind.entries", 6, "main.selectWindField(event)")
-                )
-            )
+                ui.Choice("area","wind.areas",selectArea),
+                ui.CheckBox("show area", toggleShowArea),
+                ui.HorizontalSpacer(6)
+            ),
+            ui.RowContainer()(
+                ui.Radio("vector", selectVectorWindFields,null,true),
+                ui.Radio("anim", selectGridWindFields),
+                ui.Radio("contour", selectContourWindFields)
+            ),
+            ui.List("wind.entries", 6, selectWindFieldEntry)
         ),
-        ui.Panel("flow display")(
+        ui.Panel("anim display")(
             ui.ColumnContainer("align_right")(
-                ui.Slider("max particles", "wind.max_particles", "main.windMaxParticlesChanged(event)"),
-                ui.Slider("height", "wind.height", "main.windHeightChanged(event)"),
-                ui.Slider("fade opacity", "wind.fade_opacity", "main.windFadeOpacityChanged(event)"),
-                ui.Slider("drop", "wind.drop", "main.windDropRateChanged(event)"),
-                ui.Slider("drop bump", "wind.drop_bump", "main.windDropRateBumpChanged(event)"),
-                ui.Slider("speed", "wind.speed", "main.windSpeedChanged(event)"),
-                ui.Slider("width", "wind.width", "main.windWidthChanged(event)")
+                ui.Slider("max particles", "wind.max_particles", windMaxParticlesChanged),
+                ui.Slider("height", "wind.height", windHeightChanged),
+                ui.Slider("fade opacity", "wind.fade_opacity", windFadeOpacityChanged),
+                ui.Slider("drop", "wind.drop", windDropRateChanged),
+                ui.Slider("drop bump", "wind.drop_bump", windDropRateBumpChanged),
+                ui.Slider("speed", "wind.speed", windSpeedChanged),
+                ui.Slider("width", "wind.width", windWidthChanged)
             )
         ),
-        uiPanel("vector display")(
-            ui.Slider("point size", "wind.point_size", "main.windPointSizeChanged(event)")
+        ui.Panel("vector display")(
+            ui.Slider("point size", "wind.point_size", gridPointSizeChanged)
         )
     );
-}
-
-function initDateView() {
-    let view = ui.getList("wind.dates");
-    if (view) {
-        ui.setListItemDisplayColumns(view, ["fit"], [
-            { name: "forecast", width: "10rem",  attrs: ["fixed", "alignRight"], map: e => util.toLocalDateHMTimeString(e) }
-        ]);
-    }
-    return view;
 }
 
 function initEntryView() {
     let view = ui.getList("wind.entries");
     if (view) {
         ui.setListItemDisplayColumns(view, ["header"], [
-            { name: "status", width: "1rem", attrs: [], map: e => e.status },
-            { name: "id", width: "8rem", attrs: ["alignLeft"], map: e => e.id },
-            { name: "age", width: "3rem", attrs: ["fixed", "alignRight"], map: e => util.hoursBetween(e.originDate, e.date) },
-            { name: "type", width: "4rem", attrs:[], map: e=> e.wfType },
-            ui.listItemSpacerColumn(),
-            { name: "area", tip: "toggle field area", width: "2.1rem", attrs: [], map: e => e.showAreaBtn() },
-            { name: "spd", tip: "toggle wind speed map", width: "2.1rem", attrs: [], map: e => e.showSpeeddBtn() },
-            { name: "vec", tip: "toggle wind vectors", width: "2.1rem", attrs: [], map: e => e.showVectorBtn() },
-            { name: "anim", tip: "toggle wind animation", width: "2.1rem", attrs: [], map: e => e.showAnimBtn() }
+            { name: "", width: "2rem", attrs: [], map: e => e.status },
+            { name: "forecast", width: "9.5rem",  attrs: ["fixed"], map: e => util.toLocalDateHMTimeString(e.forecastDate) },
+            { name: "Δt", tip: "forecast hour", width: "2rem", attrs: ["fixed", "alignRight"], map: e => util.hoursBetween(e.baseDate, e.forecastDate) },
+            ui.listItemSpacerColumn(1),
+            { name: "src", width: "4rem", attrs:[], map: e=> e.wfSource },
+            ui.listItemSpacerColumn(2),
+            { name: "show", tip: "toggle wind speed contour", width: "2.1rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowWindField) },
         ]);
     }
     return view;
@@ -493,77 +468,73 @@ function handleWsWindMessages(msgType, msg) {
 
 function handleWindFieldMessage(windField) {
     let we = WindFieldEntry.create(windField);
-
-    let date = windField.date; // the (forecast) date
-    let idx = uiData.sortInUnique( dates, date, uiDate.dateCompare);    
-    if (idx >= 0) ui.insertListItem( timesView, date, idx);
-
-    let id = we.id;
-    let es = entries.get(id);
-    if (es) {
-        addEntry(es,we);
-    } else { // first entry for this id
-        entries.set(id, [we]);
-    }
-    
-    if (date == selectedDate) updateWindFieldView();
+    windFieldEntries.set(windField.url, we);
+    addArea(we);
+    if (isSelected(we)) updateEntryView();
 }
 
-// we only keep the newest forecast for a given time
-function addEntry (windEntries, we) {
-    for (let i=0; i<windEntries.length; i++) {
-        let oe = windEntries[i];
-        if (oe.date > we.date) { // new time entry, nothing to replace
-            windEntries.splice(i,0,we);
-        } else if (we.succeeds(oe)){
-            we.replacePrimitivesOf(oe); // in case oe is showing
-            windEntries[i] = we;
-        }
+function addArea (we) {
+    if (!areas.find( a=> a.label == we.area)) {
+        let wa = new WindFieldArea(we.area, we.bounds);
+        uiData.sortInUnique( areas, wa, WindFieldArea.compare);
+        ui.setChoiceItems(areaView, areas);
+        if (!selectedArea) ui.selectChoiceItem(areaView, wa);
     }
+}
+
+function updateEntryView() {
+    displayEntries = util.filterMapValues(windFieldEntries, we=> isSelected(we));
+    displayEntries.sort(WindFieldEntry.compareFiltered);
+
+    ui.setListItems(entryView, displayEntries);
+}
+
+function isSelected (we) {
+    return (we.area == selectedArea.label) && (we.wfType == selectedType);
 }
 
 //--- interaction
 
-function toggleShow (event, showFunc) {
-    let cb = ui.getCheckBox(event.target);
-    if (cb) {
-        let showIt = ui.isCheckBoxSelected(cb);
-        let we = ui.getListItemOfElement(cb);
-        if (we) showFunc(we,showIt);
-    }
+function selectArea(event) {
+    selectedArea = ui.getSelectedChoiceValue(areaView);
+    updateEntryView();
+};
+
+function toggleShowArea(event) {
+    toggleShow( event, (ae,showIt) => ae.showArea(showIt));
+};
+
+function selectGridWindFields(event) {
+    selectedType = "grid";
+    updateEntryView();
 }
 
-ui.exportToMain(function toggleShowWindFieldArea(event) {
-    toggleShow( event, (we,showIt) => we.showArea(showIt));
-});
+function selectVectorWindFields(event) {
+    selectedType = "vector";
+    updateEntryView();
+}
 
-ui.exportToMain(function toggleShowWindFieldAnim(event) {
-    toggleShow( event, (we,showIt) => we.showAnim(showIt));
-});
+function selectContourWindFields(event) {
+    selectedType = "contour";
+    updateEntryView();
+}
 
-ui.exportToMain(function toggleShowWindFieldVector(event) {
-    toggleShow( event, (we,showIt) => we.showVector(showIt));
-});
+function toggleShowWindField(event) {
+    let we = ui.getListItemOfElement(event.target);
+    if (we) {
+        we.setVisible(ui.isCheckBoxSelected(event));
+        ui.updateListItem(entryView, we);
+    }
+};
 
 var userInputChange = false;
 
-ui.exportToMain(function selectWindFieldDate(event) {
-    let d = event.detail.curSelection;
-    if (d) {
-        selectedDate = d;
-        console.log("@@ selected date: ", d);
-    }
-});
 
-ui.exportToMain(function selectWindFieldEntry(event) {
-    let we = event.detail.curSelection;
-    if (we) {
-        selectedEntry = we;
-        console.log("@@ selected entry: ", we);
-    }
-});
+function selectWindFieldEntry(event) {
+    selectedEntry = event.detail.curSelection;
+}
 
-// grid animation sliders
+//--- grid animation sliders
 
 function triggerUserInputChange(windEntry, newInput) {
     if (newInput) userInputChange = true;
@@ -578,78 +549,76 @@ function triggerUserInputChange(windEntry, newInput) {
     }, 300);
 }
 
-ui.exportToMain(function windMaxParticlesChanged(event) {
+function windMaxParticlesChanged(event) {
     //console.log("max particles: " + ui.getSelectedChoiceValue(event.target));
-    let e = ui.getSelectedListItem(windView);
+    let e = ui.getSelectedListItem(entryView);
     if (e) {
         let n = ui.getSliderValue(event.target);
         e.userInput.particlesTextureSize = n;
         e.userInput.maxParticles = n * n;
         triggerUserInputChange(e, true);
     }
-});
+}
 
-ui.exportToMain(function windFadeOpacityChanged(event) {
+function windFadeOpacityChanged(event) {
     //console.log("fade opacity: " + +ui.getSliderValue(event.target));
-    let e = ui.getSelectedListItem(windView);
+    let e = ui.getSelectedListItem(entryView);
     if (e) {
         e.userInput.fadeOpacity = ui.getSliderValue(event.target);
         triggerUserInputChange(e, true);
     }
-});
+}
 
-ui.exportToMain(function windSpeedChanged(event) {
+function windSpeedChanged(event) {
     //console.log("speed: " + +ui.getSliderValue(event.target));
-    let e = ui.getSelectedListItem(windView);
+    let e = ui.getSelectedListItem(entryView);
     if (e) {
         e.userInput.speedFactor = ui.getSliderValue(event.target);
         triggerUserInputChange(e, true);
     }
-});
+}
 
-ui.exportToMain(function windWidthChanged(event) {
+function windWidthChanged(event) {
     //console.log("line width: " + +ui.getSliderValue(event.target));
-    let e = ui.getSelectedListItem(windView);
+    let e = ui.getSelectedListItem(entryView);
     if (e) {
         e.userInput.lineWidth = ui.getSliderValue(event.target);
         triggerUserInputChange(e, true);
     }
-});
+}
 
-ui.exportToMain(function windHeightChanged(event) {
+function windHeightChanged(event) {
     //console.log("height: " + +ui.getSliderValue(event.target));
-    let e = ui.getSelectedListItem(windView);
+    let e = ui.getSelectedListItem(entryView);
     if (e) {
         e.userInput.particleHeight = ui.getSliderValue(event.target);
         triggerUserInputChange(e, true);
     }
-});
+}
 
-ui.exportToMain(function windDropRateChanged(event) {
+function windDropRateChanged(event) {
     //console.log("drop rate: " + +ui.getSliderValue(event.target));
-    let e = ui.getSelectedListItem(windView);
+    let e = ui.getSelectedListItem(entryView);
     if (e) {
         e.userInput.dropRate = ui.getSliderValue(event.target);
         triggerUserInputChange(e, true);
     }
-});
+}
 
-ui.exportToMain(function windDropRateBumpChanged(event) {
+function windDropRateBumpChanged(event) {
     //console.log("drop rate bump: " + +ui.getSliderValue(event.target));
-    let e = ui.getSelectedListItem(windView);
+    let e = ui.getSelectedListItem(entryView);
     if (e) {
         e.userInput.dropRateBump = ui.getSliderValue(event.target);
         triggerUserInputChange(e, true);
     }
-});
+}
 
-ui.exportToMain(function setLastWindFieldDate(event) {
-    console.log("TBD: lastWindFieldDate");
-});
+//--- vector parameters
 
-ui.exportToMain(function setNextWindFieldDate(event) {
-    console.log("TBD: nextWindFieldDate");
-});
+function gridPointSizeChanged(event) {
+    console.log("not yet.");
+}
 
 //--- viewer callbacks
 
@@ -684,7 +653,7 @@ function setupEventListeners() {
 
     uiCesium.viewer.camera.moveEnd.addEventListener(() => {
         updateViewerParameters();
-        windEntries.forEach(e => e.applyViewerParameters());
+        //windEntries.forEach(e => e.applyViewerParameters());
         //scene.primitives.show = true;
     });
 
@@ -693,12 +662,12 @@ function setupEventListeners() {
     window.addEventListener("resize", () => {
         resized = true;
         //scene.primitives.show = false;
-        windEntries.forEach(e => e.removePrimitives());
+        //windEntries.forEach(e => e.removePrimitives());
     });
 
     scene.preRender.addEventListener(() => {
         if (resized) {
-            windEntries.forEach(e => e.updatePrimitives());
+            //windEntries.forEach(e => e.updatePrimitives());
             resized = false;
             //scene.primitives.show = true;
         }
@@ -733,11 +702,11 @@ function resumeRequestRenderMode (){
 
 
 function getColor(spd) {
-    if (spd < 4.6) return Cesium.Color.BLUE;
-    if (spd < 9.19) return Cesium.Color.GREEN;
-    if (spd < 13.79) return Cesium.Color.YELLOW;
-    if (spd < 18.39) return Cesium.Color.ORANGE;
-    return Cesium.Color.RED;
+    if (spd < 4.6) return Cesium.Color.WHITE;
+    if (spd < 9.19) return Cesium.Color.LIGHTPINK;
+    if (spd < 13.79) return Cesium.Color.HOTPINK;
+    if (spd < 18.39) return Cesium.Color.FUCHSIA;
+    return Cesium.Color.DEEPPINK;
 }
 
 async function loadCsvVector(windEntry) {

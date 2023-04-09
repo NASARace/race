@@ -271,4 +271,10 @@ export class ParticlesRendering {
             })
         };
     }
+
+    forEachPrimitive(func) {
+        func(this.primitives.segments);
+        func(this.primitives.trails);
+        func(this.primitives.screen);
+    }
 }

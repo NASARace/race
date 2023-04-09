@@ -729,3 +729,12 @@ export function compare (a,b) {
     return (a < b) ? -1 : (a == b) ? 0 : 1;
 }
 
+//--- filters
+
+export function filterMapValues (map,func) {
+    let list = [];
+    for (const e of map.values()) {
+        if (func(e)) list.push(e);
+    }
+    return list;
+}

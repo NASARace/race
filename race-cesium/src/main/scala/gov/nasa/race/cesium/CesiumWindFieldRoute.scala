@@ -26,14 +26,10 @@ import com.typesafe.config.Config
 import gov.nasa.race.core.{BusEvent, ParentActor, PipedRaceDataClient}
 import gov.nasa.race.earth.WindFieldAvailable
 import gov.nasa.race.http._
-import gov.nasa.race.ifSome
 import gov.nasa.race.ui._
-import gov.nasa.race.uom.DateTime
-import gov.nasa.race.util.FileUtils
 import scalatags.Text
 
-import java.io.File
-import scala.collection.mutable.{ArrayBuffer, SortedMap}
+import scala.collection.mutable
 
 
 /**
@@ -51,16 +47,12 @@ import scala.collection.mutable.{ArrayBuffer, SortedMap}
 trait CesiumWindFieldRoute extends CesiumRoute with FileServerRoute with PushWSRaceRoute with CachedFileAssetRoute with PipedRaceDataClient {
 
   case class WindField (wfa: WindFieldAvailable) {
-    val ext = FileUtils.getGzExtension( wfa.file)
-    val urlName = f"${wfa.area}-${wfa.wfType}-${wfa.forecastDate.format_yyyyMMdd}-t${wfa.forecastDate.getHour}%02dz.$ext"
+    // this serves as the resource name and also a unique key (note we don't include baseDate as newer entries should take precedence)
+    val urlName = f"${wfa.area}-${wfa.wfSource}-${wfa.wfType}-${wfa.forecastDate.format_yyyyMMdd}-t${wfa.forecastDate.getHour}%02dz"
     val json = wfa.toJsonWithUrl(s"wind-data/$urlName")
   }
 
-  // we only keep the newest wf for each area/forecast time
-  case class WindFieldAreas(date: DateTime, areas: SortedMap[String,WindField])
-
-  protected val windFields: ArrayBuffer[WindFieldAreas] = ArrayBuffer.empty// sorted by forecastDate
-  protected var urlMap: Map[String,File] = Map.empty // url-filename -> file. watch out - updated from receiveData and accessed from route
+  protected val windFields: mutable.LinkedHashMap[String,WindField] = mutable.LinkedHashMap.empty // urlName -> WindField
 
   //--- obtaining and updating wind fields
 
@@ -68,38 +60,14 @@ trait CesiumWindFieldRoute extends CesiumRoute with FileServerRoute with PushWSR
 
   def receiveWindFieldData: Receive = {
     case BusEvent(_,wfa:WindFieldAvailable,_) =>
-      ifSome(addWindField(wfa)) { wf=>
-        urlMap = urlMap + (wf.urlName -> wfa.file)
-        //push( TextMessage(wf.json))
-        println(s"@@@ ${wf.json}")
-      }
+      val wf = WindField(wfa)
+      addWindField(wf)
+      push( TextMessage(wf.json))
   }
 
-  def addWindField(wfa:WindFieldAvailable): Option[WindField] = {
-    val date = wfa.forecastDate
-    var i = 0
-    while (i < windFields.length) {
-      val e = windFields(i)
-      if (e.date == date) {
-        ifSome(e.areas.get(wfa.area)) { prevWf=>
-          if (prevWf.wfa.baseDate > wfa.baseDate) return None // we already had a newer one
-        }
-        val wf = WindField(wfa)
-        e.areas += (wfa.area -> wf) // replace or add
-        return Some(wf)
-
-      } else if (e.date > date) {
-        val wf = WindField(wfa)
-        windFields.insert(i, WindFieldAreas(date, SortedMap( (wfa.area -> wf))))
-        return Some(wf)
-      }
-      i += 1
-    }
-
-    val wf = WindField(wfa)
-    windFields += WindFieldAreas(date, SortedMap( (wfa.area -> wf)))
-    Some(wf)
-  }
+  // WATCH OUT - these can be used concurrently so we have to sync
+  def addWindField(wf: WindField): Unit = synchronized { windFields += (wf.urlName -> wf) }
+  def currentWindFieldValues: Seq[WindField] = synchronized { windFields.values.toSeq }
 
   //--- websocket
 
@@ -108,22 +76,20 @@ trait CesiumWindFieldRoute extends CesiumRoute with FileServerRoute with PushWSR
     initializeWindConnection(ctx,queue)
   }
 
-  def initializeWindConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
+  def initializeWindConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = synchronized {
     val remoteAddr = ctx.remoteAddress
-    windFields.foreach{ we=>
-      we.areas.foreach( e=> pushTo( remoteAddr, queue, TextMessage(e._2.json)))
-    }
+    currentWindFieldValues.foreach( wf=> pushTo(remoteAddr, queue, TextMessage(wf.json)))
   }
 
   //--- routes
 
   def windRoute: Route = {
     get {
-        pathPrefix("wind-data") {
+        pathPrefix("wind-data" ~ Slash) {
           extractUnmatchedPath { p =>
             val pathName = p.toString()
-            urlMap.get(pathName) match {
-              case Some(file) => completeWithFileContent(file)
+            windFields.get(pathName) match {
+              case Some(wf) => completeWithFileContent(wf.wfa.file)
               case None => complete(StatusCodes.NotFound, pathName)
             }
           }

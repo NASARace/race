@@ -42,8 +42,8 @@ export class ParticleSystem {
     }
 
     forEachPrimitive(func) {
-        for (let p of this.particlesComputing.primitives) func(p);
-        for (let p of this.particlesRendering.primitives) func(p);
+        this.particlesComputing.forEachPrimitive(func);
+        this.particlesRendering.forEachPrimitive(func);
     }
 
     release() {

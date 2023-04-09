@@ -39,7 +39,7 @@ import java.util.TimeZone
 object CesiumRoute {
   val terrainPrefix = "terrain"
 
-  val defaultCesiumJsVersion = "1.103" // TODO can't move past 1.101 yet since wind shaders are not WebGL2 compatible
+  val defaultCesiumJsVersion = "1.104" // TODO can't move past 1.101 yet since wind shaders are not WebGL2 compatible
 
   val cesiumPathMatcher = PathMatchers.separateOnSlashes("Build/Cesium/")
   def cesiumJsUrl (version: String): String = {
@@ -199,7 +199,7 @@ export const cesium = {
   accessToken: '$accessToken',
   requestRenderMode: $requestRenderMode,
   targetFrameRate: $targetFrameRate,
-  terrainProvider: new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'}),
+  //terrainProvider: new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'}),
   cameraPositions: [\n    $places\n  ],
   color: ${cesiumColor(config, "color", "red")},
   outlineColor: ${cesiumColor(config, "outline-color", "yellow")},

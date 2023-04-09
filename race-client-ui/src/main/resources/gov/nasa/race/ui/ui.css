@@ -979,15 +979,27 @@ div.spacer {
     flex-grow: 10;
 }
 
-div.align_left {
+div.ui_container.column.align_left {
     align-items: flex-start;
 }
 
-div.align_center {
+div.ui_container.column.align_center {
     align-items: center;
 }
 
-div.align_right {
+div.ui_container.column.align_right {
+    align-items: flex-end;
+}
+
+div.ui_container.row.align_top {
+    align-items: flex-start;
+}
+
+div.ui_container.row.align_center {
+    align-items: center;
+}
+
+div.ui_container.row.align_bottom {
     align-items: flex-end;
 }
 

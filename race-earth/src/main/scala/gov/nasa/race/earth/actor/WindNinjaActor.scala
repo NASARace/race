@@ -18,20 +18,16 @@ package gov.nasa.race.earth.actor
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
-import gov.nasa.race.common.{ActorDataAcquisitionThread, DataAcquisitionThread, ExternalProc}
+import gov.nasa.race.common.{ActorDataAcquisitionThread, ExternalProc}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.earth.{VegetationType, WindFieldAvailable, WindNinjaWxModelResults, WindNinjaWxModelSingleRun}
 import gov.nasa.race.geo.BoundingBoxGeoFilter
-import gov.nasa.race.uom.Length
-import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.util.FileUtils
-import gov.nasa.race.{Failure, SuccessValue, allDefined, earth, ifSome}
+import gov.nasa.race.{Failure, SuccessValue, allDefined, ifSome}
 
 import java.io.File
 import java.util.concurrent.{ArrayBlockingQueue, BlockingQueue}
-import java.util.concurrent.atomic.AtomicBoolean
-import scala.collection.mutable.Queue
 
 object WindNinjaArea {
   def fromConfig(conf: Config): WindNinjaArea = {
@@ -70,7 +66,7 @@ class WindNinjaThread ( client: ActorRef,
       val bd = hrrr.baseDate
       val fd = hrrr.forecastDate
       val hDiff = fd.timeSince(bd).toFullHours
-      val outputFile = new File(outputDir, f"wind-grid-$area-${bd.format_yyyyMMdd}-t${bd.getHour}%02dz-${hDiff}%02d.csv.gz")
+      val outputFile = new File(outputDir, f"wn-hrrr-grid-$area-${bd.format_yyyyMMdd}-t${bd.getHour}%02dz-${hDiff}%02d.csv.gz")
 
       huvwGridCmd.reset()
         .setInputFile( wnResult.huvw)
@@ -83,7 +79,7 @@ class WindNinjaThread ( client: ActorRef,
       val bd = hrrr.baseDate
       val fd = hrrr.forecastDate
       val hDiff = fd.timeSince(bd).toFullHours
-      val outputFile = new File(outputDir, f"wind-vector-$area-${bd.format_yyyyMMdd}-t${bd.getHour}%02dz-${hDiff}%02d.csv.gz")
+      val outputFile = new File(outputDir, f"wn-hrrr-vector-$area-${bd.format_yyyyMMdd}-t${bd.getHour}%02dz-${hDiff}%02d.csv.gz")
 
       huvwVectorCmd.reset()
         .setInputFile( wnResult.huvw)
@@ -103,12 +99,12 @@ class WindNinjaThread ( client: ActorRef,
       case SuccessValue(wnResult) =>
         ifSome(createGridFile(area.name, hrrr, wnResult)) { file =>
           info(s"publishing ${huvwGridCmd.wfType} file $file")
-          sendToClient( WindFieldAvailable(area.name, area.bounds, huvwGridCmd.wfType, huvwGridCmd.wfSrs, hrrr.baseDate, hrrr.forecastDate, file))
+          sendToClient( WindFieldAvailable(area.name, area.bounds, huvwGridCmd.wfType, huvwGridCmd.wfSrs, "hrrr", hrrr.baseDate, hrrr.forecastDate, file))
         }
 
         ifSome(createVectorFile(area.name, hrrr, wnResult)) { file =>
           info(s"publishing ${huvwVectorCmd.wfType} file $file")
-          sendToClient( WindFieldAvailable(area.name, area.bounds, huvwVectorCmd.wfType, huvwVectorCmd.wfSrs, hrrr.baseDate, hrrr.forecastDate, file))
+          sendToClient( WindFieldAvailable(area.name, area.bounds, huvwVectorCmd.wfType, huvwVectorCmd.wfSrs, "hrrr", hrrr.baseDate, hrrr.forecastDate, file))
         }
 
       case Failure(msg) =>

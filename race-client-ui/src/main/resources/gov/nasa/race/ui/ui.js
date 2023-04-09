@@ -107,7 +107,6 @@ var windows = [];
 export function Window (title, eid, icon) {
     return function (...children) { 
         let e = _createElement("DIV", "ui_window");
-        e._uiInitialize = initializeWindow;
         
         e.setAttribute("data-title", title);
         if (eid) e.setAttribute("id", eid);
@@ -389,39 +388,36 @@ export function getWindow(o) {
 //--- tabbed containers
 
 function initializeTabbedContainer (e) {
-    if (e._uiInitialize) {
-        let thdr = undefined;
-        let showTab = undefined;
-        let showTc = undefined;
-        let fit = e.classList.contains("fit");
+    let thdr = undefined;
+    let showTab = undefined;
+    let showTc = undefined;
+    let fit = e.classList.contains("fit");
 
-        for (let tc of e.children) { // those are the tab_containers
-            let show = tc.classList.contains("show");
-            if (fit) tc.classList.add("fit");
+    for (let tc of e.children) { // those are the tab_containers
+        let show = tc.classList.contains("show");
+        if (fit) tc.classList.add("fit");
 
-            let tab = _createElement("DIV","ui_tab");
-            tab._uiContainer = tc;
-            tab.innerText = tc.dataset.label;
-            tc._uiTab = tab;
-            tab.addEventListener("click", clickTab);
+        let tab = _createElement("DIV","ui_tab");
+        tab._uiContainer = tc;
+        tab.innerText = tc.dataset.label;
+        tc._uiTab = tab;
+        tab.addEventListener("click", clickTab);
 
-            if (show) { // last one wins
-                if (showTab) showTab.classList.remove("show");
-                if (showTc) showTc.classList.remove("show");
-                showTab = tab;
-                showTc = tc;
-                tab.classList.add("show");
-                e._uiShowing = tc;
-            }
-
-            if (!thdr) thdr = _createElement("DIV", "ui_tab_header");
-            thdr.appendChild(tab);
+        if (show) { // last one wins
+            if (showTab) showTab.classList.remove("show");
+            if (showTc) showTc.classList.remove("show");
+            showTab = tab;
+            showTc = tc;
+            tab.classList.add("show");
+            e._uiShowing = tc;
         }
 
-        if (thdr) e.insertBefore(thdr, e.firstChild);
-
-        e._uiInitialize = null;
+        if (!thdr) thdr = _createElement("DIV", "ui_tab_header");
+        thdr.appendChild(tab);
     }
+
+    if (thdr) e.insertBefore(thdr, e.firstChild);
+
     return e;
 }
 
@@ -446,7 +442,6 @@ function clickTab(event) {
 
 function genContainer (containerCls, align, eid, title, isBordered, children) {
     let e = _createElement("DIV", "ui_container");
-    e._uiInitialize = initializeContainer; // to be called when containing window is initialized
 
     e.classList.add(containerCls);
     if (title) e.classList.add("titled");
@@ -492,7 +487,6 @@ function initializeContainer (e) {
 export function Panel (title, isExpanded=false, eid=null) {
     return function (...children) {
         let e = _createElement("DIV", "ui_panel");
-        e._uiInitialize = initializePanel;
 
         e.classList.add(isExpanded ? "expanded" : "collapsed");
         
@@ -566,8 +560,9 @@ export function Icon (src, action, eid=null) {
     let e = _createElement( "DIV", "ui_icon");
 
     e.setAttribute("data-src", src);
-    e.setAttribute("onclick", action);
     if (eid) e.setAttribute("id", eid);
+
+    if (action instanceof Function) e.addEventListener("click", action); else e.onclick = action;
 
     initializeIcon(e);
     return e;
@@ -1076,11 +1071,10 @@ const sliderResizeObserver = new ResizeObserver(entries => {
 
 export function Slider (label, eid, changeAction) {
     let e = _createElement( "DIV", "ui_slider");
-    e._uiInitialize = initializeSlider;
 
     if (eid) e.setAttribute("data-id", eid);
     if (label) e.setAttribute("data-label", label);
-    if (changeAction) e.setAttribute("onchange", changeAction);
+    if (changeAction instanceof Function) e.addEventListener("change", changeAction); else e.onchange = changeAction;
 
     return e;
 }
@@ -1307,6 +1301,16 @@ export function getSlider(o) {
 
 //--- choices
 
+export function Choice (label,eid,changeAction) {
+    let e = _createElement("DIV", "ui_choice");
+
+    e.setAttribute("data-label", label);
+    if (eid) e.setAttribute("data-id", eid);
+    if (changeAction instanceof Function) e.addEventListener("change", changeAction); else e.onchange= changeAction;
+
+    return e;
+}
+
 function initializeChoice (e) {
     if (e.tagName == "DIV") {
         let id = e.dataset.id;
@@ -1424,15 +1428,14 @@ export function getChoice(o) { // TODO - do we really want the ui_choice_value?
 
 //--- checkboxes
 
-export function CheckBox (label, action, eid, isSelected) {
+export function CheckBox (label, action, eid=null, isSelected=false) {
     let e = _createElement("DIV", "ui_checkbox");
-    e._uiInitialize = initializeCheckBox;
 
     if (isSelected) _addClass(e, "checked");
 
     e.setAttribute("data-label", label);
-    if (action) e.onclick = action;
     if (eid) e.setAttribute("id", eid);
+    if (action instanceof Function) e.addEventListener("click", action); else e.onclick = action;
 
     return e;
 }
@@ -1527,11 +1530,13 @@ export function isCheckBoxSelected(o) {
 
 //--- radios
 
-export function Radio (label,action,eid=null) {
+export function Radio (label,action,eid=null, isSelected=false) {
     let e = _createElement("DIV", "ui_radio");
+    if (isSelected) _addClass(e, "selected");
+
     e.setAttribute("data-label", label);
     if (eid) e.setAttribute("id", eid);
-    if (action) e.onclick = action;
+    if (action instanceof Function) e.addEventListener("click", action); else e.onclick = action;
     return e;
 }
 
@@ -1739,15 +1744,16 @@ export function setKvList (o, kvList, createValueElement = undefined) {
 
 function genList (subCls, eid, maxRows, selectAction, clickAction, contextMenuAction, dblClickAction) {
     let e = _createElement("DIV", "ui_list");
-    e._uiInitialize = initializeList;
 
     if (subCls) e.classList.add(subCls);
     if (eid) e.setAttribute("id", eid);
     e.setAttribute("data-rows", maxRows.toString);
+
     if (selectAction) e.setAttribute("data-onselect", selectAction);
-    if (clickAction) e.setAttribute("onclick", clickAction);
-    if (contextMenuAction) e.setAttribute("oncontextmenu", contextMenuAction);
-    if (dblClickAction) e.setAttribute( "ondblclick", dblClickAction);
+
+    if (clickAction instanceof Function) e.addEventListener("click",clickAction); else  e.onclick= clickAction;
+    if (contextMenuAction instanceof Function) e.addEventListener("contextmenu",contextMenuAction); else e.oncontextmenu= contextMenuAction;
+    if (dblClickAction instanceof Function) e.addEventListener("dblclick", dblClickAction); else e.ondblclick= dblClickAction;
 
     return e;
 }
@@ -1784,8 +1790,13 @@ function initializeList (e) {
 
     let selectAction = _dataAttrValue(e, "onselect"); // single click or programmatic
     if (selectAction) {
-        e.addEventListener("selectionChanged", Function("event", selectAction));
-        e._uiSelectAction = selectAction;
+        if (selectAction instanceof Function) {
+            e.addEventListener("selectionChanged", selectAction);
+            e._uiSelectAction = selectAction;
+        } else {
+            e._uiSelectAction = Function("event", selectAction);
+            e.addEventListener("selectionChanged", e._uiSelectAction);
+        }
     }
 
     e.addEventListener("keydown", listKeyDownHandler);

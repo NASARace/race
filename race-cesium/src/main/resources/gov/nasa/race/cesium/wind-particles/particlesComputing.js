@@ -194,4 +194,9 @@ export class ParticlesComputing {
         }
     }
 
+    forEachPrimitive(func) {
+        func(this.primitives.calculateSpeed);
+        func(this.primitives.updatePosition);
+        func(this.primitives.postProcessingPosition);
+    }
 }

@@ -435,6 +435,13 @@ export function isRequestRenderMode() {
     return requestRenderMode;
 }
 
+export function toggleRequestRenderMode() {
+    requestRenderMode = !requestRenderMode;
+    viewer.scene.requestRenderMode = requestRenderMode;
+    ui.setCheckBox("view.rm", requestRenderMode);
+}
+ui.exportToMain(toggleRequestRenderMode);
+
 export function requestRender() {
     if (requestRenderMode && !pendingRenderRequest) {
         pendingRenderRequest = true;
@@ -503,9 +510,30 @@ export function addPrimitive(prim) {
     viewer.scene.primitives.add(prim);
 }
 
-export function removePrimitive(prim) {
-    viewer.scene.primitives.remove(prim);
+export function addPrimitives(primitives) {
+    let pc = viewer.scene.primitives;
+    primitives.forEach( p=> pc.add(p));
+    requestRender();
 }
+
+export function showPrimitive(prim, show) {
+    prim.show = show;
+    requestRender();
+}
+export function showPrimitives(primitives, show) {
+    primitives.forEach( p=> p.show = show);
+    requestRender();
+}
+
+export function removePrimitive(prim) {
+    viewer.scene.primitives.remove(prim); // watch out - this destroys prim
+}
+export function removePrimitives(primitives) {
+    let pc = viewer.scene.primitives;
+    primitives.forEach( p=> pc.remove(p));
+    requestRender();
+}
+
 
 export function clearSelectedEntity() {
     viewer.selectedEntity = null;
@@ -738,10 +766,6 @@ export function toggleFullScreen(event) {
 }
 ui.exportToMain(toggleFullScreen);
 
-ui.exportToMain(function toggleRequestRenderMode() {
-    requestRenderMode = !requestRenderMode;
-    viewer.scene.requestRenderMode = requestRenderMode;
-});
 
 ui.exportToMain(function setFrameRate(event) {
     let v = ui.getSliderValue(event.target);

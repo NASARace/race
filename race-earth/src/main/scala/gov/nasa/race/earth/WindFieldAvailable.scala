@@ -30,6 +30,7 @@ case class WindFieldAvailable ( area: String,                   // name of the a
                                 bounds: BoundingBoxGeoFilter,   // geographic boundaries
                                 wfType: String,                 // wind field type (vector, grid, contour,.. - (used by client)
                                 wfSrs: String,                  // spec of spatial reference system
+                                wfSource: String,               // hrrr or station
                                 baseDate: DateTime,             // time on which this forecast is based
                                 forecastDate: DateTime,         // time this forecast is for
                                 file: File                      // file that holds the data
@@ -38,6 +39,6 @@ case class WindFieldAvailable ( area: String,                   // name of the a
 
 
   def toJsonWithUrl (url: String): String = {
-    s"""{"windField":{"area":"$area","bounds":${bounds.toJson2D},"forecastDate":${forecastDate.toEpochMillis},"baseDate":${baseDate.toEpochMillis},"wfType":"$wfType","wfSrs":"$wfSrs","url":"$url"}}"""
+    s"""{"windField":{"area":"$area","bounds":${bounds.toJson2D},"forecastDate":${forecastDate.toEpochMillis},"baseDate":${baseDate.toEpochMillis},"wfType":"$wfType","wfSrs":"$wfSrs","wfSource":"$wfSource","url":"$url"}}"""
   }
 }
