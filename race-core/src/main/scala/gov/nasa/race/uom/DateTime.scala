@@ -471,6 +471,15 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
     (zdt.getYear, zdt.getMonthValue, zdt.getDayOfMonth, zdt.getHour, getMinute, getSecond, getMillisecond)
   }
 
+  def getYMDH: (Int,Int,Int,Int) = {
+    val zdt = toZonedDateTime
+    (zdt.getYear, zdt.getMonthValue, zdt.getDayOfMonth, zdt.getHour)
+  }
+  def getYMDHm: (Int,Int,Int,Int,Int) = {
+    val zdt = toZonedDateTime
+    (zdt.getYear, zdt.getMonthValue, zdt.getDayOfMonth, zdt.getHour, zdt.getMinute)
+  }
+
   //--- these refer to UTC
   @inline def getHour: Int = ((millis % Time.MillisInDay) / Time.MillisInHour).toInt
   @inline def getHour (zoneId: ZoneId): Int = toZonedDateTime(zoneId).getHour

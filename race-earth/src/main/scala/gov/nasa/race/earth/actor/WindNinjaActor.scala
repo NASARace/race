@@ -23,6 +23,8 @@ import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.earth.{VegetationType, WindFieldAvailable, WindNinjaWxModelResults, WindNinjaWxModelSingleRun}
 import gov.nasa.race.geo.BoundingBoxGeoFilter
+import gov.nasa.race.uom.Length
+import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.util.FileUtils
 import gov.nasa.race.{Failure, SuccessValue, allDefined, ifSome}
 
@@ -35,10 +37,11 @@ object WindNinjaArea {
     val bounds =  BoundingBoxGeoFilter.fromConfig( conf.getConfig("bounds"))
     val demFile: File = conf.getNonEmptyFile("dem-file")
     val vegetationType: VegetationType = VegetationType.of(conf.getString("vegetation-type")).get // should be computed
-    WindNinjaArea(name,bounds,demFile,vegetationType)
+    val meshResolution: Length = conf.getLengthOrElse("mesh-resolution", Meters(250))
+    WindNinjaArea(name,bounds,demFile,vegetationType,meshResolution)
   }
 }
-case class WindNinjaArea (name: String, bounds: BoundingBoxGeoFilter, demFile: File, vegetationType: VegetationType)
+case class WindNinjaArea (name: String, bounds: BoundingBoxGeoFilter, demFile: File, vegetationType: VegetationType, meshResolution: Length)
 
 /**
  * background thread to run external commands on HrrrFileAvailable/Area queue entries
@@ -91,6 +94,7 @@ class WindNinjaThread ( client: ActorRef,
     windNinjaCmd.reset()
       .setDemFile(area.demFile)
       .setVegetationType(area.vegetationType)
+      .setMeshResolution(area.meshResolution)
       .setHrrrForecast(hrrr.file, hrrr.forecastDate)
       .ignoreConsoleOutput()
 

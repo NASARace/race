@@ -17,6 +17,7 @@
 package gov.nasa.race.common
 
 import java.nio.ByteBuffer
+import scala.collection.mutable.ArrayBuffer
 
 
 class CsvParseException (msg: String) extends RuntimeException(msg)
@@ -51,6 +52,8 @@ trait CsvPullParser {
 
   def hasMoreData: Boolean = idx < limit
 
+  def getIndex: Int = idx
+
   //--- the public methods
 
   // idx is on start of first value, the preceding ',', or on EOL
@@ -63,7 +66,7 @@ trait CsvPullParser {
 
     if (i >= limit || isRecordSeparator(data(i))) return false
 
-    if (data(i) == ',' && nValues > 0) i += 1
+    if (data(i) == ',' && nValues > 0) i += 1 // beware of lines starting with ',' - has to produce a value
 
     if (data(i) == '"') {
       iStart = i+1
@@ -102,12 +105,20 @@ trait CsvPullParser {
       } else {
         i = skipToSeparator(i)
       }
+      nValues += 1
       n += 1
     }
     idx = i
   }
 
   @inline final def parseNextNonEmptyValue(): Boolean = parseNextValue() && value.nonEmpty
+
+  def readAllValues(): Array[String] = {
+    val a = ArrayBuffer.empty[String]
+    while (parseNextValue()) a += value.toString
+    skipToNextRecord()
+    a.toArray
+  }
 
   // note data(idx) is the separator, i.e. callers might still have to advance
   def skipToEndOfRecord(): Unit = {
@@ -137,6 +148,14 @@ trait CsvPullParser {
   }
 
   @inline def skipLine(): Boolean = skipRecordSeparator()
+
+  def nextLine(): Option[String] = {
+    val i0 = idx
+    while (idx < limit && !isRecordSeparator(data(idx))) idx +=1
+    val i1 = idx
+    skipRecordSeparator()
+    if (i1 > i0) Some(new String(data,i0,i1-i0)) else None
+  }
 
   def skipToNextRecord(): Boolean = {
     nValues = 0
@@ -261,3 +280,4 @@ trait Utf8CsvPullParser extends CsvPullParser {
   def initialize (bb: ByteBuffer): Boolean = initialize( bb.array(), bb.limit(), bb.position())
 }
 
+class ByteCsvPullParser extends Utf8CsvPullParser

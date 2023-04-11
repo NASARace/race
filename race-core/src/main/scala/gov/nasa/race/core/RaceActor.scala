@@ -461,6 +461,10 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
     scheduler.scheduleWithFixedDelay(0.seconds, interval, self, msg)
   }
 
+  def scheduleRecurring (delay: FiniteDuration, interval: FiniteDuration, msg: Any) : Cancellable = {
+    scheduler.scheduleWithFixedDelay(delay, interval, self, msg)
+  }
+
   def scheduleOnce(delay: FiniteDuration, msg: Any): Cancellable = scheduler.scheduleOnce(delay,self,msg)
 
   /**
