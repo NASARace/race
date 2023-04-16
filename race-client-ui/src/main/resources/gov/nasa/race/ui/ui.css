@@ -357,6 +357,7 @@ input.ui_field {
     width: var(--field-value-width);
     height: var(--input-height);
     text-align: left;
+    vertical-align: middle;
     font: var(--font);
 }
 

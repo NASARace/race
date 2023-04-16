@@ -270,6 +270,8 @@ class DefaultImageryProvider (val config: Config) extends CesiumImageryProvider 
   def appendJs (sb: StringBuilder): Unit = sb.append("null") // nothing to instantiate
 }
 
+// TODO - these are deprecated and have to use a .fromUrl() promise - we have to move this to module top level so that we can await
+
 class ArcGisMapServerImageryProvider (val config: Config) extends CesiumImageryProvider {
   def appendJs (sb: StringBuilder): Unit = {
     sb.append("new Cesium.ArcGisMapServerImageryProvider({")

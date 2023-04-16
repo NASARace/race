@@ -97,7 +97,7 @@ package object ui {
   }
 
   def uiNumField (label: String, eid: UiID, width: String=NoWidth, labelWidth: String=NoWidth): Text.TypedTag[String] = {
-    var mods = List(cls:="ui_field num", data("id"):=eid, data("label"):= label)
+    var mods = List(cls:="ui_field num", data("id"):=eid, data("label"):= label, data("type"):="text")
     if (width.nonEmpty) mods = (data("width"):=width) :: mods
     if (labelWidth.nonEmpty) mods = (data("label_width"):=labelWidth) :: mods
     div(mods: _*)
@@ -105,7 +105,7 @@ package object ui {
 
   def uiField (label: String, eid: UiID, isFixed: Boolean = false, width: String=NoWidth, labelWidth: String=NoWidth): Text.TypedTag[String] = {
     val classes = if (isFixed) "ui_field fixed" else "ui_field"
-    var mods = List(cls:=classes, data("id"):=eid, data("label"):= label)
+    var mods = List(cls:=classes, data("id"):=eid, data("label"):= label, data("type"):="text")
     if (width.nonEmpty) mods = (data("width"):=width) :: mods
     if (labelWidth.nonEmpty) mods = (data("label_width"):=labelWidth) :: mods
     div(mods: _*)

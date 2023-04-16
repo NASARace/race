@@ -34,7 +34,8 @@ class WindNinjaPointInitActor(val config: Config) extends SubscribingRaceActor w
   override def handleMessage: Receive = handlePointInitMessage orElse super.handleMessage
 
   def handlePointInitMessage: Receive = {
-    case WxStationAvailable(wx,file,date) =>
+    case wfa: WxStationAvailable =>
+    case hfa: HrrrFileAvailable =>
   }
 
 

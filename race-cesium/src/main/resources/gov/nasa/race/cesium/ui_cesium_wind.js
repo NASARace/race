@@ -16,20 +16,28 @@ var viewerParameters = {
 var globeBoundingSphere = new Cesium.BoundingSphere(Cesium.Cartesian3.ZERO, 0.99 * 6378137.0);
 
 // those are just initial values (should come from config)
+
+
+const defaultVectorRender = config.windlayer.vectorRender;
+const defaultAnimRender = config.windlayer.animRender;
+const defaultContourRender = config.windlayer.contourRender;
+
+// todo - this should be replaced with plain animRender
 const userInputDefaults = {
-    particlesTextureSize: 32,
-    maxParticles: 32 * 32,
+    particlesTextureSize: defaultAnimRender.maxParticles,
+    maxParticles: defaultAnimRender.maxParticles * defaultAnimRender.maxParticles,
     particleHeight: 2000,
-    fadeOpacity: 0.99,
+    fadeOpacity: defaultAnimRender.fadeOpacity,
     dropRate: 0.002,
     dropRateBump: 0.01,
-    speedFactor: 0.2,
-    lineWidth: 1.5
+    speedFactor: defaultAnimRender.speed,
+    lineWidth: defaultAnimRender.width
 };
 
 const WindFieldType = {
     GRID: "grid",
     VECTOR: "vector",
+    CONTOUR: "contour"
 }
 
 const REMOTE = "";
@@ -48,8 +56,9 @@ class WindFieldEntry {
 
     // factory method
     static create (windField) {
-        if (windField.wfType == WindFieldType.GRID) return new GridFieldEntry(windField);
+        if (windField.wfType == WindFieldType.GRID) return new AnimFieldEntry(windField);
         if (windField.wfType == WindFieldType.VECTOR) return new VectorFieldEntry(windField);
+        if (windField.wfType == WindFieldType.CONTOUR) return new ContourFieldEntry(windField);
         throw "unknown windField type: " + windField.wfType;
     }
 
@@ -75,7 +84,6 @@ class WindFieldEntry {
         //--- local data
         this.status = REMOTE;
         this.show = false;
-        this.userInput = {...userInputDefaults };
         // assets (such as primitives) are subclass specific
     }
 
@@ -88,14 +96,21 @@ class WindFieldEntry {
         console.log("not yet.");
     }
 
-    // override respective methods in subclasses
+    //--- override in subclasses
     setVisible (showIt) {}
+    startViewChange() {}
+    endViewChange() {}
+    renderChanged() {}
+    updateDisplayPanel() {}
 }
 
-class GridFieldEntry extends WindFieldEntry {
+class AnimFieldEntry extends WindFieldEntry {
     constructor (windField) {
         super(windField);
         this.particleSystem = undefined; // only lives while we show the grid animation, owns a number of CustomPrimitives
+        this.render = {...defaultAnimRender};
+
+        this.userInput = {...userInputDefaults };
     }
 
     static animShowing = 0;
@@ -103,7 +118,7 @@ class GridFieldEntry extends WindFieldEntry {
     setVisible (showIt) {
         if (showIt != this.show) {
             if (showIt) {
-                GridFieldEntry.animShowing++;
+                AnimFieldEntry.animShowing++;
                 if (!this.particleSystem) {
                     this.loadParticleSystemFromUrl(); // async
                 } else {
@@ -114,11 +129,11 @@ class GridFieldEntry extends WindFieldEntry {
                 this.setStatus( SHOWING);
 
             } else {
-                GridFieldEntry.animShowing--;
+                AnimFieldEntry.animShowing--;
                 if (this.particleSystem) {
                     // TODO - do we have to stop rendering first ?
                     this.particleSystem.forEachPrimitive( p=> p.show = false);
-                    if (GridFieldEntry.animShowing == 0) {
+                    if (AnimFieldEntry.animShowing == 0) {
                         uiCesium.setRequestRenderMode(true);
                         uiCesium.requestRender();
                     }
@@ -126,6 +141,21 @@ class GridFieldEntry extends WindFieldEntry {
                 }
             }
             this.show = showIt;
+        }
+    }
+
+    startViewChange() {
+        if (this.status == SHOWING) {
+            this.particleSystem.forEachPrimitive( p=> p.show = false);
+            uiCesium.requestRender();
+        }
+    }
+
+    endViewChange() {
+        if (this.status == SHOWING) {
+            this.particleSystem.applyViewerParameters(viewerParameters);
+            this.particleSystem.forEachPrimitive( p=> p.show = true);
+            uiCesium.requestRender();
         }
     }
 
@@ -217,9 +247,9 @@ class GridFieldEntry extends WindFieldEntry {
         uiCesium.setRequestRenderMode(false);
     }
 
-    applyDisplayParameters() {
+    renderChanged() {
         if (this.particleSystem) {
-            this.particleSystem.applyUserInput(this.userInput);
+            this.particleSystem.applyUserInput(userInput);
         }
     }
 
@@ -231,28 +261,40 @@ class GridFieldEntry extends WindFieldEntry {
             this.showAnim(true);
         }
     }
+
+    updateDisplayPanel() {
+    }
 }
 
 class VectorFieldEntry extends WindFieldEntry {
     constructor (windField) {
         super(windField);
-        this.vectorPrimitives = undefined; // Cesium.Primitive instantiated when showing the static vector field
+        this.render = {...defaultVectorRender};
+
+        this.pointPrimitive = undefined; // Cesium.Primitive instantiated when showing the static vector field
+        this.linePrimitive = undefined;
     }
+
+
 
     setVisible (showIt) {
         if (showIt != this.show) {
             this.show = showIt;
             if (showIt) {
-                if (!this.vectorPrimitives) {
+                if (!this.pointPrimitive) {
                     this.loadVectorsFromUrl(); // this is async, it will set vectorPrimitives when done
                 } else {
-                    uiCesium.showPrimitives(this.vectorPrimitives, true);
+                    uiCesium.showPrimitive(this.pointPrimitive, true);
+                    uiCesium.showPrimitive(this.linePrimitive, true);
+                    uiCesium.requestRender();
                 }
                 this.setStatus( SHOWING);
 
             } else {
-                if (this.vectorPrimitives) {
-                    uiCesium.showPrimitives(this.vectorPrimitives, false);
+                if (this.pointPrimitive) {
+                    uiCesium.showPrimitive(this.pointPrimitive, false);
+                    uiCesium.showPrimitive(this.linePrimitive, false);
+                    uiCesium.requestRender();
                     this.setStatus( LOADED);
                 }
             }
@@ -261,9 +303,15 @@ class VectorFieldEntry extends WindFieldEntry {
 
     async loadVectorsFromUrl() {
         let points = new Cesium.PointPrimitiveCollection();
-        let vectors = [];
+        let vectors = []; // array of GeometryInstances
         let i = 0;
-    
+        let j = 0;
+        let render = this.render;
+
+        let dc = new Cesium.DistanceDisplayConditionGeometryInstanceAttribute(0,50000);
+        let vecAttrs = {  distanceDisplayCondition: dc };
+        let vecClrs = [render.color];
+        
         function procLine (line) {
             if (i > 1) { // vector line
                 let values = util.parseCsvValues(line);
@@ -271,24 +319,23 @@ class VectorFieldEntry extends WindFieldEntry {
                     let p0 = new Cesium.Cartesian3(values[0],values[1],values[2]);
                     let p1 = new Cesium.Cartesian3(values[3],values[4],values[5]);
     
-                    let spd = values[6];
-                    let clr = getColor(spd);
+                    //let spd = values[6];
             
                     let pp = points.add({
                         position: p0,
-                        pixelSize: 4,
-                        color: clr
+                        pixelSize: render.pointSize,
+                        color: render.color
                     });
                     pp.distanceDisplayCondition = new Cesium.DistanceDisplayCondition(0,150000);
                     // pp.scaleByDistance = new Cesium.NearFarScalar(1.5e2, 15, 8.0e6, 0.0);
-            
-                    vectors[i-2] = new Cesium.GeometryInstance({
+                                
+                    vectors[j++] = new Cesium.GeometryInstance({
                         geometry: new Cesium.PolylineGeometry({
                             positions: [p0,p1],
-                            colors: [clr],
-                            width: 1.5,
+                            colors: vecClrs,
+                            width: render.strokeWidth,
                         }),
-                        attributes: {  distanceDisplayCondition: new Cesium.DistanceDisplayConditionGeometryInstanceAttribute(0,50000) }
+                        attributes:  vecAttrs
                     });
                 }
             } else if (i > 0) { // header line (ignore)
@@ -305,20 +352,137 @@ class VectorFieldEntry extends WindFieldEntry {
         this.setStatus( LOADING);
         await util.forEachTextLine( this.url, procLine);
         console.log("loaded ", i-2, " vectors from ", this.url);
-    
-        let lines = new Cesium.Primitive({ 
-            geometryInstances: vectors, 
-            appearance: polyLineColorAppearance
-        });
 
-        this.vectorPrimitives = [points,lines];
-        uiCesium.addPrimitives(this.vectorPrimitives);
+        this.vectors = vectors;
+        this.pointPrimitive = points;
+        this.linePrimitive = this.createVectorPrimitive(vectors);
+
+        uiCesium.addPrimitive(this.pointPrimitive);
+        if (this.linePrimitive) uiCesium.addPrimitive(this.linePrimitive);
+        uiCesium.requestRender();
     }
 
-    applyDisplayParameters() {
-        if (this.vectorPrimtives) {
-            console.log("@@ not yet.");
+    createVectorPrimitive(vectors) {
+        if (this.render.strokeWidth) {
+            return new Cesium.Primitive({
+                geometryInstances: this.vectors,
+                appearance: polyLineColorAppearance,
+                releaseGeometryInstances: false
+            });
+        } else {
+            return null; // no point creating a primitive if there is nothing to render
         }
+    }
+
+    renderChanged() {
+        let render = this.render;
+        let oldLinePrimitive = this.pointPrimitive;
+        if (oldLinePrimitive) {
+            let len = oldLinePrimitive.length;
+            for (let i=0; i<len; i++) {
+                let pt = oldLinePrimitive.get(i);
+                pt.color = render.color;
+                pt.pixelSize = render.pointSize;
+            }
+        }
+
+        oldLinePrimitive = this.linePrimitive;
+        if (oldLinePrimitive) {
+            // unfortunately we cannot change display of rendered primitive GeometryInstances - we have to re-create it
+            let vectors = this.vectors;
+            vectors.forEach( gi=> gi.geometry._colors[0] = render.color );
+            this.linePrimitive = this.createVectorPrimitive(vectors);
+            uiCesium.removePrimitive(oldLinePrimitive);
+            uiCesium.addPrimitive(this.linePrimitive);
+        }
+
+        uiCesium.requestRender();
+    }
+
+    updateDisplayPanel() {
+        let render = this.render;
+        ui.setSliderValue("wind.vector.point_size", render.pointSize);
+        ui.setSliderValue("wind.vector.width", render.strokeWidth);
+        ui.setField("wind.vector.color", render.color.toCssHexString());
+    }
+}
+
+class ContourFieldEntry extends WindFieldEntry {
+    constructor (windField) {
+        super(windField);
+        this.dataSource = undefined;
+        this.render = {...defaultContourRender};
+    }
+
+    setVisible (showIt) {
+        if (showIt != this.show) {
+            this.show = showIt;
+            if (showIt) {
+                if (!this.dataSource) {
+                    this.loadContoursFromUrl(); // this is async, it will set vectorPrimitives when done
+                } else {
+                    this.dataSource.show = true;
+                    uiCesium.requestRender();
+                }
+                this.setStatus( SHOWING);
+
+            } else {
+                if (this.dataSource) {
+                    this.dataSource.show = false;
+                    uiCesium.requestRender();
+                    this.setStatus( LOADED);
+                }
+            }
+        }
+    }
+
+    async loadContoursFromUrl() {
+        let renderOpts = this.getRenderOpts();
+        let response = await fetch(this.url);
+        let data = await response.json();
+
+        Cesium.GeoJsonDataSource.load(data, renderOpts).then(  // TODO - does this support streams? 
+            ds => {
+                this.dataSource = ds;
+                this.postProcessDataSource();
+
+                uiCesium.addDataSource(ds);
+                uiCesium.requestRender();
+                //setTimeout( () => uiCesium.requestRender(), 300); // ??
+            }
+        );
+    }
+
+    getRenderOpts() {
+        return { 
+            stroke: this.render.strokeColor, 
+            strokeWidth: this.render.strokeWidth, 
+            fill: this.render.fillColors[0]
+        };
+    }
+
+    postProcessDataSource() {
+        let entities = this.dataSource.entities.values;
+        let render = this.render;
+
+        for (const e of entities) {
+            let props = e.properties;
+            if (props) {
+                let spd = this.getPropValue(props, "spd");
+                if (spd) {
+                    let i = Math.min( Math.trunc(spd / 5), render.fillColors.length-1);
+                    e.polygon.material = render.fillColors[i];
+                }
+            }
+        }
+    }
+
+    getPropValue(props,key) {
+        let p = props[key];
+        return p ? p._value : undefined;
+    }
+
+    updateDisplayPanel() {
     }
 }
 
@@ -359,7 +523,9 @@ ui.registerLoadFunction(function initialize() {
 
     areaView = ui.getChoice("wind.areas");
     entryView = initEntryView();
-    initUserInputControls();
+    initAnimDisplayControls();
+    initVectorDisplayControls();
+    initContourDisplayControls();
     selectedType = "vector";
 
     ws.addWsHandler(config.wsUrl, handleWsWindMessages);
@@ -389,17 +555,24 @@ function createWindow() {
         ),
         ui.Panel("anim display")(
             ui.ColumnContainer("align_right")(
-                ui.Slider("max particles", "wind.max_particles", windMaxParticlesChanged),
-                ui.Slider("height", "wind.height", windHeightChanged),
-                ui.Slider("fade opacity", "wind.fade_opacity", windFadeOpacityChanged),
-                ui.Slider("drop", "wind.drop", windDropRateChanged),
-                ui.Slider("drop bump", "wind.drop_bump", windDropRateBumpChanged),
-                ui.Slider("speed", "wind.speed", windSpeedChanged),
-                ui.Slider("width", "wind.width", windWidthChanged)
+                ui.Slider("max particles", "wind.anim.max_particles", windMaxParticlesChanged),
+                ui.Slider("height", "wind.anim.height", windHeightChanged),
+                ui.Slider("fade opacity", "wind.anim.fade_opacity", windFadeOpacityChanged),
+                ui.Slider("drop", "wind.anim.drop", windDropRateChanged),
+                ui.Slider("drop bump", "wind.anim.drop_bump", windDropRateBumpChanged),
+                ui.Slider("speed", "wind.anim.speed", windSpeedChanged),
+                ui.Slider("width", "wind.anim.width", windWidthChanged),
+                ui.ColorField("color", "wind.anim.color", true, animColorChanged),
             )
         ),
         ui.Panel("vector display")(
-            ui.Slider("point size", "wind.point_size", gridPointSizeChanged)
+            ui.Slider("point size", "wind.vector.point_size", vectorPointSizeChanged),
+            ui.Slider("line width", "wind.vector.width", vectorLineWidthChanged),
+            ui.ColorField("line color", "wind.vector.color", true, vectorLineColorChanged),
+
+        ),
+        ui.Panel("contour display")(
+            ui.Slider("stroke width", "wind.contour.stroke_width", contourStrokeWidthChanged)
         )
     );
 }
@@ -414,44 +587,66 @@ function initEntryView() {
             ui.listItemSpacerColumn(1),
             { name: "src", width: "4rem", attrs:[], map: e=> e.wfSource },
             ui.listItemSpacerColumn(2),
-            { name: "show", tip: "toggle wind speed contour", width: "2.1rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowWindField) },
+            { name: "show", tip: "toggle windfield visibility", width: "2.1rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowWindField) },
         ]);
     }
     return view;
 }
 
-function initUserInputControls() {
+function initAnimDisplayControls() {
     var e = undefined;
     //e = ui.getChoice("wind.max_particles");
     //ui.setChoiceItems(e, ["0", "16", "32", "64", "128", "256"], 3);
 
-    e = ui.getSlider("wind.max_particles");
+    e = ui.getSlider("wind.anim.max_particles");
     ui.setSliderRange(e, 0, 128, 16);
-    ui.setSliderValue(e, userInputDefaults.particlesTextureSize);
+    ui.setSliderValue(e, defaultAnimRender.maxParticles);
 
-    e = ui.getSlider("wind.height");
+    e = ui.getSlider("wind.anim.height");
     ui.setSliderRange(e, 0, 10000, 500);
     ui.setSliderValue(e, userInputDefaults.particleHeight);
 
-    e = ui.getSlider("wind.fade_opacity");
+    e = ui.getSlider("wind.anim.fade_opacity");
     ui.setSliderRange(e, 0.8, 1.0, 0.01, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }));
-    ui.setSliderValue(e, userInputDefaults.fadeOpacity);
+    ui.setSliderValue(e, defaultAnimRender.fadeOpacity);
 
-    e = ui.getSlider("wind.drop");
+    e = ui.getSlider("wind.anim.drop");
     ui.setSliderRange(e, 0.0, 0.01, 0.001, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 3 }));
     ui.setSliderValue(e, userInputDefaults.dropRate);
 
-    e = ui.getSlider("wind.drop_bump");
+    e = ui.getSlider("wind.anim.drop_bump");
     ui.setSliderRange(e, 0.0, 0.05, 0.005, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 3 }));
     ui.setSliderValue(e, userInputDefaults.dropRateBump);
 
-    e = ui.getSlider("wind.speed");
+    e = ui.getSlider("wind.anim.speed");
     ui.setSliderRange(e, 0.0, 0.3, 0.02, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }));
-    ui.setSliderValue(e, userInputDefaults.speedFactor);
+    ui.setSliderValue(e, defaultAnimRender.speed);
 
-    e = ui.getSlider("wind.width");
+    e = ui.getSlider("wind.anim.width");
     ui.setSliderRange(e, 0.0, 3.0, 0.5, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }));
-    ui.setSliderValue(e, userInputDefaults.lineWidth);
+    ui.setSliderValue(e, defaultAnimRender.width);
+
+    e = ui.getField("wind.anim.color");
+    ui.setField(e, defaultAnimRender.color.toCssHexString());
+}
+
+function initVectorDisplayControls() {
+    var e = undefined;
+
+    e = ui.getSlider("wind.vector.point_size");
+    ui.setSliderRange(e, 0, 8, 0.5);
+    ui.setSliderValue(e, defaultVectorRender.pointSize);
+
+    e = ui.getSlider("wind.vector.width");
+    ui.setSliderRange(e, 0, 5, 0.2);
+    ui.setSliderValue(e, defaultVectorRender.strokeWidth);
+
+    e = ui.getField("wind.vector.color");
+    ui.setField(e, defaultVectorRender.color.toCssHexString());
+}
+
+function initContourDisplayControls() {
+    var e = undefined;
 }
 
 //--- WS messages
@@ -493,6 +688,17 @@ function isSelected (we) {
     return (we.area == selectedArea.label) && (we.wfType == selectedType);
 }
 
+//--- rendering suspend/resume
+
+function startViewChange() {
+    windFieldEntries.forEach( (e,k) => e.startViewChange() );
+}
+
+function endViewChange() {
+    updateViewerParameters();
+    windFieldEntries.forEach( (e,k) => e.endViewChange() );
+}
+
 //--- interaction
 
 function selectArea(event) {
@@ -531,7 +737,42 @@ var userInputChange = false;
 
 
 function selectWindFieldEntry(event) {
-    selectedEntry = event.detail.curSelection;
+    selectedEntry = ui.getSelectedListItem(entryView);
+    if (selectedEntry) selectedEntry.updateDisplayPanel();
+}
+
+//--- vector controls
+
+function vectorPointSizeChanged(event) {
+    if (selectedEntry) {
+        let n = ui.getSliderValue(event.target);
+        selectedEntry.render.pointSize = n;
+        selectedEntry.renderChanged();
+    }
+}
+
+function vectorLineWidthChanged(event) {
+    if (selectedEntry) {
+        let n = ui.getSliderValue(event.target);
+        selectedEntry.render.strokeWidth = n;
+        selectedEntry.renderChanged();
+    }
+}
+
+function vectorLineColorChanged(event) {
+    if (selectedEntry) {
+        let clrSpec = event.target.value;
+        if (clrSpec) {
+            selectedEntry.render.color = Cesium.Color.fromCssColorString(clrSpec);
+            selectedEntry.renderChanged();
+        }
+    }
+}
+
+//--- contour controls
+
+function contourStrokeWidthChanged(event) {
+
 }
 
 //--- grid animation sliders
@@ -544,7 +785,7 @@ function triggerUserInputChange(windEntry, newInput) {
             userInputChange = false;
             triggerUserInputChange(windEntry, false);
         } else {
-            windEntry.updateUserInput();
+            windEntry.renderChanged();
         }
     }, 300);
 }
@@ -614,6 +855,10 @@ function windDropRateBumpChanged(event) {
     }
 }
 
+function animColorChanged(event) {
+
+}
+
 //--- vector parameters
 
 function gridPointSizeChanged(event) {
@@ -647,15 +892,8 @@ function updateViewerParameters() {
 function setupEventListeners() {
     let scene = uiCesium.viewer.scene;
 
-    uiCesium.viewer.camera.moveStart.addEventListener(() => {
-        //scene.primitives.show = false;
-    });
-
-    uiCesium.viewer.camera.moveEnd.addEventListener(() => {
-        updateViewerParameters();
-        //windEntries.forEach(e => e.applyViewerParameters());
-        //scene.primitives.show = true;
-    });
+    uiCesium.viewer.camera.moveStart.addEventListener(startViewChange);
+    uiCesium.viewer.camera.moveEnd.addEventListener(endViewChange);
 
     var resized = false;
 
@@ -672,11 +910,6 @@ function setupEventListeners() {
             //scene.primitives.show = true;
         }
     });
-
-    window.addEventListener('particleSystemOptionsChanged', () => {
-        //particleSystem.applyUserInput(that.panel.getUserInput());
-    });
-
 }
 
 //--- data acquisition and display
@@ -699,15 +932,6 @@ function resumeRequestRenderMode (){
 
 //--- CSV (local wind vectors)
 
-
-
-function getColor(spd) {
-    if (spd < 4.6) return Cesium.Color.WHITE;
-    if (spd < 9.19) return Cesium.Color.LIGHTPINK;
-    if (spd < 13.79) return Cesium.Color.HOTPINK;
-    if (spd < 18.39) return Cesium.Color.FUCHSIA;
-    return Cesium.Color.DEEPPINK;
-}
 
 async function loadCsvVector(windEntry) {
  

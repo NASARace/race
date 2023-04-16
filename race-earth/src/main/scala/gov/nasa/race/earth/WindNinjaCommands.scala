@@ -73,6 +73,7 @@ class WindNinjaWxModelSingleRun(val prog: File, val outputPath: File) extends Ex
   protected var ymdt = (0,0,0, 0,0,0,0)
 
   override def reset(): this.type = {
+    super.reset()
     wxModelFile = None
     forecastDate = DateTime.UndefinedDateTime
     //demFile = None
@@ -116,7 +117,7 @@ class WindNinjaWxModelSingleRun(val prog: File, val outputPath: File) extends Ex
   //---
 
   override def buildCommand: String = {
-    args = Seq(
+    args ++= Seq(
       s"--output_path ${outputPath.getPath}",
 
       s"--num_threads 1",

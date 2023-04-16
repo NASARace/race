@@ -17,20 +17,53 @@
 package gov.nasa.race.cesium
 
 import akka.actor.Actor.Receive
-import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.model.{StatusCodes, Uri}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
+import gov.nasa.race.config.ConfigUtils.ConfigWrapper
+import gov.nasa.race.config.NoConfig
 import gov.nasa.race.core.{BusEvent, ParentActor, PipedRaceDataClient}
 import gov.nasa.race.earth.WindFieldAvailable
 import gov.nasa.race.http._
 import gov.nasa.race.ui._
+import gov.nasa.race.util.StringUtils
 import scalatags.Text
 
+import java.net.InetSocketAddress
 import scala.collection.mutable
 
+class DefaultVectorRendering (conf: Config) {
+  val pointSize = conf.getDoubleOrElse("point-size", 3.0)
+  val width = conf.getDoubleOrElse("stroke-width", 1.5)
+  val color = conf.getStringOrElse( "color", "green")
+
+  def toJsObject = s"""{ pointSize: $pointSize, strokeWidth: $width, color: Cesium.Color.fromCssColorString('$color') }"""
+}
+
+class DefaultAnimRendering (conf: Config) {
+  val maxParticles = conf.getIntOrElse("max-particles", 64)
+  val width = conf.getDoubleOrElse("width", 1.5)
+  val color = conf.getStringOrElse( "color", "cyan")
+  val speed = conf.getDoubleOrElse("speed", 0.2)
+  val fadeOpacity = conf.getDoubleOrElse("fade-opacity", 0.99)
+
+  def toJsObject = s"""{ maxParticles: $maxParticles, width: $width, color: Cesium.Color.fromCssColorString('$color'), speed: $speed, fadeOpacity: $fadeOpacity }"""
+}
+
+class DefaultContourRendering (conf: Config) {
+  val strokeWidth = conf.getDoubleOrElse("stroke-width", 1.5)
+  val strokeColor = conf.getStringOrElse( "stroke-color", "red")
+  val fillColors = conf.getNonEmptyStringsOrElse( "fill-color", Array( "#f0000010", "#f0000040", "#f0000080", "#f00000f0"))
+
+  def jsFillColors: String = {
+    StringUtils.mkString( fillColors, "[",",","]")( clr=> s"Cesium.Color.fromCssColorString('$clr')")
+  }
+
+  def toJsObject = s"""{ strokeWidth: $strokeWidth, strokeColor: Cesium.Color.fromCssColorString('$strokeColor'), fillColors:$jsFillColors }"""
+}
 
 /**
  * a CesiumRoute that displays wind fields
@@ -119,6 +152,21 @@ trait CesiumWindFieldRoute extends CesiumRoute with FileServerRoute with PushWSR
   )
 
   //--- client config
+  override def getConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = super.getConfig(requestUri,remoteAddr) + windFieldConfig(requestUri,remoteAddr)
+
+  def windFieldConfig(requestUri: Uri, remoteAddr: InetSocketAddress): String = {
+    val cfg = config.getConfig("windlayer")
+    val defaultVectorRendering = new DefaultVectorRendering(cfg.getConfigOrElse("vector.render", NoConfig))
+    val defaultAnimRendering = new DefaultAnimRendering(cfg.getConfigOrElse("anim.render", NoConfig))
+    val defaultContourRendering = new DefaultContourRendering(cfg.getConfigOrElse("contour.render", NoConfig))
+
+    s"""
+export const windlayer = {
+  vectorRender: ${defaultVectorRendering.toJsObject},
+  animRender: ${defaultAnimRendering.toJsObject},
+  contourRender: ${defaultContourRendering.toJsObject}
+};"""
+  }
 }
 
 /**

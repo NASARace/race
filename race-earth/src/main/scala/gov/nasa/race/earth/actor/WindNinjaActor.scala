@@ -21,7 +21,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.{ActorDataAcquisitionThread, ExternalProc}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
-import gov.nasa.race.earth.{VegetationType, WindFieldAvailable, WindNinjaWxModelResults, WindNinjaWxModelSingleRun}
+import gov.nasa.race.earth.{GdalContour, GdalWarp, VegetationType, WindFieldAvailable, WindNinjaWxModelResults, WindNinjaWxModelSingleRun}
 import gov.nasa.race.geo.BoundingBoxGeoFilter
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length.Meters
@@ -53,7 +53,9 @@ class WindNinjaThread ( client: ActorRef,
                         outputDir: File,
                         windNinjaCmd: WindNinjaWxModelSingleRun,
                         huvwGridCmd: HuvwCommand,
-                        huvwVectorCmd: HuvwCommand
+                        huvwVectorCmd: HuvwCommand,
+                        warpCmd: GdalWarp,
+                        contourCmd: GdalContour
                       ) extends ActorDataAcquisitionThread(client) {
 
   override def run(): Unit = {
@@ -63,32 +65,55 @@ class WindNinjaThread ( client: ActorRef,
     }
   }
 
+  def getOutputFile (area: String, hrrr: HrrrFileAvailable, prefix: String, ext: String): File = {
+    val bd = hrrr.baseDate
+    val fd = hrrr.forecastDate
+    val hDiff = fd.timeSince(bd).toFullHours
+    new File( outputDir, f"$prefix-$area-${bd.format_yyyyMMdd}-t${bd.getHour}%02dz-${hDiff}%02d.$ext")
+  }
+
   private def runWindNinja (hrrr: HrrrFileAvailable, area: WindNinjaArea): Unit = {
 
     def createGridFile(area: String, hrrr: HrrrFileAvailable, wnResult: WindNinjaWxModelResults): Option[File] = {
-      val bd = hrrr.baseDate
-      val fd = hrrr.forecastDate
-      val hDiff = fd.timeSince(bd).toFullHours
-      val outputFile = new File(outputDir, f"wn-hrrr-grid-$area-${bd.format_yyyyMMdd}-t${bd.getHour}%02dz-${hDiff}%02d.csv.gz")
-
       huvwGridCmd.reset()
         .setInputFile( wnResult.huvw)
-        .setOutputFile( outputFile)
+        .setOutputFile( getOutputFile(area, hrrr, "wn-hrrr-grid", "csv.gz"))
         .ignoreConsoleOutput()
         .execSync().asOption
     }
 
     def createVectorFile(area: String, hrrr: HrrrFileAvailable, wnResult: WindNinjaWxModelResults): Option[File] = {
-      val bd = hrrr.baseDate
-      val fd = hrrr.forecastDate
-      val hDiff = fd.timeSince(bd).toFullHours
-      val outputFile = new File(outputDir, f"wn-hrrr-vector-$area-${bd.format_yyyyMMdd}-t${bd.getHour}%02dz-${hDiff}%02d.csv.gz")
-
       huvwVectorCmd.reset()
         .setInputFile( wnResult.huvw)
-        .setOutputFile( outputFile)
+        .setOutputFile( getOutputFile(area, hrrr, "wn-hrrr-vector", "csv.gz"))
         .ignoreConsoleOutput()
         .execSync().asOption
+    }
+
+    def createContourFile (area: String, hrrr: HrrrFileAvailable, wnResult: WindNinjaWxModelResults): Option[File] = {
+      val huvw = wnResult.huvw
+      val geoHuvw = new File(outputDir, s"${FileUtils.getBaseName(huvw)}_4326.${FileUtils.getGzExtension(huvw)}")
+
+      // convert wnResult.huvw into geographic grid
+      val res = warpCmd.reset()
+        .setTargetSrs("EPSG:4326")
+        .setInFile( huvw)
+        .setOutFile( geoHuvw)
+        .ignoreConsoleOutput()
+        .execSync().asOption
+
+      res.flatMap { inFile =>
+        contourCmd.reset()
+          .setInFile( inFile)
+          .setOutFile( getOutputFile(area, hrrr, "wn-hrrr-contour", "json"))
+          .setBand(5)
+          .setInterval(5.0)
+          //.setAttrName("spd")
+          .setPolygon()
+          .setAttrMinName("spd") // in case
+          .ignoreConsoleOutput()
+          .execSync().asOption
+      }
     }
 
     windNinjaCmd.reset()
@@ -111,6 +136,11 @@ class WindNinjaThread ( client: ActorRef,
           sendToClient( WindFieldAvailable(area.name, area.bounds, huvwVectorCmd.wfType, huvwVectorCmd.wfSrs, "hrrr", hrrr.baseDate, hrrr.forecastDate, file))
         }
 
+        ifSome(createContourFile(area.name, hrrr, wnResult)) { file =>
+          info(s"publishing contour file $file")
+          sendToClient( WindFieldAvailable( area.name, area.bounds, "contour", "epsg:4326", "hrrr", hrrr.baseDate, hrrr.forecastDate, file))
+        }
+
       case Failure(msg) =>
         warning(s"WindNinja execution failed: $msg")
     } // end of non-actor thread
@@ -129,12 +159,16 @@ class WindNinjaActor (val config: Config) extends SubscribingRaceActor with Publ
 
   val areas: Seq[WindNinjaArea] = config.getConfigSeq("areas").map(WindNinjaArea.fromConfig)
   val outputDir: File = FileUtils.ensureWritableDir(config.getStringOrElse("directory", "tmp/windninja")).get
+
+  //--- external progs we use
   val windNinjaCmd = new WindNinjaWxModelSingleRun( config.getExecutableFile("windninja-prog", "WindNinja_cli"), outputDir)
   val huvwGridCmd = new HuvwCsvGridCommand( config.getExecutableFile("huvw-grid-prog", "huvw_csv_grid"), outputDir)
   val huvwVectorCmd = new HuvwCsvVectorCommand( config.getExecutableFile("huvw-vector-prog", "huvw_csv_vector"), outputDir)
+  val warpCmd = new GdalWarp( config.getExecutableFile("gdalwarp-prog", "gdalwarp"))
+  val contourCmd = new GdalContour(  config.getExecutableFile("gdal-contour-prog", "gdal_contour"))
 
   protected var queue = new ArrayBlockingQueue[(HrrrFileAvailable, WindNinjaArea)](config.getIntOrElse("queue-size", 256))
-  protected val wnThread = new WindNinjaThread(self,queue,outputDir,windNinjaCmd,huvwGridCmd,huvwVectorCmd).setLogging(this)
+  protected val wnThread = new WindNinjaThread(self,queue,outputDir,windNinjaCmd,huvwGridCmd,huvwVectorCmd,warpCmd,contourCmd).setLogging(this)
 
   override def onStartRaceActor(originator: ActorRef): Boolean = {
     wnThread.start()
@@ -171,6 +205,7 @@ trait HuvwCommand extends ExternalProc[File] {
   protected var outputFile: Option[File] = None
 
   override def reset(): this.type = {
+    super.reset()
     inputFile = None
     this
   }
@@ -188,7 +223,9 @@ trait HuvwCommand extends ExternalProc[File] {
   }
 
   override def buildCommand: String = {
-    args = Seq(inputFile.get.getPath, outputFile.get.getPath)
+    args += inputFile.get.getPath
+    args += outputFile.get.getPath
+
     super.buildCommand
   }
 

@@ -77,14 +77,22 @@ var positionsView = undefined;
 var dataSource = undefined;
 var showPointerLoc = true;
 
+
+let terrain = await Cesium.createWorldTerrainAsync({
+    requestWaterMask: false,
+    requestVertexNormals: true,
+});
+console.log("cesium terrain loaded");
+
+//let terrain = Cesium.createWorldTerrain();
+
 ui.registerLoadFunction(function initialize() {
     if (config.cesium.accessToken) Cesium.Ion.defaultAccessToken = config.cesium.accessToken;
 
     requestRenderMode = config.cesium.requestRenderMode;
 
     viewer = new Cesium.Viewer('cesiumContainer', {
-        //terrainProvider: config.cesium.terrainProvider,
-        terrainProvider: Cesium.createWorldTerrain(), // required for terrain articulation
+        terrainProvider: terrain,
         skyBox: false,
         infoBox: false,
         baseLayerPicker: false,  // if true primitives don't work anymore ?? 

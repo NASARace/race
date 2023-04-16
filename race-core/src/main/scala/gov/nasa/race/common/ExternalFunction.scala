@@ -19,6 +19,7 @@ package gov.nasa.race.common
 import gov.nasa.race.{Failure, ResultValue, SuccessValue}
 
 import java.io.File
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.sys.process.{Process, ProcessLogger}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -43,13 +44,13 @@ trait ExternalFunction[T] {
 trait ExternalProc[T] extends ExternalFunction[T] {
 
   val prog: File // the executable itself - mandatory (note we use a File here so that we can support abs/rel paths)
-  var args: Seq[String] = Seq.empty // we keep this variable so that we can use builder patterns and/or subtype specific construction
+  val args: ArrayBuffer[String] = ArrayBuffer.empty // we keep this variable so that we can use builder patterns and/or subtype specific construction
 
   def cwd: Option[File] = None // optional working dir to change to before executing child process
   def env: Seq[(String,String)] = Seq.empty  // optional child proc environment vars
 
   def reset(): this.type = {
-    args = Seq.empty
+    args.clear()
     lastError = None
     this
   }
@@ -99,9 +100,11 @@ trait ExternalProc[T] extends ExternalFunction[T] {
         lastError = None
         outputBuffer.clear()
 
+        val cmd = buildCommand
+
         val exitCode = log match { // this blocks until child process returns
-          case Some(logger) => Process(buildCommand, cwd, env: _*).!(logger)
-          case None => Process(buildCommand, cwd, env: _*).!
+          case Some(logger) => Process( cmd, cwd, env: _*).!(logger)
+          case None => Process(cmd, cwd, env: _*).!
         }
 
         if (exitCode == successExitCode) {

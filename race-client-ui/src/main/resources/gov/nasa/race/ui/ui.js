@@ -654,10 +654,39 @@ export function setButtonDisabled(o, isDisabled) {
 
 //--- fields 
 
+function genField (inputType, extraCls, label, eid, changeAction) {
+    let e = _createElement("DIV", "ui_field");
+    extraCls.forEach( cls=> e.classList.add(cls));
+
+    e.setAttribute("data-label", label);
+    e.setAttribute("data-type", inputType);
+    if (eid) e.setAttribute("data-id", eid);
+    if (changeAction instanceof Function) e.addEventListener("change", changeAction); else e.onchange= changeAction;
+
+    return e;
+}
+
+export function TextField (label, eid, isInput, changeAction) {
+    let extraCls = isInput ? ["input"] : [];
+    return genField("text", extraCls, label, eid, changeAction);
+}
+
+export function NumField (label, eid, isInput, changeAction) {
+    let extraCls = isInput ? ["input"] : [];
+    return genField("text", extraCls, label, eid, changeAction);
+}
+
+export function ColorField (label, eid, isInput, changeAction){
+    let extraCls = isInput ? ["input"] : [];
+    return genField("color", extraCls, label, eid, changeAction);
+}
+
 function initializeField (e) {
     if (e.tagName == "DIV") {
         let id = e.dataset.id;
         let labelText = e.dataset.label;
+        let inputType = e.dataset.type ? e.dataset.type : "text";
+
         let dataWidth = _inheritableData(e, 'width');
         let labelWidth = _inheritableData(e, 'labelWidth');
 
@@ -669,8 +698,9 @@ function initializeField (e) {
             }
 
             let field = _createElement("INPUT", e.classList);
-            field.setAttribute("type", "text");
             field.id = id;
+            field.type = inputType;
+
             if (_hasBorderedParent(e)) {
                 field.style.border = 'none';
                 e.style.margin = '0';
@@ -678,7 +708,7 @@ function initializeField (e) {
             if (dataWidth) field.style.width = dataWidth;
             e.appendChild(field);
 
-            if (e.classList.contains("input")) {
+            if (e.classList.contains("input") && inputType == "text") {
                 field.setAttribute("placeholder", e.dataset.placeholder);
                 field.addEventListener("keypress", _checkKeyEvent);
             } else {
@@ -1435,7 +1465,11 @@ export function CheckBox (label, action, eid=null, isSelected=false) {
 
     e.setAttribute("data-label", label);
     if (eid) e.setAttribute("id", eid);
-    if (action instanceof Function) e.addEventListener("click", action); else e.onclick = action;
+    if (action instanceof Function) {
+        e.addEventListener("click", action);
+    } else {
+        e.onclick = action;
+    }
 
     return e;
 }
@@ -1450,12 +1484,12 @@ function initializeCheckBox(e) {
 
 function _addCheckBoxComponents(e, labelText) {
     let btn = _createElement("DIV", "ui_checkbox_button");
-    btn.addEventListener("click", _clickCheckBox);
+    btn.addEventListener("click", _clickCheckBoxBtn);
     e.appendChild(btn);
 
     if (labelText) {
         let lbl = _createElement("DIV", "ui_checkbox_label", labelText);
-        lbl.addEventListener("click", _clickCheckBox);
+        lbl.addEventListener("click", _clickCheckBoxBtn);
         e.appendChild(lbl);
     }
 }
@@ -1464,7 +1498,9 @@ export function createCheckBox(initState, clickHandler, labelText = "") {
     let e = _createElement("DIV", "ui_checkbox");
     if (initState) _addClass(e, "checked");
     _addCheckBoxComponents(e, labelText);
-    if (clickHandler) e.addEventListener("click", clickHandler);
+
+    if (clickHandler)  e.addEventListener("click", clickHandler); // watch out - these don't get cloned
+    
     return e;
 }
 
@@ -1476,7 +1512,7 @@ export function setCheckBoxDisabled(o, isDisabled) {
     _setDisabled(getCheckBox(o), isDisabled);
 }
 
-function _clickCheckBox(event) {
+function _clickCheckBoxBtn(event) {
     let checkbox = getCheckBox(event);
     if (checkbox) {
         _toggleClass(checkbox, "checked");
@@ -1749,7 +1785,10 @@ function genList (subCls, eid, maxRows, selectAction, clickAction, contextMenuAc
     if (eid) e.setAttribute("id", eid);
     e.setAttribute("data-rows", maxRows.toString);
 
-    if (selectAction) e.setAttribute("data-onselect", selectAction);
+    if (selectAction) {
+        e._uiSelectAction = selectAction; // don't use attribute here
+        e.addEventListener("selectionChanged", selectAction);
+    }
 
     if (clickAction instanceof Function) e.addEventListener("click",clickAction); else  e.onclick= clickAction;
     if (contextMenuAction instanceof Function) e.addEventListener("contextmenu",contextMenuAction); else e.oncontextmenu= contextMenuAction;
@@ -1788,12 +1827,9 @@ function initializeList (e) {
     e.setAttribute("tabindex", "0");
     if (e.firstElementChild && e.firstElementChild.classList.contains("ui_popup_menu")) _hoistChildElement(e.firstElementChild);
 
-    let selectAction = _dataAttrValue(e, "onselect"); // single click or programmatic
-    if (selectAction) {
-        if (selectAction instanceof Function) {
-            e.addEventListener("selectionChanged", selectAction);
-            e._uiSelectAction = selectAction;
-        } else {
+    if (!e._uiSelectAction) {
+        let selectAction = _dataAttrValue(e, "onselect"); // single click or programmatic
+        if (selectAction) {
             e._uiSelectAction = Function("event", selectAction);
             e.addEventListener("selectionChanged", e._uiSelectAction);
         }
@@ -2327,9 +2363,8 @@ function _setSelectedItemElement(listBox, itemElement) {
 }
 
 function _selectListItem(event) {
-    let tgt = event.target;
-    let itemElement = _nearestElementWithClass(tgt, "ui_list_item");
-    if (itemElement) {
+    let itemElement = event.currentTarget;
+    if (itemElement.classList.contains("ui_list_item")) {
         let listBox = nearestParentWithClass(itemElement, "ui_list");
         if (listBox) {
             _setSelectedItemElement(listBox, itemElement);

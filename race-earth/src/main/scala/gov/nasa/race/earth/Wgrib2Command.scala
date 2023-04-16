@@ -43,10 +43,11 @@ class Wgrib2RetrieveData (val prog: File) extends ExternalProc[Array[GeoPosData]
   override def canRun: Boolean = grib2File.isDefined && matchSpec.isDefined && queryPos.nonEmpty
 
   override def buildCommand: String = {
-    args = Seq(
+    args ++= Seq(
       grib2File.get.getPath,
       s"""-match "${matchSpec.get}""""
-    ) ++ queryPos.map( p=> s"-lon ${p.lonDeg} ${p.latDeg}")
+    )
+    queryPos.foreach( p=> args += s"-lon ${p.lonDeg} ${p.latDeg}")
 
     super.buildCommand
   }

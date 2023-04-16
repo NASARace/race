@@ -88,7 +88,7 @@ trait CesiumRoute
   val requestRenderMode = config.getBooleanOrElse("request-render", false)
   val targetFrameRate = config.getIntOrElse("frame-rate", -1)
   val proxyTerrain = config.getBooleanOrElse("proxy-elevation-provider", true)
-  val terrainProvider = config.getStringOrElse("elevation-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
+  val terrainProvider = config.getStringOrElse("terrain-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
   val cameraPositions = getCameraPositions()
 
   def getCameraPositions(): Seq[CameraPosition] = {
@@ -122,8 +122,6 @@ trait CesiumRoute
         //--- the standard Cesium assets - note we always proxy these fs-cached with a pre-configured host URL
       } ~ pathPrefix(cesiumPathMatcher) {
         completeProxied(cesiumJsUrl(cesiumVersion))
-
-        //--- our Cesium assets
       } ~
         fileAssetPath("ui_cesium.js") ~
         fileAssetPath("ui_cesium.css") ~
@@ -132,6 +130,7 @@ trait CesiumRoute
         fileAssetPath("layer-icon.svg") ~
         fileAssetPath("map-cursor.png")
     }
+    // TODO - we should have a path for own/proxied terrain
   }
 
   //--- cesium web socket handling
@@ -189,8 +188,8 @@ trait CesiumRoute
   // to be called from the concrete getConfig() implementation
   def basicCesiumConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
     val wsToken = registerTokenForClient(remoteAddr)
+    // TODO - terrain proxying has to be moved into the (async) init functions (see above)
     val terrain = if (proxyTerrain) CesiumRoute.terrainPrefix else terrainProvider
-    // new Cesium.CesiumTerrainProvider({ url: Cesium.IonResource.fromAssetId(1),}),
     val places = cameraPositions.mkString(",\n    ")
 
     s"""
@@ -199,7 +198,6 @@ export const cesium = {
   accessToken: '$accessToken',
   requestRenderMode: $requestRenderMode,
   targetFrameRate: $targetFrameRate,
-  //terrainProvider: new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'}),
   cameraPositions: [\n    $places\n  ],
   color: ${cesiumColor(config, "color", "red")},
   outlineColor: ${cesiumColor(config, "outline-color", "yellow")},

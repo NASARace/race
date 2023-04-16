@@ -239,6 +239,21 @@ object FileUtils {
   }
   def getGzExtension (file: File): String = getGzExtension(file.getName)
 
+  def isGzipped (fn: String): Boolean = fn.endsWith(".gz")
+  def isGzipped (file: File): Boolean = isGzipped(file.getName)
+
+  /**
+   * if a file extension ends in ".gz" answer the extension group before it (e.g. "blah.csv.gz" -> "csv")
+   * if it doesn't end in "*.gz" just return None
+   */
+  def getGzippedExtension (fn: String): Option[String] = {
+    if (isGzipped(fn)) {
+      var i = fn.lastIndexOf('.', fn.length-4)
+      if (i>= 0) Some(fn.substring(i+1,  fn.length-3).toLowerCase) else None
+    } else None
+  }
+  def getGzippedExtension (file: File): Option[String] = getGzippedExtension(file.getName)
+
   def hasAnyExtension( f: File, exts: String*): Boolean = exts.contains(getExtension(f))
 
   def hasExtension (fn: String): Boolean = fn.lastIndexOf('.') >= 0
