@@ -65,14 +65,14 @@ export class ParticleSystem {
         });
     }
 
-    refreshParticles(maxParticlesChanged) {
+    refreshParticles(refreshParticlesRendering) {
         this.clearFramebuffers();
 
         this.particlesComputing.destroyParticlesTextures();
         this.particlesComputing.createParticlesTextures(this.context, this.data, this.userInput, this.viewerParameters);
 
 
-        if (maxParticlesChanged) {
+        if (refreshParticlesRendering) {
             var geometry = this.particlesRendering.createSegmentsGeometry(this.userInput);
             this.particlesRendering.primitives.segments.geometry = geometry;
             var vertexArray = Cesium.VertexArray.fromGeometry({
@@ -86,15 +86,14 @@ export class ParticleSystem {
     }
 
     applyUserInput(userInput) {
-        var maxParticlesChanged = false;
-        if (this.userInput.maxParticles != userInput.maxParticles) {
-            maxParticlesChanged = true;
-        }
+        var maxParticlesChanged = (this.userInput.maxParticles != userInput.maxParticles);
+        var colorChanged = (this.userInput.color != userInput.color);
 
         Object.keys(userInput).forEach((key) => {
             this.userInput[key] = userInput[key];
         });
-        this.refreshParticles(maxParticlesChanged);
+
+        this.refreshParticles(maxParticlesChanged || colorChanged);
     }
 
     applyViewerParameters(viewerParameters) {

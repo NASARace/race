@@ -17,22 +17,9 @@ var globeBoundingSphere = new Cesium.BoundingSphere(Cesium.Cartesian3.ZERO, 0.99
 
 // those are just initial values (should come from config)
 
-
 const defaultVectorRender = config.windlayer.vectorRender;
 const defaultAnimRender = config.windlayer.animRender;
 const defaultContourRender = config.windlayer.contourRender;
-
-// todo - this should be replaced with plain animRender
-const userInputDefaults = {
-    particlesTextureSize: defaultAnimRender.maxParticles,
-    maxParticles: defaultAnimRender.maxParticles * defaultAnimRender.maxParticles,
-    particleHeight: 2000,
-    fadeOpacity: defaultAnimRender.fadeOpacity,
-    dropRate: 0.002,
-    dropRateBump: 0.01,
-    speedFactor: defaultAnimRender.speed,
-    lineWidth: defaultAnimRender.width
-};
 
 const WindFieldType = {
     GRID: "grid",
@@ -109,8 +96,6 @@ class AnimFieldEntry extends WindFieldEntry {
         super(windField);
         this.particleSystem = undefined; // only lives while we show the grid animation, owns a number of CustomPrimitives
         this.render = {...defaultAnimRender};
-
-        this.userInput = {...userInputDefaults };
     }
 
     static animShowing = 0;
@@ -160,6 +145,7 @@ class AnimFieldEntry extends WindFieldEntry {
     }
 
     async loadParticleSystemFromUrl() {
+
         let nx, x0, dx, ny, y0, dy; // grid bounds and cell size
         let hs, us, vs, ws; // the data arrays
         let hMin = 1e6, uMin = 1e6, vMin = 1e6, wMin = 1e6;
@@ -229,6 +215,7 @@ class AnimFieldEntry extends WindFieldEntry {
     
         this.setStatus( LOADING);
         await util.forEachTextLine(this.url, procLine);
+
         console.log("loaded ", i-2, " grid points from ", this.url);
     
         let data = {
@@ -236,20 +223,21 @@ class AnimFieldEntry extends WindFieldEntry {
             lon: axisData(nx, x0 < 0 ? 360 + x0 : x0, dx),  // normalize to 0..360
             lat: axisData(ny, y0, dy),
             lev: { array: new Float32Array([1]), min: 1, max: 1 },
+            H: { array: hs, min: hMin, max: hMax },
             U: { array: us, min: uMin, max: uMax },
-            V: { array: vs, min: vMin, max: vMax }
-            //W: { array: ws, min: wMin, max: wMax }
+            V: { array: vs, min: vMin, max: vMax },
+            W: { array: ws, min: wMin, max: wMax }
         };
         //console.log("@@ data:", data);
     
-        this.particleSystem = new ParticleSystem(uiCesium.viewer.scene.context, data, this.userInput, viewerParameters);
+        this.particleSystem = new ParticleSystem(uiCesium.viewer.scene.context, data, this.render, viewerParameters);
         this.particleSystem.forEachPrimitive( p=> uiCesium.addPrimitive(p));
         uiCesium.setRequestRenderMode(false);
     }
 
     renderChanged() {
         if (this.particleSystem) {
-            this.particleSystem.applyUserInput(userInput);
+            this.particleSystem.applyUserInput(this.render);
         }
     }
 
@@ -263,6 +251,17 @@ class AnimFieldEntry extends WindFieldEntry {
     }
 
     updateDisplayPanel() {
+        let r = this.render;
+
+        ui.setSliderValue( ui.getSlider("wind.anim.particles"), r.particlesTextureSize);
+        ui.setSliderValue( ui.getSlider("wind.anim.height"), r.particleHeight);
+        ui.setSliderValue( ui.getSlider("wind.anim.fade_opacity"), r.fadeOpacity);
+        ui.setSliderValue( ui.getSlider("wind.anim.drop"), r.dropRate);
+        ui.setSliderValue( ui.getSlider("wind.anim.drop_bump"), r.dropRateBump);
+        ui.setSliderValue( ui.getSlider("wind.anim.speed"), r.speedFactor);
+        ui.setSliderValue( ui.getSlider("wind.anim.width"), r.lineWidth);
+
+        ui.setField( ui.getField("wind.anim.color"), r.color.toCssHexString());
     }
 }
 
@@ -515,6 +514,7 @@ var displayEntries = [];  // time/source sorted entries for selected area and ty
 var entryView = undefined; // the list showing available wind fields for the selected time
 var selectedEntry = undefined;
 
+
 //--- wind field init
 
 ui.registerLoadFunction(function initialize() {
@@ -555,13 +555,13 @@ function createWindow() {
         ),
         ui.Panel("anim display")(
             ui.ColumnContainer("align_right")(
-                ui.Slider("max particles", "wind.anim.max_particles", windMaxParticlesChanged),
-                ui.Slider("height", "wind.anim.height", windHeightChanged),
+                ui.Slider("particles", "wind.anim.particles", windParticlesChanged),
+                ui.Slider("extra height", "wind.anim.height", windHeightChanged),
                 ui.Slider("fade opacity", "wind.anim.fade_opacity", windFadeOpacityChanged),
                 ui.Slider("drop", "wind.anim.drop", windDropRateChanged),
                 ui.Slider("drop bump", "wind.anim.drop_bump", windDropRateBumpChanged),
-                ui.Slider("speed", "wind.anim.speed", windSpeedChanged),
-                ui.Slider("width", "wind.anim.width", windWidthChanged),
+                ui.Slider("speed factor", "wind.anim.speed", windSpeedChanged),
+                ui.Slider("line width", "wind.anim.width", windWidthChanged),
                 ui.ColorField("color", "wind.anim.color", true, animColorChanged),
             )
         ),
@@ -597,37 +597,38 @@ function initAnimDisplayControls() {
     var e = undefined;
     //e = ui.getChoice("wind.max_particles");
     //ui.setChoiceItems(e, ["0", "16", "32", "64", "128", "256"], 3);
+    let r = defaultAnimRender;
 
-    e = ui.getSlider("wind.anim.max_particles");
+    e = ui.getSlider("wind.anim.particles");
     ui.setSliderRange(e, 0, 128, 16);
-    ui.setSliderValue(e, defaultAnimRender.maxParticles);
+    ui.setSliderValue(e, r.particlesTextureSize);
 
     e = ui.getSlider("wind.anim.height");
     ui.setSliderRange(e, 0, 10000, 500);
-    ui.setSliderValue(e, userInputDefaults.particleHeight);
+    ui.setSliderValue(e, r.particleHeight);
 
     e = ui.getSlider("wind.anim.fade_opacity");
     ui.setSliderRange(e, 0.8, 1.0, 0.01, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }));
-    ui.setSliderValue(e, defaultAnimRender.fadeOpacity);
+    ui.setSliderValue(e, r.fadeOpacity);
 
     e = ui.getSlider("wind.anim.drop");
     ui.setSliderRange(e, 0.0, 0.01, 0.001, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 3 }));
-    ui.setSliderValue(e, userInputDefaults.dropRate);
+    ui.setSliderValue(e, r.dropRate);
 
     e = ui.getSlider("wind.anim.drop_bump");
     ui.setSliderRange(e, 0.0, 0.05, 0.005, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 3 }));
-    ui.setSliderValue(e, userInputDefaults.dropRateBump);
+    ui.setSliderValue(e, r.dropRateBump);
 
     e = ui.getSlider("wind.anim.speed");
     ui.setSliderRange(e, 0.0, 0.3, 0.02, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }));
-    ui.setSliderValue(e, defaultAnimRender.speed);
+    ui.setSliderValue(e, r.speedFactor);
 
     e = ui.getSlider("wind.anim.width");
     ui.setSliderRange(e, 0.0, 3.0, 0.5, new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }));
-    ui.setSliderValue(e, defaultAnimRender.width);
+    ui.setSliderValue(e, r.lineWidth);
 
     e = ui.getField("wind.anim.color");
-    ui.setField(e, defaultAnimRender.color.toCssHexString());
+    ui.setField(e, r.color.toCssHexString());
 }
 
 function initVectorDisplayControls() {
@@ -733,8 +734,6 @@ function toggleShowWindField(event) {
     }
 };
 
-var userInputChange = false;
-
 
 function selectWindFieldEntry(event) {
     selectedEntry = ui.getSelectedListItem(entryView);
@@ -777,93 +776,92 @@ function contourStrokeWidthChanged(event) {
 
 //--- grid animation sliders
 
-function triggerUserInputChange(windEntry, newInput) {
-    if (newInput) userInputChange = true;
+// we have to delay particleSystem updates while user moves the slider
+var pendingUserInputChange = false; 
+
+function triggerAnimRenderChange(windEntry, newInput) {
+    if (newInput) pendingUserInputChange = true;
 
     setTimeout(() => {
-        if (userInputChange) {
-            userInputChange = false;
-            triggerUserInputChange(windEntry, false);
+        if (pendingUserInputChange) {
+            pendingUserInputChange = false;
+            triggerAnimRenderChange(windEntry, false);
         } else {
             windEntry.renderChanged();
         }
     }, 300);
 }
 
-function windMaxParticlesChanged(event) {
-    //console.log("max particles: " + ui.getSelectedChoiceValue(event.target));
+function windParticlesChanged(event) {
     let e = ui.getSelectedListItem(entryView);
     if (e) {
         let n = ui.getSliderValue(event.target);
-        e.userInput.particlesTextureSize = n;
-        e.userInput.maxParticles = n * n;
-        triggerUserInputChange(e, true);
+        // todo - shall we adjust here?
+        e.render.particlesTextureSize = n;
+        e.render.maxParticles = n*n;
+        triggerAnimRenderChange(e, true);
     }
 }
 
 function windFadeOpacityChanged(event) {
-    //console.log("fade opacity: " + +ui.getSliderValue(event.target));
     let e = ui.getSelectedListItem(entryView);
     if (e) {
-        e.userInput.fadeOpacity = ui.getSliderValue(event.target);
-        triggerUserInputChange(e, true);
+        e.render.fadeOpacity = ui.getSliderValue(event.target);
+        triggerAnimRenderChange(e, true);
     }
 }
 
 function windSpeedChanged(event) {
-    //console.log("speed: " + +ui.getSliderValue(event.target));
     let e = ui.getSelectedListItem(entryView);
     if (e) {
-        e.userInput.speedFactor = ui.getSliderValue(event.target);
-        triggerUserInputChange(e, true);
+        e.render.speedFactor = ui.getSliderValue(event.target);
+        triggerAnimRenderChange(e, true);
     }
 }
 
 function windWidthChanged(event) {
-    //console.log("line width: " + +ui.getSliderValue(event.target));
     let e = ui.getSelectedListItem(entryView);
     if (e) {
-        e.userInput.lineWidth = ui.getSliderValue(event.target);
-        triggerUserInputChange(e, true);
+        e.render.lineWidth = ui.getSliderValue(event.target);
+        triggerAnimRenderChange(e, true);
     }
 }
 
 function windHeightChanged(event) {
-    //console.log("height: " + +ui.getSliderValue(event.target));
     let e = ui.getSelectedListItem(entryView);
     if (e) {
-        e.userInput.particleHeight = ui.getSliderValue(event.target);
-        triggerUserInputChange(e, true);
+        e.render.particleHeight = ui.getSliderValue(event.target);
+        triggerAnimRenderChange(e, true);
     }
 }
 
 function windDropRateChanged(event) {
-    //console.log("drop rate: " + +ui.getSliderValue(event.target));
     let e = ui.getSelectedListItem(entryView);
     if (e) {
-        e.userInput.dropRate = ui.getSliderValue(event.target);
-        triggerUserInputChange(e, true);
+        e.render.dropRate = ui.getSliderValue(event.target);
+        triggerAnimRenderChange(e, true);
     }
 }
 
 function windDropRateBumpChanged(event) {
-    //console.log("drop rate bump: " + +ui.getSliderValue(event.target));
     let e = ui.getSelectedListItem(entryView);
     if (e) {
-        e.userInput.dropRateBump = ui.getSliderValue(event.target);
-        triggerUserInputChange(e, true);
+        e.render.dropRateBump = ui.getSliderValue(event.target);
+        triggerAnimRenderChange(e, true);
     }
 }
 
 function animColorChanged(event) {
-
+    let e = ui.getSelectedListItem(entryView);
+    if (e) {
+        let clrSpec = event.target.value;
+        if (clrSpec) {
+            e.render.color = Cesium.Color.fromCssColorString(clrSpec);
+            triggerAnimRenderChange(e, true);
+        }
+    }
 }
 
-//--- vector parameters
-
-function gridPointSizeChanged(event) {
-    console.log("not yet.");
-}
 
 //--- viewer callbacks
 

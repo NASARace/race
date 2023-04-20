@@ -1303,12 +1303,15 @@ export function setSliderRange(o, min, max, step, numFormatter) {
 export function setSliderValue(o, v) {
     let e = getSlider(o);
     if (e) {
-        e._uiValue = _computeSliderValue(e, v);
-        if (e._uiNum) e._uiNum.innerText = _formattedNum(e._uiValue, e._uiNumFormatter);
-        if (_hasDimensions(e)) _positionThumb(e);
+        let newValue = _computeSliderValue(e, v);
+        if (newValue != e._uiValue) {
+            e._uiValue = newValue;
+            if (e._uiNum) e._uiNum.innerText = _formattedNum(e._uiValue, e._uiNumFormatter);
+            if (_hasDimensions(e)) _positionThumb(e);
 
-        let slider = e.parentElement;
-        slider.dispatchEvent(new Event('change'));
+            let slider = e.parentElement;
+            slider.dispatchEvent(new Event('change'));
+        }
     }
 }
 

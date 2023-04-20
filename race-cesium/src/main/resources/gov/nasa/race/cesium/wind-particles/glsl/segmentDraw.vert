@@ -4,11 +4,14 @@ in vec2 st;
 // it is not normal itself, but used to control lines drawing
 in vec3 normal; // (point to use, offset sign, not used component)
 
+
+
+uniform sampler2D H; // grid cell height
+uniform float particleHeight; //  extra height we can interactively set
+
 uniform sampler2D previousParticlesPosition;
 uniform sampler2D currentParticlesPosition;
 uniform sampler2D postProcessingPosition;
-
-uniform float particleHeight;
 
 uniform float aspect;
 uniform float pixelSize;
@@ -17,11 +20,65 @@ uniform float lineWidth;
 uniform vec3 minimum; // minimum of each dimension
 uniform vec3 maximum; // maximum of each dimension
 
+// required to interpolate height
+uniform vec3 dimension; // (lon, lat, lev)
+uniform vec3 interval; // interval of each dimension
+
 struct adjacentPoints {
     vec4 previous;
     vec4 current;
     vec4 next;
 };
+
+//--- height interpolation (unfortunately somewhat redundant with calculateSpeed.frag)
+
+vec2 mapPositionToNormalizedIndex2D(vec3 lonLatLev) {
+    // ensure the range of longitude and latitude
+    lonLatLev.x = mod(lonLatLev.x, 360.0);
+    lonLatLev.y = clamp(lonLatLev.y, -90.0, 90.0);
+
+    vec3 index3D = vec3(0.0);
+    index3D.x = (lonLatLev.x - minimum.x) / interval.x;
+    index3D.y = (lonLatLev.y - minimum.y) / interval.y;
+    index3D.z = (lonLatLev.z - minimum.z) / interval.z;
+
+    vec2 index2D = vec2(index3D.x, index3D.z * dimension.y + index3D.y);
+    vec2 normalizedIndex2D = vec2(index2D.x / dimension.x, 1.0 - index2D.y / (dimension.y * dimension.z));
+    return normalizedIndex2D;
+}
+
+float getGridHeight(vec3 lonLatLev) {
+    vec2 normalizedIndex2D = mapPositionToNormalizedIndex2D(lonLatLev);
+    float height = texture(H, normalizedIndex2D).r;
+    return height;
+}
+
+float interpolateHeight(vec3 lonLatLev) {
+    float lon = lonLatLev.x;
+    float lat = lonLatLev.y;
+    float lev = lonLatLev.z;
+
+    float lon0 = floor(lon / interval.x) * interval.x;
+    float lon1 = lon0 + 1.0 * interval.x;
+    float lat0 = floor(lat / interval.y) * interval.y;
+    float lat1 = lat0 + 1.0 * interval.y;
+
+    float lon0_lat0 = getGridHeight( vec3(lon0, lat0, lev));
+    float lon1_lat0 = getGridHeight( vec3(lon1, lat0, lev));
+    float lon0_lat1 = getGridHeight( vec3(lon0, lat1, lev));
+    float lon1_lat1 = getGridHeight( vec3(lon1, lat1, lev));
+
+    float lon_lat0 = mix(lon0_lat0, lon1_lat0, lon - lon0);
+    float lon_lat1 = mix(lon0_lat1, lon1_lat1, lon - lon0);
+    float lon_lat = mix(lon_lat0, lon_lat1, lat - lat0);
+
+    return lon_lat;
+}
+
+float getHeight (vec3 lonLatLev) {
+    return interpolateHeight(lonLatLev) + particleHeight; // particleHeight is just extra, on top of wind/terrain height
+}
+
 
 vec3 convertCoordinate(vec3 lonLatLev) {
     // WGS84 (lon, lat, lev) -> ECEF (x, y, z)
@@ -41,7 +98,7 @@ vec3 convertCoordinate(vec3 lonLatLev) {
     float sinLon = sin(longitude);
 
     float N_Phi = a / sqrt(1.0 - e2 * sinLat * sinLat);
-    float h = particleHeight; // it should be high enough otherwise the particle may not pass the terrain depth test
+    float h = getHeight(lonLatLev); 
     float c = (N_Phi + h) * cosLat;
 
     vec3 cartesian = vec3(0.0);

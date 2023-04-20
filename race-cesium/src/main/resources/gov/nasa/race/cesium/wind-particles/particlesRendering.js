@@ -119,6 +119,15 @@ export class ParticlesRendering {
         const minimum = new Cesium.Cartesian3(data.lon.min, data.lat.min, data.lev.min);
         const maximum = new Cesium.Cartesian3(data.lon.max, data.lat.max, data.lev.max);
 
+        const dimension = new Cesium.Cartesian3(data.dimensions.lon, data.dimensions.lat, data.dimensions.lev);
+        const interval = new Cesium.Cartesian3(
+            (maximum.x - minimum.x) / (dimension.x - 1),
+            (maximum.y - minimum.y) / (dimension.y - 1),
+            dimension.z > 1 ? (maximum.z - minimum.z) / (dimension.z - 1) : 1.0
+        );
+
+        const clr = new Cesium.Cartesian4( userInput.color.red, userInput.color.green, userInput.color.blue, userInput.color.alpha);
+
         this.primitives = {
             segments: new CustomPrimitive({
                 commandType: 'Draw',
@@ -155,6 +164,19 @@ export class ParticlesRendering {
                     },
                     maximum: function() {
                         return maximum;
+                    },
+
+                    dimension: function() {
+                        return dimension;
+                    },
+                    interval: function() {
+                        return interval;
+                    },
+                    H: function() {
+                        return particlesComputing.windTextures.H;
+                    },
+                    color: function() {
+                        return clr;
                     }
                 },
                 vertexShaderSource: new Cesium.ShaderSource({

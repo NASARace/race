@@ -26,8 +26,10 @@ export class ParticlesComputing {
         };
 
         this.windTextures = {
+            H: Util.createTexture(windTextureOptions, data.H.array),
             U: Util.createTexture(windTextureOptions, data.U.array),
-            V: Util.createTexture(windTextureOptions, data.V.array)
+            V: Util.createTexture(windTextureOptions, data.V.array),
+            W: Util.createTexture(windTextureOptions, data.W.array),
         };
     }
 
@@ -76,6 +78,7 @@ export class ParticlesComputing {
         );
         const uSpeedRange = new Cesium.Cartesian2(data.U.min, data.U.max);
         const vSpeedRange = new Cesium.Cartesian2(data.V.min, data.V.max);
+        const wSpeedRange = new Cesium.Cartesian2(data.W.min, data.W.max);
 
         const that = this;
 
@@ -88,6 +91,9 @@ export class ParticlesComputing {
                     },
                     V: function() {
                         return that.windTextures.V;
+                    },
+                    W: function() {
+                        return that.windTextures.W;
                     },
                     currentParticlesPosition: function() {
                         return that.particlesTextures.currentParticlesPosition;
@@ -109,6 +115,9 @@ export class ParticlesComputing {
                     },
                     vSpeedRange: function() {
                         return vSpeedRange;
+                    },
+                    wSpeedRange: function() {
+                        return wSpeedRange;
                     },
                     pixelSize: function() {
                         return viewerParameters.pixelSize;

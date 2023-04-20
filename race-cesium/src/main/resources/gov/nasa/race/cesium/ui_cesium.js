@@ -77,11 +77,14 @@ var positionsView = undefined;
 var dataSource = undefined;
 var showPointerLoc = true;
 
-
-let terrain = await Cesium.createWorldTerrainAsync({
+// this is async so we have to init it at the module top level
+/*
+const terrain = (config.terrainProvider) ? config.terrainProvider() : await Cesium.createWorldTerrainAsync({
     requestWaterMask: false,
     requestVertexNormals: true,
 });
+*/
+const terrain = Cesium.createWorldTerrain();
 console.log("cesium terrain loaded");
 
 //let terrain = Cesium.createWorldTerrain();

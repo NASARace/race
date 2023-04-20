@@ -44,13 +44,18 @@ class DefaultVectorRendering (conf: Config) {
 }
 
 class DefaultAnimRendering (conf: Config) {
-  val maxParticles = conf.getIntOrElse("max-particles", 64)
-  val width = conf.getDoubleOrElse("width", 1.5)
-  val color = conf.getStringOrElse( "color", "cyan")
-  val speed = conf.getDoubleOrElse("speed", 0.2)
+  val particlesTextureSize = conf.getIntOrElse("particles-texture-size", 64) // power of 2
+  val maxParticles = particlesTextureSize * particlesTextureSize;
+  val particleHeight = conf.getDoubleOrElse("particle-Height", 0.0)
+  val lineWidth = conf.getDoubleOrElse("line-width", 1.5)
+  val speedFactor = conf.getDoubleOrElse("speed-factor", 0.2)
   val fadeOpacity = conf.getDoubleOrElse("fade-opacity", 0.99)
+  val dropRate = conf.getDoubleOrElse("drop-rate", 0.002)
+  val dropRateBump = conf.getDoubleOrElse("drop-rate-bump", 0.01)
 
-  def toJsObject = s"""{ maxParticles: $maxParticles, width: $width, color: Cesium.Color.fromCssColorString('$color'), speed: $speed, fadeOpacity: $fadeOpacity }"""
+  val color = conf.getStringOrElse( "color", "cyan")
+
+  def toJsObject = s"""{ particlesTextureSize: $particlesTextureSize, maxParticles: $maxParticles, lineWidth: $lineWidth, color: Cesium.Color.fromCssColorString('$color'), speedFactor: $speedFactor, particleHeight: $particleHeight, fadeOpacity: $fadeOpacity, dropRate: $dropRate, dropRateBump: $dropRateBump }"""
 }
 
 class DefaultContourRendering (conf: Config) {

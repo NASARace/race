@@ -3,6 +3,7 @@
 // the size of UV textures: width = lon, height = lat*lev
 uniform sampler2D U; // eastward wind 
 uniform sampler2D V; // northward wind
+uniform sampler2D W; // up/down wind
 uniform sampler2D currentParticlesPosition; // (lon, lat, lev)
 
 uniform vec3 dimension; // (lon, lat, lev)
@@ -13,6 +14,7 @@ uniform vec3 interval; // interval of each dimension
 // used to calculate the wind norm
 uniform vec2 uSpeedRange; // (min, max);
 uniform vec2 vSpeedRange;
+uniform vec2 wSpeedRange;
 uniform float pixelSize;
 uniform float speedFactor;
 
@@ -76,8 +78,10 @@ vec3 linearInterpolation(vec3 lonLatLev) {
     // https://en.wikipedia.org/wiki/Bilinear_interpolation
     float u = interpolateTexture(U, lonLatLev);
     float v = interpolateTexture(V, lonLatLev);
+    //float w = interpolateTexture(W, lonLatLev);
+    float w = 0.1; // already causes error -> subsequent w==0 assumption ? 
+    //float w = 0.0;
 
-    float w = 0.0;  // TODO - this needs to be calculated from W field
     return vec3(u, v, w);
 }
 
@@ -106,7 +110,8 @@ vec3 convertSpeedUnitToLonLat(vec3 lonLatLev, vec3 speed) {
     vec2 lonLatLength = lengthOfLonLat(lonLatLev);
     float u = speed.x / lonLatLength.x;
     float v = speed.y / lonLatLength.y;
-    float w = 0.0;
+    float w = speed.z / lonLatLength.x; // ?? we just need to scale proportionally (lon is less dependent than lat)
+    //float w = 0.0;
     vec3 windVectorInLonLatLev = vec3(u, v, w);
 
     return windVectorInLonLatLev;
@@ -134,6 +139,8 @@ float calculateWindNorm(vec3 speed) {
     vec3 percent = vec3(0.0);
     percent.x = (speed.x - uSpeedRange.x) / (uSpeedRange.y - uSpeedRange.x);
     percent.y = (speed.y - vSpeedRange.x) / (vSpeedRange.y - vSpeedRange.x);
+    percent.z = (speed.z - wSpeedRange.x) / (wSpeedRange.y - wSpeedRange.x);
+
     float norm = length(percent);
 
     return norm;

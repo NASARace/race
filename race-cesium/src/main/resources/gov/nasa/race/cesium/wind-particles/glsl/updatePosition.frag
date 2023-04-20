@@ -3,6 +3,8 @@
 uniform sampler2D currentParticlesPosition; // (lon, lat, lev)
 uniform sampler2D particlesSpeed; // (u, v, w, norm) Unit converted to degrees of longitude and latitude 
 
+// TODO - should we just ignore w and interpolate the height from lonLat and H texture ?
+
 in vec2 v_textureCoordinates;
 out vec4 fragColor;
 

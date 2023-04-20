@@ -8,7 +8,6 @@ export function loadText(filePath) {
 
 export function setParticlesTextureSize(userInput) {
     // make sure maxParticles is exactly the square of particlesTextureSize
-    userInput.particlesTextureSize = Math.ceil(Math.sqrt(userInput.maxParticles));
     userInput.maxParticles = userInput.particlesTextureSize * userInput.particlesTextureSize;
 }
 
