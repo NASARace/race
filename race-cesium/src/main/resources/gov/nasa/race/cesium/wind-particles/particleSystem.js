@@ -5,8 +5,8 @@ export class ParticleSystem {
     constructor(context, data, userInput, viewerParameters) {
         this.context = context;
         this.data = data;
-        this.userInput = userInput;
-        this.viewerParameters = viewerParameters;
+        this.userInput = {...userInput};
+        this.viewerParameters = {...viewerParameters};
 
         this.particlesComputing = new ParticlesComputing(
             this.context, this.data,
@@ -65,41 +65,22 @@ export class ParticleSystem {
         });
     }
 
-    refreshParticles(refreshParticlesRendering) {
+    refreshParticles() {
         this.clearFramebuffers();
-
-        this.particlesComputing.destroyParticlesTextures();
-        this.particlesComputing.createParticlesTextures(this.context, this.data, this.userInput, this.viewerParameters);
-
-
-        if (refreshParticlesRendering) {
-            var geometry = this.particlesRendering.createSegmentsGeometry(this.userInput);
-            this.particlesRendering.primitives.segments.geometry = geometry;
-            var vertexArray = Cesium.VertexArray.fromGeometry({
-                context: this.context,
-                geometry: geometry,
-                attributeLocations: this.particlesRendering.primitives.segments.attributeLocations,
-                bufferUsage: Cesium.BufferUsage.STATIC_DRAW,
-            });
-            this.particlesRendering.primitives.segments.commandToExecute.vertexArray = vertexArray;
-        }
+        this.particlesComputing.refreshParticles(this.context, this.data, this.userInput, this.viewerParameters);
+        this.particlesRendering.updateSegments(this.context, this.userInput);
     }
 
     applyUserInput(userInput) {
-        var maxParticlesChanged = (this.userInput.maxParticles != userInput.maxParticles);
-        var colorChanged = (this.userInput.color != userInput.color);
+        this.userInput = {...userInput};
 
-        Object.keys(userInput).forEach((key) => {
-            this.userInput[key] = userInput[key];
-        });
-
-        this.refreshParticles(maxParticlesChanged || colorChanged);
+        this.particlesComputing.updateUserInputUniforms(userInput);
+        this.particlesRendering.updateUserInputUniforms(userInput);
+        this.refreshParticles();
     }
 
     applyViewerParameters(viewerParameters) {
-        Object.keys(viewerParameters).forEach((key) => {
-            this.viewerParameters[key] = viewerParameters[key];
-        });
-        this.refreshParticles(false);
+        this.viewerParameters = {...viewerParameters};
+        this.refreshParticles();
     }
 }

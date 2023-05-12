@@ -31,21 +31,14 @@ var satNames = new Map();
 
 var dataSets = []; // complete list in ascending time (latest entries are appended)
 var displayDataSets = []; // in reverse, latest on top
-var dataSetView = undefined; // showing displayDataSets
 var selectedDataSet = undefined;
 var selectedPeerDataSet = undefined;
-
-var hotspots = [];
-var hotspotView = undefined;
 var selectedHotspot = undefined;
 
 // restorable selections
 var lastSelDs = undefined;
-var lastSelPeerDs = undefined;
 var lastSelHs = undefined;
-
-var historyView = undefined; // for selected hotspot
-var maskLabel = undefined;
+var lastSelPeerDs = undefined;
 
 var pixelLevel = "all";  // high, probable, all
 var latestOnly = true; // do we just show pixels reported in the last batch
@@ -58,38 +51,61 @@ var refDate = Number.MAX_INTEGER;
 var pointSize = config.goesr.pointSize;
 var maxMissingMin = config.goesr.maxMissingMin;
 
-function getSatelliteWithName (satName) {
-    return satellites.find( sat=> sat.name == satName);
+createIcon();
+createWindow();
+var dataSetView = initDataSetView();
+var hotspotView = initHotspotView();
+var historyView = initHistoryView();
+var maskLabel = ui.getLabel("goesr.mask");
+
+ui.setCheckBox("goesr.followLatest", followLatest);
+ui.setCheckBox("goesr.lockStep", lockStep);
+ui.selectRadio( "goesr.level.all");
+initSliders();
+
+uiCesium.setEntitySelectionHandler(goesrSelection);
+ws.addWsHandler(handleWsGoesrMessages);
+
+uiCesium.initLayerPanel("goesr", config.goesr, showGoesr);
+console.log("ui_cesium_goesr initialized");
+
+function createIcon() {
+    return ui.Icon("geo-sat-icon.svg", (e)=> ui.toggleWindow(e,'goesr'));
 }
 
-function getSatelliteWithId (satId) {
-    return satellites.find( sat=> sat.satId == satId);
+function createWindow() {
+    return ui.Window("GOES-R Satellites", "goesr", "geo-sat-icon.svg")(
+        ui.LayerPanel("goesr", toggleShowGoesr),
+        ui.Panel("data sets", true)(
+            ui.RowContainer()(
+                ui.CheckBox("lock step", toggleGoesrLockStep, "goesr.lockStep"),
+                ui.CheckBox("follow latest", toggleFollowLatestGoesr, "goesr.followLatest"),
+                ui.HorizontalSpacer(2),
+                ui.CheckBox("G16", toggleShowGoesrSatellite, "goesr.G16"),
+                ui.CheckBox("G17", toggleShowGoesrSatellite, "goesr.G17"),
+                ui.CheckBox("G18", toggleShowGoesrSatellite, "goesr.G18"),
+            ),
+                ui.List("goesr.dataSets", 6, selectGoesrDataSet),
+          ui.ListControls("goesr.dataSets")
+        ),
+        ui.Panel("hotspots", true)(
+            ui.List("goesr.hotspots", 8, selectGoesrHotspot, null,null, zoomToGoesrHotspot),
+            ui.RowContainer()(
+                ui.Radio("high", setGoesrPixelLevel, "goesr.level.high"),
+                ui.Radio("probable", setGoesrPixelLevel, "goesr.level.probable"),
+                ui.Radio( "all", setGoesrPixelLevel, "goesr.level.all"),
+            )
+        ),
+        ui.Panel("hotspot history", true)(
+            ui.List("goesr.history", 8, selectGoesrHistory),
+            ui.Label("goesr.mask")
+        ),
+        ui.Panel("layer parameters", false)(
+            ui.Slider("max missing [min]", "goesr.maxMissing", setGoesrMaxMissing),
+            ui.Slider("size [pix]", "goesr.pointSize", setGoesrPointSize)
+        )
+    );
 }
-
-function getSatelliteIndex (satId) {
-    for (let i=0; i<satellites.length; i++) {
-        if (satellites[i].satId == satId) return i;
-    }
-    return -1;
-}
-
-ui.registerLoadFunction(function initialize() {
-    dataSetView = initDataSetView();
-    hotspotView = initHotspotView();
-    historyView = initHistoryView();
-    maskLabel = ui.getLabel("goesr.mask");
-
-    ui.setCheckBox("goesr.followLatest", followLatest);
-    ui.setCheckBox("goesr.lockStep", lockStep);
-    ui.selectRadio( "goesr.level.all");
-    initSliders();
-
-    uiCesium.setEntitySelectionHandler(goesrSelection);
-    ws.addWsHandler(config.wsUrl, handleWsGoesrMessages);
-
-    uiCesium.initLayerPanel("goesr", config.goesr, showGoesr);
-    console.log("ui_cesium_goesr initialized");
-});
 
 function initDataSetView() {
     let view = ui.getList("goesr.dataSets");
@@ -130,6 +146,21 @@ function initSliders() {
     ui.setSliderValue(e, pointSize);
 }
 
+function getSatelliteWithName (satName) {
+    return satellites.find( sat=> sat.name == satName);
+}
+
+function getSatelliteWithId (satId) {
+    return satellites.find( sat=> sat.satId == satId);
+}
+
+function getSatelliteIndex (satId) {
+    for (let i=0; i<satellites.length; i++) {
+        if (satellites[i].satId == satId) return i;
+    }
+    return -1;
+}
+
 function hotspotClass (hs) {
     let missingMin = getMissingMin(hs);
     if (missingMin) {
@@ -159,7 +190,7 @@ function initHistoryView() {
     return view;
 }
 
-ui.exportToMain(function selectGoesrDataSet(event) {
+function selectGoesrDataSet(event) {
     let ds = event.detail.curSelection;
     if (ds) {
         selectedDataSet = ds;
@@ -177,7 +208,7 @@ ui.exportToMain(function selectGoesrDataSet(event) {
     }
 
     updateHotspots();
-});
+}
 
 function getPeerDataSet (ds) {
     if (hasShowingPeer(ds.sat)) {
@@ -353,8 +384,9 @@ function createHotspotEntity (hs) {
             outlineColor: clr,
             outlineWidth: outlineWidth(hs),
             distanceDisplayCondition: config.goesr.boundsDC,
+            //heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
             height: 0
-                //zIndex: 1
+            //zIndex: 1
         },
     });
 
@@ -420,13 +452,13 @@ function getHotspotHistory (hs) {
     return hist;
 }
 
-ui.exportToMain(function toggleGoesrLatestOnly(event) {
+function toggleGoesrLatestOnly(event) {
     let cb = ui.getCheckBox(event.target);
     if (cb) {
         latestOnly = ui.isCheckBoxSelected(cb);
         updateHotspots();
     }
-});
+}
 
 function goesrSelection() {
     let sel = uiCesium.getSelectedEntity();
@@ -511,7 +543,7 @@ function filterPixel(hs) {
         (pixelLevel == "probable" && isProbablePixel(hs.mask)));
 }
 
-ui.exportToMain(function toggleShowGoesrSatellite(event) {
+function toggleShowGoesrSatellite(event) {
     let cb = ui.getCheckBox(event.target);
     if (cb) {
         let satName = ui.getCheckBoxLabel(cb)
@@ -527,7 +559,7 @@ ui.exportToMain(function toggleShowGoesrSatellite(event) {
             updateHotspots();
         }
     }
-});
+}
 
 function showGoesr(cond) {
     // we don't want to change the hotspotEntry show, just make the assets disappear
@@ -537,13 +569,13 @@ function showGoesr(cond) {
     uiCesium.requestRender();
 }
 
-ui.exportToMain(function setGoesrPixelLevel(event) {
+function setGoesrPixelLevel(event) {
     pixelLevel = ui.getRadioLabel(event.target);  // high, probable, all
     clearEntities();
     updateHotspots();
-});
+}
 
-ui.exportToMain(function selectGoesrHotspot(event) {
+function selectGoesrHotspot(event) {
     let hs = event.detail.curSelection;
     if (hs) {
         ui.setListItems(historyView, getHotspotHistory(hs));
@@ -551,19 +583,19 @@ ui.exportToMain(function selectGoesrHotspot(event) {
         ui.clearList(historyView);
     }
     ui.setLabelText(maskLabel, null);
-});
+}
 
-ui.exportToMain(function selectGoesrHistory(event) {
+function selectGoesrHistory(event) {
     let hs = event.detail.curSelection;
     ui.setLabelText(maskLabel, hs ? getMaskDescription(hs.mask) : null);
-});
+}
 
 function getMaskDescription(mask) {
     let desc = maskDesc.get(mask);
     return desc ? desc : "";
 }
 
-ui.exportToMain(function zoomToGoesrHotspot(event) {
+function zoomToGoesrHotspot(event) {
     let lv = ui.getList(event);
     if (lv) {
         let hs = ui.getSelectedListItem(lv);
@@ -572,12 +604,12 @@ ui.exportToMain(function zoomToGoesrHotspot(event) {
             if (hs.entity) uiCesium.setSelectedEntity(hs.entity);
         }
     }
-});
+}
 
-ui.exportToMain(function setGoesrMaxMissing(event) {
-});
+function setGoesrMaxMissing(event) {
+}
 
-ui.exportToMain(function setGoesrPointSize(event) {
+function setGoesrPointSize(event) {
     pointSize = ui.getSliderValue(event.target);
     satellites.forEach( sat=>{
         if (sat.dataSource) {
@@ -587,23 +619,23 @@ ui.exportToMain(function setGoesrPointSize(event) {
         }
     });
     uiCesium.requestRender();
-});
+}
 
-ui.exportToMain(function toggleFollowLatestGoesr(event) {
+function toggleFollowLatestGoesr(event) {
     followLatest = ui.isCheckBoxSelected(event.target);
     if (followLatest && ui.getSelectedListItemIndex(dataSetView) != 0) {
         ui.selectFirstListItem(dataSetView);
     }
-});
+}
 
-ui.exportToMain(function toggleGoesrLockStep(event) {
+function toggleGoesrLockStep(event) {
     lockStep = ui.isCheckBoxSelected(event.target);
     updateHotspots();
-});
+}
 
-ui.exportToMain(function toggleShowGoesr(event) {
+function toggleShowGoesr(event) {
     let cb = ui.getCheckBox(event.target);
     if (cb) {
         showGoesr( ui.isCheckBoxSelected(cb));
     }
-});
+}

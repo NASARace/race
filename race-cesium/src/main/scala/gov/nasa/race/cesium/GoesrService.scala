@@ -41,19 +41,19 @@ import java.net.InetSocketAddress
 import scala.collection.mutable.ArrayDeque
 import scala.concurrent.duration.DurationInt
 
-object CesiumGoesrRoute {
+object GoesrService {
   val jsModule = "ui_cesium_goesr.js"
   val icon = "geo-sat-icon.svg"
 
   val GOESR_DATASET = asc("goesrDataSet")
 }
-import gov.nasa.race.cesium.CesiumGoesrRoute._
+import gov.nasa.race.cesium.GoesrService._
 
 /**
   * a Cesium RaceRouteInfo that uses a collection of geostationary and polar-orbiter satellites to detect
   * fire hotspots
   */
-trait CesiumGoesrRoute extends CesiumRoute with ContinuousTimeRaceRoute with PushWSRaceRoute with RaceDataClient with JsonProducer {
+trait GoesrService extends CesiumRoute with ContinuousTimeRaceRoute with PushWSRaceRoute with RaceDataClient with JsonProducer {
 
   val goesrSatellites = config.getConfigArray("goes-r.satellites").map(c=> new SatelliteInfo(c))
   val goesrAssets = getSymbolicAssetMap("goesr.assets", config, Seq(("fire","fire.png")))
@@ -127,53 +127,12 @@ trait CesiumGoesrRoute extends CesiumRoute with ContinuousTimeRaceRoute with Pus
 
   override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ uiCesiumGoesrResources
 
-  override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiGoesrWindow(), uiGoesrIcon)
-
   override def getConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
     super.getConfig(requestUri,remoteAddr) + uiGoesrConfig(requestUri,remoteAddr)
   }
 
   def uiCesiumGoesrResources: Seq[Text.TypedTag[String]] = {
     Seq( extModule(jsModule))
-  }
-
-  def uiGoesrWindow(title: String="GOES-R Satellites"): Text.TypedTag[String] = {
-    uiWindow(title,"goesr", icon)(
-      cesiumLayerPanel("goesr", "main.toggleShowGoesr(event)"),
-      uiPanel("data sets", true)(
-        uiRowContainer()(
-          goesrSatellites.map( sat=> uiCheckBox( sat.name, "main.toggleShowGoesrSatellite(event)", s"goesr.${sat.name}")).foldLeft(
-            Seq(
-              uiHorizontalSpacer(2),
-              uiCheckBox("lock step", "main.toggleGoesrLockStep(event)", "goesr.lockStep"),
-              uiCheckBox("follow latest", "main.toggleFollowLatestGoesr(event)", "goesr.followLatest")
-            )
-          )( (acc,e)=> e +: acc).reverse:_*
-        ),
-        uiList("goesr.dataSets", 6, "main.selectGoesrDataSet(event)"),
-        uiListControls("goesr.dataSets")
-      ),
-      uiPanel("hotspots", true)(
-        uiList("goesr.hotspots", maxRows=8, selectAction = "main.selectGoesrHotspot(event)", dblClickAction = "main.zoomToGoesrHotspot(event)"),
-        uiRowContainer()(
-          uiRadio("high", "main.setGoesrPixelLevel(event)", "goesr.level.high"),
-          uiRadio("probable", "main.setGoesrPixelLevel(event)", "goesr.level.probable"),
-          uiRadio( "all", "main.setGoesrPixelLevel(event)", "goesr.level.all"),
-        )
-      ),
-      uiPanel("hotspot history", true)(
-        uiList("goesr.history", 8, selectAction = "main.selectGoesrHistory(event)"),
-        uiLabel("goesr.mask")
-      ),
-      uiPanel("layer parameters", false)(
-        uiSlider("max missing [min]", "goesr.maxMissing", "main.setGoesrMaxMissing(event)"),
-        uiSlider("size [pix]", "goesr.pointSize", "main.setGoesrPointSize(event)")
-      )
-    )
-  }
-
-  def uiGoesrIcon: Text.TypedTag[String] = {
-    uiIcon(icon, "main.toggleWindow(event,'goesr')", "goesr_icon")
   }
 
   def uiGoesrConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
@@ -206,4 +165,4 @@ trait CesiumGoesrRoute extends CesiumRoute with ContinuousTimeRaceRoute with Pus
   }
 }
 
-class CesiumGoesrApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumGoesrRoute
+class CesiumGoesrApp (val parent: ParentActor, val config: Config) extends DocumentRoute with ImageryLayerService with GoesrService

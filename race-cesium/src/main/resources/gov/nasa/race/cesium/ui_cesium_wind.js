@@ -5,7 +5,7 @@ import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 import * as uiData from "./ui_data.js";
 import * as windUtils from "./wind-particles/windUtils.js";
-import { ParticleSystem } from "./wind-particles/particleSystem.js"
+import { ParticleSystem } from "./wind-particles/particleSystem.js";
 
 var viewerParameters = {
     lonRange: new Cesium.Cartesian2(),
@@ -505,34 +505,24 @@ class WindFieldArea {
 const windFieldEntries = new Map(); // unique-key -> WindFieldEntry
 
 var areas = [] // sorted list of areas
-var areaView = undefined;
 var selectedArea = undefined;
-
-var selectedType = undefined;
-
 var displayEntries = [];  // time/source sorted entries for selected area and type
-var entryView = undefined; // the list showing available wind fields for the selected time
 var selectedEntry = undefined;
+var selectedType = "vector";
 
+createIcon();
+createWindow();
 
-//--- wind field init
+var areaView = ui.getChoice("wind.areas");
+var entryView = initEntryView();
+initAnimDisplayControls();
+initVectorDisplayControls();
+initContourDisplayControls();
 
-ui.registerLoadFunction(function initialize() {
-    createIcon();
-    createWindow();
+ws.addWsHandler(handleWsWindMessages);
+setupEventListeners();
 
-    areaView = ui.getChoice("wind.areas");
-    entryView = initEntryView();
-    initAnimDisplayControls();
-    initVectorDisplayControls();
-    initContourDisplayControls();
-    selectedType = "vector";
-
-    ws.addWsHandler(config.wsUrl, handleWsWindMessages);
-    setupEventListeners();
-
-    console.log("ui_cesium_wind initialized");
-});
+console.log("ui_cesium_wind initialized");
 
 function createIcon() {
     return ui.Icon("wind-icon.svg", (e)=> ui.toggleWindow(e,'wind'), "wind_icon");
@@ -572,7 +562,13 @@ function createWindow() {
 
         ),
         ui.Panel("contour display")(
-            ui.Slider("stroke width", "wind.contour.stroke_width", contourStrokeWidthChanged)
+            ui.Slider("stroke width", "wind.contour.stroke_width", contourStrokeWidthChanged),
+            ui.ColorField("stroke color", "wind.contour.stroke_color", true, contourStrokeColorChanged),
+            ui.ColorField("0-5mph", "wind.contour.color0", true, contourFillColorChanged),
+            ui.ColorField("5-10mph", "wind.contour.color1", true, contourFillColorChanged),
+            ui.ColorField("10-15mph", "wind.contour.color2", true, contourFillColorChanged),
+            ui.ColorField("15-20mph", "wind.contour.color3", true, contourFillColorChanged),
+            ui.ColorField(">20mph", "wind.contour.color4", true, contourFillColorChanged)
         )
     );
 }
@@ -648,6 +644,21 @@ function initVectorDisplayControls() {
 
 function initContourDisplayControls() {
     var e = undefined;
+
+    e = ui.getSlider("wind.contour.stroke_width");
+    ui.setSliderRange(e, 0, 3, 0.5);
+    ui.setSliderValue(e, defaultContourRender.strokeWidth);
+
+    e = ui.getField("wind.contour.stroke_color");
+    ui.setField(e, defaultContourRender.strokeColor.toCssHexString());
+
+    for (var i = 0; i<defaultContourRender.fillColors.length; i++) {
+        e = ui.getField(`wind.contour.color${i}`);
+        if (e) {
+            console.log("@@ fillColor ", i, " = ", defaultContourRender.fillColors[i].toCssHexString());
+            ui.setField(e, defaultContourRender.fillColors[i].toCssHexString());
+        }
+    }
 }
 
 //--- WS messages
@@ -771,6 +782,14 @@ function vectorLineColorChanged(event) {
 //--- contour controls
 
 function contourStrokeWidthChanged(event) {
+
+}
+
+function contourStrokeColorChanged(event) {
+
+}
+
+function contourFillColorChanged(event) {
 
 }
 

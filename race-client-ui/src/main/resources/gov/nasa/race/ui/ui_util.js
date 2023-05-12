@@ -624,6 +624,64 @@ export function getRectCenter (rect) {
 }
 
 
+//--- UTM coordinate transformation
+
+
+function getUtmTransform () {
+    const sin = Math.sin;
+    const cos = Math.cos;
+    const sinh = Math.sinh;
+    const cosh = Math.cosh;
+    const atan = Math.atan;
+    const atanh = Math.atanh;
+    const round = Math.round;
+    const floor = Math.floor;
+    const sqrt = Math.sqrt;
+
+    const a = 6378.137;
+    const f = 1/298.257223563;
+    const n = f / (2.0 - f);
+    const n2 = n * n;
+    const n3 = n2 * n;
+    const n4 = n2 * n2; 
+    const A = (a / (1 + n)) * (1 + n2/4 + n4/64);
+    const α1 = n/2 - (2/3)*n2 + (5/16)*n3;
+    const α2 = (13/48)*n2 - (3/5)*n3;
+    const α3 = (61/240)*n3;
+    const C = (2*sqrt(n)) / (1 + n);
+    const k0 = 0.9996;
+    const D = k0 * A;
+    const E0 = 500.0;
+
+    // no 'I' or 'O' band
+    const latBands = ["A","B","C","D","E","F","G","H","J","K","L","M","N","P","Q","R","S","T","U","V","W","X"];
+
+    return function (latDeg,lonDeg) {
+        if (latDeg < -80.0 || latDeg > 84.0) return undefined;
+        let band = latBands[floor((latDeg+80)/8)];
+
+        let φ = toRadians(latDeg);
+        let λ = toRadians(lonDeg);
+        let utmZone = round((lonDeg + 180) / 6);
+        let λ0 = toRadians((utmZone-1)*6 - 180 + 3);
+        let dλ = λ - λ0;
+        let N0 = φ < 0 ? 10000 : 0;
+
+        let sin_φ = sin(φ);
+        let t = sinh( atanh(sin_φ) - C * atanh( C*sin_φ));
+        let ξ = atan( t/cos(dλ));
+        let η = atanh( sin(dλ) / sqrt(1 + t*t));
+
+        let E = E0 + D*(η + (α1 * cos(2*ξ)*sinh(2*η)) + (α2 * cos(4*ξ)*sinh(4*η)) + (α3 * cos(6*ξ)*sinh(6*η)));
+        let N = N0 + D*(ξ + (α1 * sin(2*ξ)*cosh(2*η)) + (α2 * sin(4*ξ)*cosh(4*η)) + (α3 * sin(6*ξ)*cosh(6*η)));
+
+        return { utmZone: utmZone, band: band, easting: round(E*1000), northing: round(N*1000)};
+    }
+} 
+
+export const latLon2Utm = getUtmTransform();
+
+
 export function downSampleWithFirstAndLast (a, newLen) {
     let len = a.length;
     if (newLen > len) return a; // nothing to downsample

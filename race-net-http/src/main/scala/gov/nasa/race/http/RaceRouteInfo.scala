@@ -27,6 +27,7 @@ import gov.nasa.race.config.SubConfigurable
 import gov.nasa.race.core.{ConfigLoggable, ParentActor, RaceActorSystem, RaceDataClient, RaceDataClientMessage}
 import gov.nasa.race.util.StringUtils
 import scalatags.Text
+import scalatags.Text.all._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -129,6 +130,14 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
   // loaded after all RACE specific resources
   def getPostambleBodyFragments: Seq[Text.TypedTag[String]] = Seq.empty
 
+  //--- special content fragments
+
+  protected def modPath(jsModule: String): String = if (jsModule.startsWith("./")) jsModule else s"./$jsModule"
+
+  // override if we have to accumulate
+  protected def addJsModule(jsModule: String): Text.TypedTag[String] = {
+    script(src:=modPath(jsModule), tpe:="module")
+  }
 }
 
 /**

@@ -299,4 +299,52 @@ export class ParticlesRendering {
         func(this.primitives.trails);
         func(this.primitives.screen);
     }
+
+    updateSegments (context,userInput) {
+        let segments = this.primitives.segments;
+        let geometry = this.createSegmentsGeometry(userInput);
+        segments.geometry = geometry;
+
+        if (segments.commandToExecute) {
+            segments.commandToExecute.vertexArray = Cesium.VertexArray.fromGeometry({
+                context: context,
+                geometry: geometry,
+                attributeLocations: segments.attributeLocations,
+                bufferUsage: Cesium.BufferUsage.STATIC_DRAW,
+            });
+        }
+    }
+
+    updateColor (color) {
+        const clr = new Cesium.Cartesian4( color.red, color.green, color.blue, color.alpha);
+
+        this.primitives.segments.uniformMap.color = function() {
+            return clr;
+        };
+    }
+
+    updateUserInputUniforms (userInput) {
+        let primitives = this.primitives;
+
+        let map = primitives.segments.uniformMap;
+        const lineWidth = userInput.lineWidth;
+        map.lineWidth = function() {
+            return lineWidth;
+        };
+        const particleHeight = userInput.particleHeight;
+        map.particleHeight = function() {
+            return particleHeight;
+        };
+        const color = userInput.color;
+        const clr = new Cesium.Cartesian4( color.red, color.green, color.blue, color.alpha);
+        map.color = function() {
+            return clr;
+        };
+
+        map = primitives.trails.uniformMap;
+        const fadeOpacity = userInput.fadeOpacity;
+        map.fadeOpacity = function() {
+            return fadeOpacity;
+        };
+    }
 }

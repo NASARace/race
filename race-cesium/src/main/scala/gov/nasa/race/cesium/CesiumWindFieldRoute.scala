@@ -61,7 +61,7 @@ class DefaultAnimRendering (conf: Config) {
 class DefaultContourRendering (conf: Config) {
   val strokeWidth = conf.getDoubleOrElse("stroke-width", 1.5)
   val strokeColor = conf.getStringOrElse( "stroke-color", "red")
-  val fillColors = conf.getNonEmptyStringsOrElse( "fill-color", Array( "#f0000010", "#f0000040", "#f0000080", "#f00000f0"))
+  val fillColors = conf.getNonEmptyStringsOrElse( "fill-color", Array( "#f0000010", "#f0000040", "#f0000080", "#f00000c0", "#f00000f0"))
 
   def jsFillColors: String = {
     StringUtils.mkString( fillColors, "[",",","]")( clr=> s"Cesium.Color.fromCssColorString('$clr')")
@@ -177,4 +177,4 @@ export const windlayer = {
 /**
   * a single page application that processes wind channels
   */
-class CesiumWindFieldApp(val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumWindFieldRoute with ImageryLayerRoute
+class CesiumWindFieldApp(val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumWindFieldRoute with ImageryLayerService

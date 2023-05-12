@@ -208,4 +208,32 @@ export class ParticlesComputing {
         func(this.primitives.updatePosition);
         func(this.primitives.postProcessingPosition);
     }
+
+    refreshParticles(context,data,userInput,viewerParameters) {
+        this.destroyParticlesTextures();
+        this.createParticlesTextures(context, data, userInput, viewerParameters);
+        
+        this.updateUserInputUniforms(userInput)
+    }
+
+    updateUserInputUniforms (userInput) {
+        let primitives = this.primitives;
+
+        let map = primitives.calculateSpeed.uniformMap;
+        const speedFactor = userInput.speedFactor;
+        map.speedFactor = function() {
+            return speedFactor;
+        };
+
+        map = primitives.postProcessingPosition.uniformMap;
+        const dropRate = userInput.dropRate;
+        map.dropRate = function() {
+            return dropRate;
+        };
+        const dropRateBump = userInput.dropRateBump;
+        map.dropRateBump = function() {
+            return dropRateBump;
+        }
+
+    }
 }

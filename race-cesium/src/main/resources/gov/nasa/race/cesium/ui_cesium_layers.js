@@ -55,7 +55,7 @@ class LayerEntry {
 ui.registerLoadFunction(function initialize() {
     layerView = initLayerView();
 
-    ws.addWsHandler(config.wsUrl, handleWsLayerMessages);
+    ws.addWsHandler(handleWsLayerMessages);
     console.log("ui_cesium_layers initialized");
 });
 

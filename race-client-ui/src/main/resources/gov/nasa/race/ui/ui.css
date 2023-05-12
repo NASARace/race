@@ -346,6 +346,7 @@ div.ui_field_label {
     /* width: var(--field-label-width); */
     height: var(--field-height);
     white-space: pre;
+    font: var(--font);
 }
 
 input.ui_field {
@@ -466,6 +467,12 @@ input.ui_field.input {
 
 input.ui_field.input.fixed {
     color: var(--input-color);
+    font: var(--mono-font);
+    text-align: right;
+}
+
+input.ui_field.fixed {
+    color: var(--data-color);
     font: var(--mono-font);
     text-align: right;
 }

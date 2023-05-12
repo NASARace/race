@@ -72,6 +72,7 @@ class GeoJsonRendering (conf: Config) extends JsonSerializable {
   def markerSymbol: Option[String] = conf.getOptionalString("marker-symbol")
   def markerSize: Option[Int] = conf.getOptionalInt(("marker-size"))
   def fill: Option[String] = conf.getOptionalString("fill-color")
+  def clampToGround: Option[Boolean] = conf.getOptionalBoolean("clamp-to-ground")
 
   //--- our extended attributes
   def module: Option[String] = conf.getOptionalString("module") // used on client side for specific rendering and property mod
@@ -88,7 +89,7 @@ class GeoJsonRendering (conf: Config) extends JsonSerializable {
     ifSome (module) { mod=> writer.writeStringMember("module", s"./${GeoLayer.MODULE_PREFIX}/$mod") }
     ifSome (pointDistance) { writer.writeIntMember("pointDistance", _) }
     ifSome (geometryDistance) { writer.writeIntMember("geometryDistance", _) }
-
+    ifSome (clampToGround) { writer.writeBooleanMember("clampToGround", _) }
   }
 
   def toJs: String = {
@@ -103,6 +104,7 @@ class GeoJsonRendering (conf: Config) extends JsonSerializable {
     ifSome (module) { v=> sb.append(s"module:'./${GeoLayer.MODULE_PREFIX}/$v',") }
     ifSome (pointDistance) { v=> sb.append(s"pointDistance:$v,") }
     ifSome (geometryDistance) { v=> sb.append(s"geometryDistance:$v,") }
+    ifSome (clampToGround) { v=> sb.append(s"clampToGround:$v,") }
     sb.append('}')
     sb.toString
   }
@@ -115,6 +117,7 @@ class DefaultGeoJsonRendering (conf: Config) extends GeoJsonRendering(conf) {
   override def markerSymbol: Option[String] = Some(conf.getStringOrElse("marker-symbol", "square"))
   override def markerSize: Option[Int] = Some(conf.getIntOrElse("marker-size", 32))
   override def fill: Option[String] = Some(conf.getStringOrElse("fill-color","#FF69B4"))
+  override def clampToGround: Option[Boolean] = Some(conf.getBooleanOrElse("clamp-to-ground", true))
 
   // we don't provide default values for extended rendering attributes
 }
@@ -129,18 +132,16 @@ case class GeoLayer (pathName: String, file: File, date: DateTime, info: String,
   }
 }
 
-object GeoLayerRoute {
+object GeoLayerService {
   val jsModule = "ui_cesium_geolayer.js"
   val icon = "geomarker-icon.svg"
-
-  val windowId = "geolayer"
 }
-import GeoLayerRoute._
+import GeoLayerService._
 
 /**
  * a route that serves configured GeoJSON content
  */
-trait GeoLayerRoute extends CesiumRoute with FileServerRoute with JsonProducer {
+trait GeoLayerService extends CesiumRoute with FileServerRoute with JsonProducer {
   private val defaultRendering = new DefaultGeoJsonRendering(config.getConfigOrElse("geolayer.render", NoConfig))
   private val sources = mutable.LinkedHashMap.from( config.getConfigSeq("geolayer.sources").map(GeoLayer(_)).map(l=> l.pathName -> l))
   private val renderModules = getRenderModules(sources.values)
@@ -166,8 +167,7 @@ trait GeoLayerRoute extends CesiumRoute with FileServerRoute with JsonProducer {
         extractUnmatchedPath { p =>
           val pathName = NetUtils.decodeUri(p.toString())
           sources.get(pathName) match {
-            case Some(geoLayer) =>
-              completeWithFileContent( geoLayer.file)
+            case Some(geoLayer) => completeWithFileContent( geoLayer.file)
             case None => complete(StatusCodes.NotFound, pathName)
           }
         }
@@ -190,25 +190,9 @@ trait GeoLayerRoute extends CesiumRoute with FileServerRoute with JsonProducer {
   //--- document fragments
 
   override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ uiCesiumGeoLayerResources
-  override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiGeoLayerWindow(), uiGeoLayerIcon)
   override def getConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = super.getConfig(requestUri,remoteAddr) + geoLayerConfig(requestUri,remoteAddr)
 
-  def uiCesiumGeoLayerResources: Seq[Text.TypedTag[String]] =  renderModules :+ extModule(jsModule)
-
-  def uiGeoLayerWindow(title: String="Geo Layers"): Text.TypedTag[String] = {
-    uiWindow(title, windowId, icon)(
-      cesiumLayerPanel(windowId, "main.toggleShowGeoLayer(event)"),
-      uiPanel("sources", true)(
-        uiTreeList(s"$windowId.source.list", maxRows = 15, minWidthInRem = 25, selectAction="main.selectGeoLayerSource(event)")
-      ),
-      uiPanel("data", false)(
-        uiKvTable(s"$windowId.object", maxRows = 15, maxWidthInRem = 20, minWidthInRem = 25)
-      ),
-      uiPanel("source parameters", false)()
-    )
-  }
-
-  def uiGeoLayerIcon: Text.TypedTag[String] = uiIcon(icon, s"main.toggleWindow(event,'$windowId')", "geolayer_icon")
+  def uiCesiumGeoLayerResources: Seq[Text.TypedTag[String]] =  renderModules :+ addJsModule(jsModule)
 
   def geoLayerConfig(requestUri: Uri, remoteAddr: InetSocketAddress): String = {
     val cfg = config.getConfig("geolayer")
@@ -226,7 +210,8 @@ trait GeoLayerRoute extends CesiumRoute with FileServerRoute with JsonProducer {
   }
 
   def initializeGeoLayerConnection (ctx: WSContext, queue: SourceQueueWithComplete[Message]): Unit = {
-    pushTo( ctx.remoteAddress, queue, TextMessage.Strict( toNewJson( serializeSources(_, sources.values))))
+    val msg = toNewJson( serializeSources(_, sources.values))
+    pushTo( ctx.remoteAddress, queue, TextMessage.Strict( msg))
   }
 
   def serializeSources (writer: JsonWriter, srcs: Iterable[GeoLayer]): Unit = {
@@ -238,5 +223,5 @@ trait GeoLayerRoute extends CesiumRoute with FileServerRoute with JsonProducer {
 }
 
 
-class CesiumGeoLayerApp (val parent: ParentActor, val config: Config) extends DocumentRoute with GeoLayerRoute
-class CesiumGeoImgApp (val parent: ParentActor, val config: Config) extends DocumentRoute with GeoLayerRoute with ImageryLayerRoute
+class CesiumGeoLayerApp (val parent: ParentActor, val config: Config) extends DocumentRoute with GeoLayerService
+class CesiumGeoImgApp (val parent: ParentActor, val config: Config) extends DocumentRoute with GeoLayerService with ImageryLayerService

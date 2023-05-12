@@ -171,7 +171,7 @@ package object ui {
     div(mods: _*)
   }
 
-  def uiTextInput (label: String, eid: UiID, isFixed: Boolean = false, action: String=NoAction, placeHolder: String="", width: String=NoWidth): Text.TypedTag[String] = {
+  def uiTextInput(label: UiID, eid: UiID, action: UiID = NoAction, isFixed: Boolean = false, placeHolder: UiID = "", width: UiID = NoWidth): Text.TypedTag[String] = {
     var classes = "ui_field text input"
     if (isFixed) classes += " fixed"
     var mods = List(cls:=classes, data("id"):=eid, data("label"):= label)

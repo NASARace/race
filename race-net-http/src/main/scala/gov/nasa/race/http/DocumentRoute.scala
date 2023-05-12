@@ -19,9 +19,11 @@ package gov.nasa.race.http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import gov.nasa.race.util.FileUtils
 import scalatags.Text
 import scalatags.Text.all.{script, _}
 
+import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, Set => MutSet}
 
 /**
@@ -68,6 +70,7 @@ trait DocumentRoute extends RaceRouteInfo {
     * TODO - do we need to pass in requestUri and remoteAddr to allow for location and user agent specific documents?
     */
   protected def getDocument(): String = {
+    "<!DOCTYPE html>" +
     html(
       scalatags.Text.all.head(
         // entries have to be unique (don't load scripts or resources twice)
@@ -79,10 +82,47 @@ trait DocumentRoute extends RaceRouteInfo {
         // here we do allow repetitions
         getPreambleBodyFragments,
         getBodyFragments,
-        getPostambleBodyFragments
+        getPostambleBodyFragments,
+
+        if (jsModules.nonEmpty) {
+          script( tpe:="module")(postExecJsModule)
+        } else ""
       )
     ).render
   }
+
+  //--- support for collecting JsModules over all fragments of a document
+
+  protected val jsModules: mutable.LinkedHashSet[String] = mutable.LinkedHashSet.empty
+
+  protected def clearJsModules(): Unit = jsModules.clear()
+
+  // called from micro-service traits
+  override protected def addJsModule(jsModule: String): Text.TypedTag[String] = {
+    val jsModulePath = modPath(jsModule)
+    jsModules.add(jsModulePath)
+    script(src:=jsModulePath, tpe:="module")
+  }
+
+  protected def postExecJsModule: String = {
+    // using static imports it should not matter if we intersperse imports and postExec calls but for
+    // the sake of clarity we keep the (blocking) imports on top
+    val baseNames = ArrayBuffer.empty[String]
+    val sb = new StringBuilder()
+    sb.append("\n")
+    jsModules.foreach { jsMod =>
+      val baseName = FileUtils.getBaseName(jsMod)
+      baseNames += baseName
+      sb.append(s"import * as $baseName from '$jsMod';\n")
+    }
+    baseNames.foreach { baseName =>
+      sb.append(s"if ($baseName.postExec) $baseName.postExec();\n")
+    }
+    sb.append("console.log('js modules initialized.');\n")
+
+    sb.toString
+  }
+
 }
 
 /**

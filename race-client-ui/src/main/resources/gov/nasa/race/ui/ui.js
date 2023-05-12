@@ -11,18 +11,15 @@ export function exportToMain(func) {
 
 //--- module initialization
 // (note that the moduleInitializers are executed on window.onload - after all modules and elements have been loaded and pre-initialized)
+// NOTE - this does not hold in case of toplevel awaits - onload might get executed before toplevel awaits return
 
 var loadFunctions = [];
 var unloadFunctions = [];
 var postLoadFunctions = [];  // called after all loadFunctions have been executed
 
 window.addEventListener('load', e => {
-    console.log("initializing modules..");
     loadFunctions.forEach(f => f());
-    console.log("modules initialized.");
-
     postLoadFunctions.forEach(f => f());
-    console.log("document initialized.");
 });
 
 window.addEventListener('unload', e => {
@@ -568,24 +565,25 @@ export function Icon (src, action, eid=null) {
     return e;
 }
 
-function initializeIcon (icon) {
-    // if icon is not positioned add it to the iconBox
+function initializeIcon (e) {
+    if (e.children.length == 0) {
+        // if icon is not positioned add it to the iconBox
+        if (!iconBox) iconBox = getIconBox();
+        let parent = e.parentElement;
+        if (parent) parent.removeChild(e);
+        iconBox.appendChild(e);
 
-    if (!iconBox) iconBox = getIconBox();
-    let parent = icon.parentElement;
-    if (parent) parent.removeChild(icon);
-    iconBox.appendChild(icon);
+        let src = e.dataset.src;
 
-    let src = icon.dataset.src;
+        let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        e.appendChild(svg);
+        svg.setAttribute("viewBox", "0 0 32 32");
 
-    let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    icon.appendChild(svg);
-    svg.setAttribute("viewBox", "0 0 32 32");
-
-    let use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-    use.classList.add("ui_icon_svg");
-    use.setAttribute("href", src + "#layer1");
-    svg.appendChild(use);
+        let use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        use.classList.add("ui_icon_svg");
+        use.setAttribute("href", src + "#layer1");
+        svg.appendChild(use);
+    }
 }
 
 function initializeIcons() {
@@ -629,12 +627,16 @@ function getIconBox() {
 
 //--- input element functions
 
-export function Button (text, onClickAction) {
+export function Button (text, action) {
     let e = _createElement("INPUT", "ui_button");
     e.type = "button"
     e.value = text;
 
-    if (onClickAction) e.onclick = onClickAction;
+    if (action instanceof Function) {
+        e.addEventListener("click", action);
+    } else {
+        e.onclick = action;
+    }
 
     return e;
 }
@@ -652,6 +654,25 @@ export function setButtonDisabled(o, isDisabled) {
     setInputDisabled(o, isDisabled);
 }
 
+//--- passive text (no user input, only programmatic)
+
+// dialog element label
+export function Label (eid, isPermanent=false, maxWidthInRem=0, minWidthInRem=0) {
+    let e = _createElement("DIV", "ui_label");
+    e.setAttribute("id", eid);
+    if (isPermanent) e.classList.add("permanent");
+    setWidthStyle(e, maxWidthInRem, minWidthInRem);
+    return e;
+}
+
+// un-labeled text data
+export function Text (eid, maxWidthInRem, minWidthInRem=0, text=null) {
+    let e = _createElement("DIV", "ui_text");
+    e.setAttribute("id", eid);
+    setWidthStyle(e,maxWidthInRem,minWidthInRem);
+    return e;
+}
+
 //--- fields 
 
 function genField (inputType, extraCls, label, eid, changeAction) {
@@ -661,8 +682,19 @@ function genField (inputType, extraCls, label, eid, changeAction) {
     e.setAttribute("data-label", label);
     e.setAttribute("data-type", inputType);
     if (eid) e.setAttribute("data-id", eid);
-    if (changeAction instanceof Function) e.addEventListener("change", changeAction); else e.onchange= changeAction;
+    if (changeAction) {
+        if (changeAction instanceof Function) e.addEventListener("change", changeAction); else e.onchange= changeAction;
+    }
 
+    return e;
+}
+
+export function TextInput (label, eid, changeAction, isFixed=false, placeHolder=null, width=null) {
+    let extraCls = changeAction ? ["input"] : [];
+    if (isFixed) extraCls.push("fixed");
+    let e = genField("text", extraCls, label, eid, changeAction);
+    if (placeHolder) e.setAttribute("data-placeholder", placeHolder);
+    if (width) e.setAttribute("data-width", width);
     return e;
 }
 
@@ -672,7 +704,7 @@ export function TextField (label, eid, isInput, changeAction) {
 }
 
 export function NumField (label, eid, isInput, changeAction) {
-    let extraCls = isInput ? ["input"] : [];
+    let extraCls = isInput ? ["fixed","input"] : ["fixed"];
     return genField("text", extraCls, label, eid, changeAction);
 }
 
@@ -682,7 +714,7 @@ export function ColorField (label, eid, isInput, changeAction){
 }
 
 function initializeField (e) {
-    if (e.tagName == "DIV") {
+    if (e.tagName == "DIV" && e.children.length == 0) {
         let id = e.dataset.id;
         let labelText = e.dataset.label;
         let inputType = e.dataset.type ? e.dataset.type : "text";
@@ -841,6 +873,21 @@ const _timerClients = [];
 
 const MILLIS_IN_DAY = 86400000;
 
+export function Clock (label, eid, tz) {
+    let e = _createElement("DIV", "ui_clock");
+    if (label) e.setAttribute("data-label", label);
+    if (eid) e.setAttribute("data-id", eid);
+    if (tz) e.setAttribute("data-tz", tz);
+    return e;
+}
+
+export function Timer (label, eid) {
+    let e = _createElement("DIV", "ui_timer");
+    if (label) e.setAttribute("data-label", label);
+    if (eid) e.setAttribute("data-id", eid);
+    return e;
+}
+
 document.addEventListener("visibilitychange", function() {
     if (document.visibilityState === 'visible') {
         if (_timerClients.length > 0) startTime();
@@ -884,7 +931,7 @@ export function stopTime() {
 }
 
 function initializeTimer(e) {
-    if (e.tagName == "DIV") {
+    if (e.tagName == "DIV" && e.children.length == 0) {
         let id = e.dataset.id;
         let labelText = e.dataset.label;
 
@@ -944,7 +991,7 @@ export function resetTimer(o, timeScale) {
 }
 
 function initializeClock(e) {
-    if (e.tagName == "DIV") {
+    if (e.tagName == "DIV" && e.children.length == 0) {
         let id = e.dataset.id;
         let labelText = e.dataset.label;
 
@@ -1110,56 +1157,58 @@ export function Slider (label, eid, changeAction) {
 }
 
 function initializeSlider (e) {
-    let id = e.dataset.id;
-    let labelText = e.dataset.label;
-    // default init - likely to be set by subsequent uiSetSliderRange/Value calls
-    let minValue = _parseInt(e.dataset.minValue, 0);
-    let maxValue = _parseInt(e.dataset.maxValue, 100);
-    let v = _parseInt(e.dataset.value, minValue);
+    if (e.children.length == 0) {
+        let id = e.dataset.id;
+        let labelText = e.dataset.label;
+        // default init - likely to be set by subsequent uiSetSliderRange/Value calls
+        let minValue = _parseInt(e.dataset.minValue, 0);
+        let maxValue = _parseInt(e.dataset.maxValue, 100);
+        let v = _parseInt(e.dataset.value, minValue);
 
-    if (maxValue > minValue) {
-        if (labelText) {
-            let label = _createElement("DIV", "ui_field_label", labelText);
-            e.appendChild(label);
+        if (maxValue > minValue) {
+            if (labelText) {
+                let label = _createElement("DIV", "ui_field_label", labelText);
+                e.appendChild(label);
+            }
+
+            let track = _createElement("DIV", "ui_slider_track");
+            track.id = id;
+            track._uiMinValue = minValue;
+            track._uiMaxValue = maxValue;
+            track._uiStep = _parseNumber(e.dataset.inc);
+            track._uiValue = _computeSliderValue(track, v);
+            track.addEventListener("click", clickTrack);
+
+            let range = _createElement("DIV", "ui_slider_range");
+            track._uiRange = range;
+            track.appendChild(range);
+
+            let left = _createElement("DIV", "ui_slider_limit", minValue);
+            left.addEventListener("click", clickMin);
+            track._uiLeftLimit = left;
+            track.appendChild(left);
+
+            let thumb = _createElement("DIV", "ui_slider_thumb", "▲");
+            track._uiThumb = thumb;
+            thumb.addEventListener("mousedown", startDrag);
+            track.appendChild(thumb);
+
+            let num = _createElement("DIV", "ui_slider_num");
+            num.addEventListener("click", clickNum);
+            track._uiNum = num;
+            track.appendChild(num);
+
+            let right = _createElement("DIV", "ui_slider_limit", maxValue);
+            right.addEventListener("click", clickMax);
+            track._uiRightLimit = right;
+            track.appendChild(right);
+
+            e.appendChild(track);
+            sliderResizeObserver.observe(track);
+
+        } else {
+            console.log("illegal range for slider " + id);
         }
-
-        let track = _createElement("DIV", "ui_slider_track");
-        track.id = id;
-        track._uiMinValue = minValue;
-        track._uiMaxValue = maxValue;
-        track._uiStep = _parseNumber(e.dataset.inc);
-        track._uiValue = _computeSliderValue(track, v);
-        track.addEventListener("click", clickTrack);
-
-        let range = _createElement("DIV", "ui_slider_range");
-        track._uiRange = range;
-        track.appendChild(range);
-
-        let left = _createElement("DIV", "ui_slider_limit", minValue);
-        left.addEventListener("click", clickMin);
-        track._uiLeftLimit = left;
-        track.appendChild(left);
-
-        let thumb = _createElement("DIV", "ui_slider_thumb", "▲");
-        track._uiThumb = thumb;
-        thumb.addEventListener("mousedown", startDrag);
-        track.appendChild(thumb);
-
-        let num = _createElement("DIV", "ui_slider_num");
-        num.addEventListener("click", clickNum);
-        track._uiNum = num;
-        track.appendChild(num);
-
-        let right = _createElement("DIV", "ui_slider_limit", maxValue);
-        right.addEventListener("click", clickMax);
-        track._uiRightLimit = right;
-        track.appendChild(right);
-
-        e.appendChild(track);
-        sliderResizeObserver.observe(track);
-
-    } else {
-        console.log("illegal range for slider " + id);
     }
 }
 
@@ -1345,7 +1394,7 @@ export function Choice (label,eid,changeAction) {
 }
 
 function initializeChoice (e) {
-    if (e.tagName == "DIV") {
+    if (e.tagName == "DIV" && e.children.length == 0) {
         let id = e.dataset.id;
         let labelText = e.dataset.label;
 
@@ -1736,12 +1785,24 @@ export function getSelectorLabel(o) {
 
 //--- key-value tables (2 column lists, first column contains right aligned labels)
 
+export function KvTable(eid, maxRows, maxWidthInRem, minWidthInRem) {
+    let e = _createElement("DIV", "ui_kvtable");
+
+    if (eid) e.setAttribute("id", eid);
+    e.setAttribute("data-rows", maxRows.toString);
+    setWidthStyle(e, maxWidthInRem,minWidthInRem);
+
+    return e;
+}
+
 function initializeKvTable (e) {
-    let itemHeight = getRootVar("--list-item-height");
-    let itemPadding = getRootVar("--list-item-padding");
-   
-    let nRows = _intDataAttrValue(e, "rows", 8);
-    e.style.maxHeight = `calc(${nRows} * (${itemHeight} + ${itemPadding}))`; // does not include padding, borders or margin
+    if (!e.style.maxHeight) {
+        let itemHeight = getRootVar("--list-item-height");
+        let itemPadding = getRootVar("--list-item-padding");
+    
+        let nRows = _intDataAttrValue(e, "rows", 8);
+        e.style.maxHeight = `calc(${nRows} * (${itemHeight} + ${itemPadding}))`; // does not include padding, borders or margin
+    }
 }
 
 export function getKvTable(o) {
@@ -1786,7 +1847,7 @@ function genList (subCls, eid, maxRows, selectAction, clickAction, contextMenuAc
 
     if (subCls) e.classList.add(subCls);
     if (eid) e.setAttribute("id", eid);
-    e.setAttribute("data-rows", maxRows.toString);
+    e.setAttribute("data-rows", maxRows.toString());
 
     if (selectAction) {
         e._uiSelectAction = selectAction; // don't use attribute here
@@ -1804,8 +1865,10 @@ export function List (eid, maxRows, selectAction, clickAction, contextMenuAction
     return genList(null, eid, maxRows, selectAction, clickAction, contextMenuAction, dblClickAction);
 }
 
-export function TreeList (eid, maxRows, selectAction, clickAction, contextMenuAction, dblClickAction) {
-    return genList("tree", eid, maxRows, selectAction, clickAction, contextMenuAction, dblClickAction);
+export function TreeList (eid, maxRows, minWidthInRem, selectAction, clickAction, contextMenuAction, dblClickAction) {
+    let e = genList("tree", eid, maxRows, selectAction, clickAction, contextMenuAction, dblClickAction);
+    setWidthStyle(e, 0,minWidthInRem);
+    return e;
 }
 
 export function ListWithPopup (eid, maxRows, selectAction, clickAction, contextMenuAction, dblClickAction) {
@@ -1822,30 +1885,33 @@ export function ListWithPopup (eid, maxRows, selectAction, clickAction, contextM
 }
 
 function initializeList (e) {
-    let itemHeight = getRootVar("--list-item-height");
-    let itemPadding = getRootVar("--list-item-padding");
-    
-    let nRows = _intDataAttrValue(e, "rows", 8);
-    e.style.maxHeight = `calc(${nRows} * (${itemHeight} + ${itemPadding}))`; // does not include padding, borders or margin
-    e.setAttribute("tabindex", "0");
-    if (e.firstElementChild && e.firstElementChild.classList.contains("ui_popup_menu")) _hoistChildElement(e.firstElementChild);
+    if (!e._uiItemMap) {
+        let itemHeight = getRootVar("--list-item-height");
+        let itemPadding = getRootVar("--list-item-padding");
+        
+        let nRows = _intDataAttrValue(e, "rows", 8);
 
-    if (!e._uiSelectAction) {
-        let selectAction = _dataAttrValue(e, "onselect"); // single click or programmatic
-        if (selectAction) {
-            e._uiSelectAction = Function("event", selectAction);
-            e.addEventListener("selectionChanged", e._uiSelectAction);
+        e.style.maxHeight = `calc(${nRows} * (${itemHeight} + ${itemPadding}))`; // does not include padding, borders or margin
+        e.setAttribute("tabindex", "0");
+        if (e.firstElementChild && e.firstElementChild.classList.contains("ui_popup_menu")) _hoistChildElement(e.firstElementChild);
+
+        if (!e._uiSelectAction) {
+            let selectAction = _dataAttrValue(e, "onselect"); // single click or programmatic
+            if (selectAction) {
+                e._uiSelectAction = Function("event", selectAction);
+                e.addEventListener("selectionChanged", e._uiSelectAction);
+            }
         }
+
+        e.addEventListener("keydown", listKeyDownHandler);
+
+        // element state
+        e._uiSelectedItemElement = null; // we add a property to keep track of selections
+        e._uiMapFunc = item => item.toString(); // item => itemElement text
+        e._uiItemMap = new Map(); // item -> itemElement
+
+        addListWrapper(e); // reparent
     }
-
-    e.addEventListener("keydown", listKeyDownHandler);
-
-    // element state
-    e._uiSelectedItemElement = null; // we add a property to keep track of selections
-    e._uiMapFunc = item => item.toString(); // item => itemElement text
-    e._uiItemMap = new Map(); // item -> itemElement
-
-    addListWrapper(e); // reparent
 }
 
 function listKeyDownHandler(event) {
@@ -2409,6 +2475,17 @@ export function getList(o) {
 
 //--- list controls (first,up,down,last,clear buttons)
 
+export function ListControls (listId, first=null,up=null,down=null,last=null,clear=null) {
+    let e = _createElement("DIV", "ui_listcontrols");
+    e.setAttribute("data-listId", listId);
+    if (first) e.setAttribute("data-first", first);
+    if (up) e.setAttribute("data-up", up);
+    if (down) e.setAttribute("data-down", down);
+    if (last) e.setAttribute("data-last", last);
+    if (clear) e.setAttribute("data-clear", clear);
+    return e;
+}
+
 function initializeListControls(e) {
     if (e.tagName == "DIV" && _hasNoChildElements(e)) {
         let le = getList( e.dataset.listid);
@@ -2661,6 +2738,14 @@ export function createColorInput(initClr, size, action) {
     return e;
 }
 
+//--- common panels
+
+export function LayerPanel (windowId, showAction, isExpanded=false) {
+    return Panel("layer", isExpanded, `${windowId}.layer`)(
+        Label(`${windowId}.layer-descr`)
+    )
+}
+
 //--- images
 
 export function createImage(src, placeholder, w, h) {
@@ -2743,6 +2828,13 @@ function _containsAnyClass(element, ...cls) {
         if (cl.contains(c)) return true;
     }
     return false;
+}
+
+function setWidthStyle (e, maxWidthInRem=0, minWidthInRem=0) {
+    let style = "";
+    if (maxWidthInRem) style += `max-width:${maxWidthInRem}rem;`;
+    if (minWidthInRem) style += `min-width:${minWidthInRem}rem;`;
+    if (style) e.setAttribute("style", style);
 }
 
 function _setAlignment(e, attrs) {
@@ -3032,5 +3124,12 @@ export function resetElementColors(e) {
     if (e) {
         e.style.color = null;
         e.style.backgroundColor = null;
+    }
+}
+
+export function initElem (e, initFunc) {
+    if (e) {
+        initFunc(e);
+        return e;
     }
 }
