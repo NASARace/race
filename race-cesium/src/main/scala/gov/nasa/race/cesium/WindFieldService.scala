@@ -82,7 +82,7 @@ class DefaultContourRendering (conf: Config) {
  *
  * TODO - both windFieldEntries and urlMap still need re-org
  */
-trait CesiumWindFieldRoute extends CesiumRoute with FileServerRoute with PushWSRaceRoute with CachedFileAssetRoute with PipedRaceDataClient {
+trait WindFieldService extends CesiumService with FileServerRoute with PushWSRaceRoute with CachedFileAssetRoute with PipedRaceDataClient {
 
   case class WindField (wfa: WindFieldAvailable) {
     // this serves as the resource name and also a unique key (note we don't include baseDate as newer entries should take precedence)
@@ -177,4 +177,4 @@ export const windlayer = {
 /**
   * a single page application that processes wind channels
   */
-class CesiumWindFieldApp(val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumWindFieldRoute with ImageryLayerService
+class CesiumWindFieldApp(val parent: ParentActor, val config: Config) extends DocumentRoute with WindFieldService with ImageryLayerService

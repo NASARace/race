@@ -35,6 +35,7 @@ import java.util
 import scala.annotation.tailrec
 import scala.collection.immutable.HashSet
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
 
 /**
@@ -597,6 +598,14 @@ object FileUtils {
     res
   }
   def checkFileHeader (file: File, header: String): Boolean = checkFileHeader(file, header.getBytes)
+
+  def getDirElements (pathSpec: String): Array[File] = {
+    pathSpec.split(if (pathSpec.contains('\\')) ";" else ":").foldLeft(ArrayBuffer.empty[File]) { (acc,e)=>
+      val f = new File(e)
+      // we could check for duplicates in already added paths here
+      if (f.isDirectory) acc += f else acc
+    }.toArray
+  }
 
   def findExecutableFile (exeName: String, dirs: Array[String] = pathDirs): Option[File] = {
     val fname = OsUtils.executableName(exeName)

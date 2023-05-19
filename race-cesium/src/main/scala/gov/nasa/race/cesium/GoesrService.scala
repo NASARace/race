@@ -53,7 +53,7 @@ import gov.nasa.race.cesium.GoesrService._
   * a Cesium RaceRouteInfo that uses a collection of geostationary and polar-orbiter satellites to detect
   * fire hotspots
   */
-trait GoesrService extends CesiumRoute with ContinuousTimeRaceRoute with PushWSRaceRoute with RaceDataClient with JsonProducer {
+trait GoesrService extends CesiumService with ContinuousTimeRaceRoute with PushWSRaceRoute with RaceDataClient with JsonProducer {
 
   val goesrSatellites = config.getConfigArray("goes-r.satellites").map(c=> new SatelliteInfo(c))
   val goesrAssets = getSymbolicAssetMap("goesr.assets", config, Seq(("fire","fire.png")))

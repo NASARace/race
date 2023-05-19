@@ -21,7 +21,7 @@ import com.typesafe.config.Config
 import gov.nasa.race.common.{ActorDataAcquisitionThread, ExternalProc}
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
-import gov.nasa.race.earth.{GdalContour, GdalWarp, VegetationType, WindFieldAvailable, WindNinjaWxModelResults, WindNinjaWxModelSingleRun}
+import gov.nasa.race.earth.{GdalContour, GdalWarp, VegetationType, WindFieldAvailable, WindNinjaWxModelResults, WindNinjaSingleRun}
 import gov.nasa.race.geo.BoundingBoxGeoFilter
 import gov.nasa.race.uom.Length
 import gov.nasa.race.uom.Length.Meters
@@ -48,14 +48,14 @@ case class WindNinjaArea (name: String, bounds: BoundingBoxGeoFilter, demFile: F
  * this has to be outside the actor since we run a sequence of external programs on each queue entry
  * since this can consume a lot of memory and CPU we process queue entries one at a time
  */
-class WindNinjaThread ( client: ActorRef,
-                        queue: BlockingQueue[(HrrrFileAvailable,WindNinjaArea)],
-                        outputDir: File,
-                        windNinjaCmd: WindNinjaWxModelSingleRun,
-                        huvwGridCmd: HuvwCommand,
-                        huvwVectorCmd: HuvwCommand,
-                        warpCmd: GdalWarp,
-                        contourCmd: GdalContour
+class WindNinjaThread (client: ActorRef,
+                       queue: BlockingQueue[(HrrrFileAvailable,WindNinjaArea)],
+                       outputDir: File,
+                       windNinjaCmd: WindNinjaSingleRun,
+                       huvwGridCmd: HuvwCommand,
+                       huvwVectorCmd: HuvwCommand,
+                       warpCmd: GdalWarp,
+                       contourCmd: GdalContour
                       ) extends ActorDataAcquisitionThread(client) {
 
   override def run(): Unit = {
@@ -161,11 +161,11 @@ class WindNinjaActor (val config: Config) extends SubscribingRaceActor with Publ
   val outputDir: File = FileUtils.ensureWritableDir(config.getStringOrElse("directory", "tmp/windninja")).get
 
   //--- external progs we use
-  val windNinjaCmd = new WindNinjaWxModelSingleRun( config.getExecutableFile("windninja-prog", "WindNinja_cli"), outputDir)
-  val huvwGridCmd = new HuvwCsvGridCommand( config.getExecutableFile("huvw-grid-prog", "huvw_csv_grid"), outputDir)
-  val huvwVectorCmd = new HuvwCsvVectorCommand( config.getExecutableFile("huvw-vector-prog", "huvw_csv_vector"), outputDir)
-  val warpCmd = new GdalWarp( config.getExecutableFile("gdalwarp-prog", "gdalwarp"))
-  val contourCmd = new GdalContour(  config.getExecutableFile("gdal-contour-prog", "gdal_contour"))
+  val windNinjaCmd = new WindNinjaSingleRun( getExecutableFile("windninja-prog", "WindNinja_cli"), outputDir)
+  val huvwGridCmd = new HuvwCsvGridCommand( getExecutableFile("huvw-grid-prog", "huvw_csv_grid"), outputDir)
+  val huvwVectorCmd = new HuvwCsvVectorCommand( getExecutableFile("huvw-vector-prog", "huvw_csv_vector"), outputDir)
+  val warpCmd = new GdalWarp( getExecutableFile("gdalwarp-prog", "gdalwarp"))
+  val contourCmd = new GdalContour(  getExecutableFile("gdal-contour-prog", "gdal_contour"))
 
   protected var queue = new ArrayBlockingQueue[(HrrrFileAvailable, WindNinjaArea)](config.getIntOrElse("queue-size", 256))
   protected val wnThread = new WindNinjaThread(self,queue,outputDir,windNinjaCmd,huvwGridCmd,huvwVectorCmd,warpCmd,contourCmd).setLogging(this)
@@ -222,11 +222,10 @@ trait HuvwCommand extends ExternalProc[File] {
     this
   }
 
-  override def buildCommand: String = {
-    args += inputFile.get.getPath
-    args += outputFile.get.getPath
-
+  override def buildCommand: StringBuilder = {
     super.buildCommand
+      .append(' ').append( inputFile.get.getPath)
+      .append(' ').append( outputFile.get.getPath)
   }
 
   def getSuccessValue: File = {

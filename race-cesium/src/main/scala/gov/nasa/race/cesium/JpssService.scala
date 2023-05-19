@@ -64,7 +64,7 @@ import gov.nasa.race.cesium.JpssService._
   * a RaceRouteInfo that serves active fires detected by polar orbiting satellites
   * note this can handle multiple satellites
   */
-trait JpssService extends CesiumRoute with PushWSRaceRoute with ContinuousTimeRaceRoute with RaceDataClient with JsonProducer {
+trait JpssService extends CesiumService with PushWSRaceRoute with ContinuousTimeRaceRoute with RaceDataClient with JsonProducer {
 
   val jpssAssets = getSymbolicAssetMap("jpss.assets", config, Seq(("fire","fire.png")))
 

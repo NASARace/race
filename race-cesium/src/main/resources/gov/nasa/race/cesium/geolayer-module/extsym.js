@@ -10,6 +10,8 @@ const defaultBillboardDC = new Cesium.DistanceDisplayCondition(0, 40000);
 const defaultGeometryDC = new Cesium.DistanceDisplayCondition(0, 150000);
 const defaultPointDC = new Cesium.DistanceDisplayCondition(40000, Number.MAX_VALUE);
 
+// TODO - this currently does not work with macOS WebGL which renders clamp-to-ground polygons incorrectly
+// (3D tiles seem to render correctly so we might translate GeoJSON into 3D tiles in the future)
 
 export function render (entityCollection, opts) {
     let entities = entityCollection.values;
@@ -57,8 +59,8 @@ export function render (entityCollection, opts) {
 
         if (e.polygon) {
             e.polygon.distanceDisplayCondition = (opts.geometryDC ? opts.geometryDC : defaultGeometryDC);
-            //e.polygon.height = 10;
-            //e.polygon.heightReference = Cesium.HeightReference.RELATIVE_TO_GROUND;
+            e.polygon.height = 0;
+            e.polygon.heightReference = Cesium.HeightReference.RELATIVE_TO_GROUND;
         }
 
         if (e.polyline) {
@@ -74,7 +76,6 @@ export function render (entityCollection, opts) {
 async function make3D (entities, positions) {
     let tp = await uiCesium.terrainProvider;
     
-    console.log("@@ sampling ", positions.length, " positions");
     Cesium.sampleTerrainMostDetailed(tp, positions).then ( (pos3d) => {        
         let len = pos3d.length;
         for (let i = 0; i< len; i++) {
@@ -85,7 +86,6 @@ async function make3D (entities, positions) {
             }
         }
     });
-    console.log("@@ done upating positions");
 }
 
 function cleanupPropertyNames (entity) {

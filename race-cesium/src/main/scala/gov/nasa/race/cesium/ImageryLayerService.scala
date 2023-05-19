@@ -227,7 +227,7 @@ import ImageryLayerService._
 /**
  * a RaceRouteInfo for Cesium Imagery Layers
  */
-trait ImageryLayerService extends CesiumRoute with JsonProducer {
+trait ImageryLayerService extends CesiumService with JsonProducer {
   private val defaultRendering = new DefaultImageryRendering(config.getConfigOrElse("imglayer.render", NoConfig))
   private val sources = config.getConfigSeq("imglayer.sources").map(ImgLayer(_))
 

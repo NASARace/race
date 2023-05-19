@@ -22,14 +22,14 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{ExceptionHandler, PathMatcher, PathMatchers, Route}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
-import gov.nasa.race.cesium.CesiumRoute.{cesiumJsUrl, terrainPrefix}
+import gov.nasa.race.cesium.CesiumService.{cesiumJsUrl, terrainPrefix}
 import gov.nasa.race.common.JsConvertible
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.config.NoConfig
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.http._
 import gov.nasa.race.ifSome
-import gov.nasa.race.ui.{uiRadio, uiRowContainer, uiSlider, _}
+import gov.nasa.race.ui._
 import gov.nasa.race.uom.Length.Meters
 import gov.nasa.race.util.{ClassLoaderUtils, FileUtils, StringUtils}
 import scalatags.Text
@@ -38,7 +38,7 @@ import scalatags.Text.all._
 import java.net.InetSocketAddress
 import java.util.TimeZone
 
-object CesiumRoute {
+object CesiumService {
   val terrainPrefix = "terrain"
 
   val defaultCesiumJsVersion = "1.105"
@@ -61,7 +61,7 @@ object CesiumRoute {
     }
   }
 }
-import CesiumRoute._
+import CesiumService._
 
 object CameraPosition {
   def apply (conf: Config): CameraPosition = {
@@ -136,7 +136,7 @@ case class ArcGisTiledElevationTerrainProvider (config: Config) extends External
   * control Cesium appearance. However, config usually also has to provide layer/dataSource (i.e. application-specific)
   * settings and hence we provide only config artifacts here
   */
-trait CesiumRoute
+trait CesiumService
   extends FSCachedProxyRoute // we might cache cesium content
     with UiRoute // we provide race-ui windows for controlling Cesium view and entities
     with CachedFileAssetRoute
@@ -178,7 +178,7 @@ trait CesiumRoute
   def uiCesiumRoute: Route = {
     get {
       //--- dynamic geospatial content requested by Cesium at runtime
-      pathPrefix(CesiumRoute.terrainPrefix) { // also just when configured as proxy
+      pathPrefix(CesiumService.terrainPrefix) { // also just when configured as proxy
         terrainProvider match {
           case etp: ExternalTerrainProvider => completeProxied(etp.url)
           case _ => complete(StatusCodes.NotFound)

@@ -41,7 +41,7 @@ import TrackService._
 /**
   * a RaceRoute that uses Cesium to display tracks transmitted over a websocket
   */
-trait TrackService extends CesiumRoute with TrackWSRoute with CachedFileAssetRoute {
+trait TrackService extends CesiumService with TrackWSRoute with CachedFileAssetRoute {
 
   val trackColor = config.getStringOrElse("color", "yellow")
 

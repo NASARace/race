@@ -52,8 +52,11 @@ case class WindNinjaWxModelResults (huvw: File, huvw0: File)
  * output path, DEM file and mesh resolution are constant
  * HRRR file and respective forecast time change between executions
  * result is the HUVW grid in JSON notation
+ *
+ * this is not a typical ExternalProc since it relies on cached values to create the highly structured command and
+ * to compute result values
  */
-class WindNinjaWxModelSingleRun(val prog: File, val outputPath: File) extends ExternalProc[WindNinjaWxModelResults] {
+class WindNinjaSingleRun(val prog: File, val outputPath: File) extends ExternalProc[WindNinjaWxModelResults] {
   if (!prog.isFile || !prog.canExecute) throw new RuntimeException(s"WindNinja executable not found: $prog")
   if (!FileUtils.ensureWritableDir(outputPath).isDefined) throw new RuntimeException(s"cannot create WindNinja output dir $outputPath")
 
@@ -62,6 +65,7 @@ class WindNinjaWxModelSingleRun(val prog: File, val outputPath: File) extends Ex
   val timeZone = DateTime.localId
 
   protected var wxModelFile: Option[File] = None
+  protected var wxStationFile: Option[File] = None
   protected var vegetationType: Option[VegetationType] = None
 
   // those we can set but keep between runs
@@ -82,14 +86,23 @@ class WindNinjaWxModelSingleRun(val prog: File, val outputPath: File) extends Ex
     this
   }
 
-  override def canRun: Boolean = allDefined( wxModelFile, demFile, forecastDate, vegetationType)
+  override def canRun: Boolean = {
+    (wxModelFile.isDefined || wxStationFile.isDefined) && demFile.isDefined
+  }
 
-  //--- the args that can vary between executions
+  //--- argument setters
+
   def setHrrrForecast( hrrrFile: File, date: DateTime): this.type = {
     if (!hrrrFile.isFile) throw new RuntimeException(s"HRRR forecast file not found: $hrrrFile")
     wxModelFile = Some(hrrrFile)
     forecastDate = date
     ymdt = date.getYMDT
+    this
+  }
+
+  def setStationFile(stationFile: File): this.type = {
+    if (!stationFile.isFile) throw new RuntimeException(s"weather station file not found: $stationFile")
+    wxStationFile = Some(stationFile)
     this
   }
 
@@ -114,47 +127,61 @@ class WindNinjaWxModelSingleRun(val prog: File, val outputPath: File) extends Ex
     this
   }
 
-  //---
+  //--- command assembly
 
-  override def buildCommand: String = {
-    args ++= Seq(
-      s"--output_path ${outputPath.getPath}",
+  override def buildCommand: StringBuilder = {
+    appendInitialization( super.buildCommand
+      .append(s" --output_path ${outputPath.getPath}")
 
-      s"--num_threads 1",
-      s"--initialization_method wxModelInitialization",
-      s"--mesh_resolution ${meshResolution.toMeters}",
-      s"--units_mesh_resolution m",
-      s"--diurnal_winds true",
-      s"--elevation_file ${demFile.get.getPath}",
-      s"--vegetation ${vegetationType.get}",
-      s"--output_wind_height ${windHeight.toMeters}",
-      s"--units_output_wind_height m",
-      s"--time_zone ${timeZone}",
+      .append( " --num_threads 1")
+      .append(s" --mesh_resolution ${meshResolution.toMeters}")
+      .append( " --units_mesh_resolution m")
+      .append( " --diurnal_winds true")
+      .append(s" --elevation_file ${demFile.get.getPath}")
+      .append(s" --vegetation ${vegetationType.get}")
+      .append(s" --output_wind_height ${windHeight.toMeters}")
+      .append( " --units_output_wind_height m")
+      .append(s" --time_zone ${timeZone}")
 
-      s"--forecast_filename ${wxModelFile.get}",
-      f"--forecast_time ${ymdt._1}%4d${ymdt._2}%02d${ymdt._3}%02dT${ymdt._4}%02d0000", // WN does not accept time zone (assumes UTC)
-      s"--start_year ${ymdt._1}",
-      s"--start_month ${ymdt._2}",
-      s"--start_day ${ymdt._3}",
-      s"--start_hour ${ymdt._4}",
-      s"--stop_year ${ymdt._1}",
-      s"--stop_month ${ymdt._2}",
-      s"--stop_day ${ymdt._3}",
-      s"--stop_hour ${ymdt._4}",
+      .append( " --write_goog_output false")
+      .append( " --write_shapefile_output false")
+      .append( " --write_pdf_output false")
+      .append( " --write_farsite_atm false")
+      .append( " --write_wx_model_goog_output false")
+      .append( " --write_wx_model_shapefile_output false")
+      .append( " --write_wx_model_ascii_output false")
+      .append( " --write_wx_station_kml false")
 
-      s"--write_goog_output false",
-      s"--write_shapefile_output false",
-      s"--write_pdf_output false",
-      s"--write_farsite_atm false",
-      s"--write_wx_model_goog_output false",
-      s"--write_wx_model_shapefile_output false",
-      s"--write_wx_model_ascii_output false",
-
-      s"--write_huvw_output true",
-      s"--write_huvw_0_output true"
+      .append( " --write_huvw_output true")
+      .append( " --write_huvw_0_output true")
     )
-    super.buildCommand
   }
+
+  def appendInitialization (sb: StringBuilder): StringBuilder = {
+    if (wxModelFile.isDefined) {
+      sb
+        .append( " --initialization_method wxModelInitialization")
+        .append(s" --forecast_filename ${wxModelFile.get}")
+        .append(f" --forecast_time ${ymdt._1}%4d${ymdt._2}%02d${ymdt._3}%02dT${ymdt._4}%02d0000") // WN does not accept time zone (assumes UTC)
+        .append(s" --start_year ${ymdt._1}")
+        .append(s" --start_month ${ymdt._2}")
+        .append(s" --start_day ${ymdt._3}")
+        .append(s" --start_hour ${ymdt._4}")
+        .append(s" --stop_year ${ymdt._1}")
+        .append(s" --stop_month ${ymdt._2}")
+        .append(s" --stop_day ${ymdt._3}")
+        .append(s" --stop_hour ${ymdt._4}")
+
+    } else if (wxStationFile.isDefined) {
+      sb
+        .append( " --initialization_method pointInitialization")
+        .append( " --match_points true")
+        .append(s" --wx_station_filename ${wxStationFile.get}")
+
+    } else throw new RuntimeException("no suitable initialization data")
+  }
+
+  //--- result value computation
 
   override def getSuccessValue: WindNinjaWxModelResults = {
     // output/czu_utm_08-20-2020_0000_250m_huvw.tif

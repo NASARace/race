@@ -18,32 +18,29 @@
 package gov.nasa.race.core
 
 import akka.actor.SupervisorStrategy.{Resume, Stop}
-
-import java.io.FileInputStream
-import java.lang.reflect.InvocationTargetException
-import java.util.concurrent.TimeoutException
 import akka.actor._
 import akka.event.Logging.LogLevel
 import akka.event.LoggingAdapter
-import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.Config
 import gov.nasa.race._
 import gov.nasa.race.common.SettableClock
 import gov.nasa.race.common.Status._
 import gov.nasa.race.config.ConfigUtils._
-import gov.nasa.race.core._
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.ConsoleIO.AppMenu
 import gov.nasa.race.util.FileUtils._
 import gov.nasa.race.util.NetUtils._
 import gov.nasa.race.util.{ClassLoaderUtils, ThreadUtils}
 
+import java.io.FileInputStream
+import java.lang.reflect.InvocationTargetException
+import java.util.concurrent.TimeoutException
 import scala.collection.concurrent.TrieMap
-import scala.collection.immutable.{ListMap, Map, Set}
+import scala.collection.immutable.{Map, Set}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.jdk.CollectionConverters._
 import scala.language.postfixOps
 

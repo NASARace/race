@@ -141,7 +141,7 @@ import GeoLayerService._
 /**
  * a route that serves configured GeoJSON content
  */
-trait GeoLayerService extends CesiumRoute with FileServerRoute with JsonProducer {
+trait GeoLayerService extends CesiumService with FileServerRoute with JsonProducer {
   private val defaultRendering = new DefaultGeoJsonRendering(config.getConfigOrElse("geolayer.render", NoConfig))
   private val sources = mutable.LinkedHashMap.from( config.getConfigSeq("geolayer.sources").map(GeoLayer(_)).map(l=> l.pathName -> l))
   private val renderModules = getRenderModules(sources.values)
@@ -224,4 +224,4 @@ trait GeoLayerService extends CesiumRoute with FileServerRoute with JsonProducer
 
 
 class CesiumGeoLayerApp (val parent: ParentActor, val config: Config) extends DocumentRoute with GeoLayerService
-class CesiumGeoImgApp (val parent: ParentActor, val config: Config) extends DocumentRoute with GeoLayerService with ImageryLayerService
+class CesiumGeoImgApp (val parent: ParentActor, val config: Config) extends DocumentRoute with GeoLayerService with ImageryLayerService with CesiumBldgRoute

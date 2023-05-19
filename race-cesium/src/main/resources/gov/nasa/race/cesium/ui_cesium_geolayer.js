@@ -94,7 +94,9 @@ async function loadRenderModule (modPath,sourceEntry=null) {
 function geoLayerSelection() {
     let e = uiCesium.getSelectedEntity();
 
-    //uiCesium.viewer.selectionIndicator.viewModel.position = e.position._value;  // HACK - cesium has wrong SI height if not clamp-to-ground
+    if (e.position && e.position._value) {
+        uiCesium.viewer.selectionIndicator.viewModel.position = e.position._value;  // HACK - cesium has wrong SI height if not clamp-to-ground
+    }
 
     if (e && e.properties && e.properties.propertyNames) {
         let kvList = e.properties.propertyNames.map( key=> [key, e.properties[key]._value]);
@@ -161,13 +163,11 @@ function processRenderOpts (opts, sourceEntry=null) {
 async function loadSource(sourceEntry) {
     let url = "geolayer-data/" + sourceEntry.source.pathName;
 
-    console.log("@@ start loading: ", url); 
     fetch(url).then( (response) => {
         if (response.ok) {
             let data = response.json();
             if (data) {
                 let renderOpts = collectRenderOpts(sourceEntry);
-                console.log("@@ got data for ", url);
                 Cesium.GeoJsonDataSource.load(data, renderOpts).then( (ds) => {
                     ds.show = true;
                     sourceEntry.dataSource = ds;
@@ -176,8 +176,9 @@ async function loadSource(sourceEntry) {
                     ui.updateListItem(sourceView, sourceEntry);
             
                     uiCesium.addDataSource(ds);
-                    uiCesium.requestRender();
-                    console.log("@@ loaded geoJSON source ", url);
+
+                    console.log("loaded ", url);
+                    setTimeout( () => { uiCesium.requestRender(); }, 500);  // not showing if immediate request ?
                 });
             } else console.log("no data for request: ", url);
         } else console.log("request failed: ", url);
