@@ -31,4 +31,5 @@ conf
 *.code-workspace
 .bsp
 *.lock
+__pycache__
 
