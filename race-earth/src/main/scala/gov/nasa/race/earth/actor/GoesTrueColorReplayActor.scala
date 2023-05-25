@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.earth
+package gov.nasa.race.earth.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.actor.FileReplayActor

@@ -15,16 +15,15 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.earth
+package gov.nasa.race.earth.actor
 
-import gov.nasa.race.http.{HttpFileRetriever, RequestFile}
-import gov.nasa.race.core.PeriodicRaceActor
-import gov.nasa.race.uom.DateTime
 import com.typesafe.config.Config
-import akka.actor.ActorRef
+import gov.nasa.race.core.PeriodicRaceActor
+import gov.nasa.race.http.{HttpFileRetriever, RequestFile}
+import gov.nasa.race.uom.DateTime
 
 import java.io.File
-import scala.concurrent.duration.{FiniteDuration, DurationInt}
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 
 class GOESTrueColorFileRetriever (val config: Config) extends HttpFileRetriever with PeriodicRaceActor {

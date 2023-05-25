@@ -15,30 +15,28 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.earth
+package gov.nasa.race.earth.actor
 
 import akka.actor.ActorRef
-import akka.http.scaladsl.model.{HttpEntity, HttpMethods}
 import akka.http.scaladsl.model.ContentTypes.`application/json`
-
+import akka.http.scaladsl.model.{HttpEntity, HttpMethods}
 import com.typesafe.config.Config
 import gov.nasa.race
-import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{ExternalProc, JsonWriter, StringJsonPullParser}
-
+import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.earth.Gdal2Tiles
 import gov.nasa.race.http.{FileRetrieved, HttpActor}
 import gov.nasa.race.uom.DateTime
-import gov.nasa.race.util.FileUtils
-import gov.nasa.race.common.ConstAsciiSlice.asc
 
 import java.io.File
-import scala.concurrent.{Await, ExecutionContext, Future}
-import ExecutionContext.Implicits.global
-import scala.concurrent.duration.{Duration, DurationInt}
-import scala.language.postfixOps
-import scala.util.{Success, Failure => FailureEx}
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.{Duration, DurationInt}
+import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
 import scala.sys.process.Process
+import scala.util.{Success, Failure => FailureEx}
 
 trait  SmokeSegmentationActor extends PublishingRaceActor with SubscribingRaceActor{
   // unsure what might go here - may omit
