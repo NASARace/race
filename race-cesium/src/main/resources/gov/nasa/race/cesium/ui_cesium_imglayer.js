@@ -230,7 +230,7 @@ let pixBuf = new Uint8Array(3);
 // watch out - this runs in the render loop so avoid length computation
 const probeColor = function(scene,time) {
     let canvas = scene.canvas;
-    let gl = canvas.getContext('webgl');
+    let gl = canvas.getContext('webgl2');
 
     gl.readPixels( mouseX, gl.drawingBufferHeight - mouseY, 1, 1, gl.RGB, gl.UNSIGNED_BYTE, pixBuf);
 

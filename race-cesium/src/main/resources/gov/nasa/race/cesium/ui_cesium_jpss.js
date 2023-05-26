@@ -122,7 +122,6 @@ ui.registerClockMonitor( startTimeUpdate);
 
 console.log("ui_cesium_jpss initialized");
 
-
 //--- end init
 
 function createIcon() {

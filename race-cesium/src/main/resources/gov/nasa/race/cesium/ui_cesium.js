@@ -55,10 +55,9 @@ class Position {
 var cameraSpec = undefined;
 var lastCamera = undefined; // saved last position & orientation
 
-var requestRenderMode = false;
-var targetFrameRate = -1;
-
+var requestRenderMode = config.cesium.requestRenderMode;
 var pendingRenderRequest = false;
+var targetFrameRate = -1;
 
 var layerOrder = []; // populated by initLayerPanel calls from modules
 var layerOrderView = undefined; // showing the registered module layers
@@ -96,7 +95,7 @@ export const viewer = new Cesium.Viewer('cesiumContainer', {
     homeButton: false,
     timeline: false,
     animation: false,
-    requestRenderMode: config.cesium.requestRenderMode,
+    requestRenderMode: requestRenderMode,
 });
 
 checkImagery();
@@ -146,7 +145,8 @@ viewer.scene.canvas.addEventListener('click', handleMouseClick);
 
 ws.addWsHandler(handleWsViewMessages);
 
-viewer.scene.postRender.addEventListener(function(scene, time) {
+// FIXME - this seems to be broken as of Cesium 105.1
+viewer.scene.postRender.addEventListener(function() {
     pendingRenderRequest = false;
 });
 

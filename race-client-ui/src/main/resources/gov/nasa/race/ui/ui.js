@@ -384,36 +384,64 @@ export function getWindow(o) {
 
 //--- tabbed containers
 
+export function TabbedContainer (eid,width) {
+    return function (...children) {
+        let e = _createElement("DIV", "ui_tab_container_wrapper");
+        if (eid) e.setAttribute("id", eid);
+        if (width) e.style.minWidth = width;
+
+        for (const c of children) e.appendChild(c);
+
+        return e;
+    }
+}
+
+export function Tab (label,show,eid) {
+    return function (...children) {
+        let e = _createElement("DIV", "ui_tab_container");
+        e.setAttribute("data-label", label);
+        if (show) e.classList.add("show");
+        if (eid) e.setAttribute("id", eid);
+
+        for (const c of children) e.appendChild(c);
+
+        return e;
+    }
+}
+
 function initializeTabbedContainer (e) {
-    let thdr = undefined;
-    let showTab = undefined;
-    let showTc = undefined;
-    let fit = e.classList.contains("fit");
+    if (!e._uiIsInitialized) {
+        let thdr = undefined;
+        let showTab = undefined;
+        let showTc = undefined;
+        let fit = e.classList.contains("fit");
 
-    for (let tc of e.children) { // those are the tab_containers
-        let show = tc.classList.contains("show");
-        if (fit) tc.classList.add("fit");
+        for (let tc of e.children) { // those are the tab_containers
+            let show = tc.classList.contains("show");
+            if (fit) tc.classList.add("fit");
 
-        let tab = _createElement("DIV","ui_tab");
-        tab._uiContainer = tc;
-        tab.innerText = tc.dataset.label;
-        tc._uiTab = tab;
-        tab.addEventListener("click", clickTab);
+            let tab = _createElement("DIV","ui_tab");
+            tab._uiContainer = tc;
+            tab.innerText = tc.dataset.label;
+            tc._uiTab = tab;
+            tab.addEventListener("click", clickTab);
 
-        if (show) { // last one wins
-            if (showTab) showTab.classList.remove("show");
-            if (showTc) showTc.classList.remove("show");
-            showTab = tab;
-            showTc = tc;
-            tab.classList.add("show");
-            e._uiShowing = tc;
+            if (show) { // last one wins
+                if (showTab) showTab.classList.remove("show");
+                if (showTc) showTc.classList.remove("show");
+                showTab = tab;
+                showTc = tc;
+                tab.classList.add("show");
+                e._uiShowing = tc;
+            }
+
+            if (!thdr) thdr = _createElement("DIV", "ui_tab_header");
+            thdr.appendChild(tab);
         }
 
-        if (!thdr) thdr = _createElement("DIV", "ui_tab_header");
-        thdr.appendChild(tab);
+        if (thdr) e.insertBefore(thdr, e.firstChild);
+        e._uiIsInitialized = true;
     }
-
-    if (thdr) e.insertBefore(thdr, e.firstChild);
 
     return e;
 }
@@ -822,6 +850,22 @@ export function setLabelText(o, text) {
 }
 
 //--- general text
+
+export function TextArea (eid, visCols=0, visRows=0, maxLines=0, isFixed=false, isReadOnly=false, isVResizable=false){
+    let e = _createElement("TEXTAREA", "ui_textarea");
+    if (eid) e.id = eid;
+    if (isReadOnly) {
+        e.classList.add("readonly");
+        e.readOnly = true;
+    }
+    if (isVResizable) e.classList.add("vresize");
+    if (isFixed) e.classList.add("fixed");
+    if (visCols) e.cols = visCols;
+    if (visRows) e.rows = visRows;
+    if (maxLines) e.setAttribute("data-maxlines", maxLines);
+
+    return e;
+}
 
 export function setTextContent(o,newContent) {
     let e = getText(o);

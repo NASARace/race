@@ -193,4 +193,4 @@ export const track = {
 /**
   * a single page application that processes track channels
   */
-class CesiumTrackApp (val parent: ParentActor, val config: Config) extends DocumentRoute with TrackService
+class CesiumTrackApp (val parent: ParentActor, val config: Config) extends DocumentRoute with ImageryLayerService with TrackService

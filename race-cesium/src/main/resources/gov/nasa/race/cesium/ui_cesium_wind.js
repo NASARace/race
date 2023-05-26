@@ -655,7 +655,6 @@ function initContourDisplayControls() {
     for (var i = 0; i<defaultContourRender.fillColors.length; i++) {
         e = ui.getField(`wind.contour.color${i}`);
         if (e) {
-            console.log("@@ fillColor ", i, " = ", defaultContourRender.fillColors[i].toCssHexString());
             ui.setField(e, defaultContourRender.fillColors[i].toCssHexString());
         }
     }
