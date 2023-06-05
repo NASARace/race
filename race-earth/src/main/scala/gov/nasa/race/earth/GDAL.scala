@@ -28,7 +28,7 @@ import gov.nasa.race.util.FileUtils
 class Gdal2Tiles (val prog: File, val inFile: File, val outputPath: File, driverPath: File,
                   srsName: String = "EPSG:4326", webviewer: String = "none",
                   tileSize: Int = 256,  profile: String = "mercator", resampling: String = "average",
-                  zoom: Int = 7, resume: Boolean = false, noDataValue: Option[Double] = None,
+                  zoom: Option[Int] = None, resume: Boolean = false, noDataValue: Option[Double] = None,
                   tmsCompatible: Boolean = false, verbose: Boolean = true, kml: Boolean = false,
                   googleKey: Option[String] = None, bingKey: Option[String] = None, nbProcesses: Int = 1
                  ) extends ExternalProc[File] {
@@ -46,7 +46,7 @@ class Gdal2Tiles (val prog: File, val inFile: File, val outputPath: File, driver
        s"tile_size=$tileSize",
        s"profile=$profile",
        s"resampling=$resampling", 
-       s"zoom=$zoom",
+       s"zoom=${zoom.get}",
        s"resume=$resume", 
        s"srcnodata=$noDataValue",
        s"tmscompatible=$tmsCompatible",

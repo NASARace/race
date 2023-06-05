@@ -57,7 +57,7 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
   val apiPath: File = new File(System.getProperty("user.dir"), config.getString("api-exe"))
   val apiCwd: File = new File(System.getProperty("user.dir"), config.getString("api-cwd"))
   val apiProcess = new SmokeSegmentationAPIProcess(pythonPath, Some(apiCwd), apiPath)
-  apiProcess.ignoreOutput
+  //apiProcess.ignoreOutput
 
   var runningProc:Process = startAPI // starts the Python server hosting model API and checks if it is available
   var requestDate: DateTime = DateTime.UndefinedDateTime
@@ -151,7 +151,7 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
   def createTiles(outputPath: File, inFile: File): Future[race.ResultValue[File]] = {
     info(s"saving smoke/cloud wms tiles to $outputPath")
     val tiles = new Gdal2Tiles(prog = pythonPath, inFile = inFile, outputPath = outputPath, driverPath = gdal2tilesPath,
-      verbose = false, webviewer = "all", tileSize=256, zoom=7)
+      verbose = false, webviewer = "all", tileSize=256, zoom=Some(7))
     tiles.ignoreOutput
     val tilesFuture = tiles.exec()
     tilesFuture

@@ -94,7 +94,8 @@ def smoke_segmentation(tif_dataset, segmentation_model, target_shape, output_pat
     image = convert_tif_to_image(tif_dataset)
     #tile image
     if tile:
-        images, original_shape, full_tiled_shape, padding_tuple = get_tiles(tile_kernel, image, target_shape)
+        images, full_tiled_shape, padding_tuple = get_tiles(tile_kernel, image, target_shape)
+        original_shape = target_shape
     else:
         images = np.array([image])
         original_shape = images.shape[1:3]
@@ -140,58 +141,89 @@ def unpad(x, pad_width):
         slices.append(slice(c[0], e))
     return x[tuple(slices)]
 
-def reconstruct_image(tiled_array, tiled_shape, padding_tuple=((0,0), (0,0), (0,0))):
+def reconstruct_image(tiled_array, tiled_shape, padding_tuple, target=512, overlap=48):
     rows = []
     for i in range(tiled_shape[0]):
-        rows.append(np.concatenate([tiled_array[tiled_shape[1]*i + j] for j in range(tiled_shape[1])], axis=1))
+        row = []
+        for j in range(tiled_shape[1]):
+            if i == 0:
+                vert_start = 0
+                vert_stop = target-overlap
+            elif i < tiled_shape[0]-1:
+                vert_start = overlap
+                vert_stop = target-overlap
+            else:
+                vert_start = overlap
+                vert_stop = target
+            if j == 0:
+                horz_start = 0
+                horz_stop = target-overlap
+            elif j < tiled_shape[1]-1:
+                horz_start = overlap
+                horz_stop = target-overlap
+            else:
+                horz_start = overlap
+                horz_stop = target
+            full = tiled_array[tiled_shape[1]*i+j][ vert_start:vert_stop, horz_start:horz_stop]
+            row.append(full)   
+        rows.append(np.concatenate(row, axis=1))
     full_image = np.concatenate(rows, axis=0)
     full_image = unpad(full_image, padding_tuple)
     return full_image
 
-def get_image_tiles_reshape(image, kernel_size):
-    height, width, channels = image.shape
-    tile_height, tile_width = kernel_size
-    tiled_array = image.reshape(height // tile_height, tile_height,
-                                width // tile_width, tile_width,
-                                channels)
-    tiled_array = tiled_array.swapaxes(1,2)
-    tiled_shape = tiled_array.shape
-    tiled_array = tiled_array.reshape(-1, *tiled_array.shape[2:])
-    return tiled_array, tiled_shape
+def split(img, window_size, margin):
+    sh = list(img.shape)
+    sh[0], sh[1] = sh[0] + (margin * 2), sh[1] + (margin * 2)
+    img_ = np.zeros(shape=sh)
+    if margin != 0:
+        img_[margin:-margin, margin:-margin] = img
+    else:
+        img_ = img    
 
-def get_tiles(tile_kernel, image, target_shape, pixel_mult=1):
+    stride = window_size
+    step = window_size + (2 * margin)
+
+    nrows, ncols = img.shape[0] // window_size, img.shape[1] // window_size
+    splitted = []
+    for i in range(nrows):
+        for j in range(ncols):
+            h_start = j*stride
+            v_start = i*stride
+            cropped = img[v_start:v_start+step, h_start:h_start+step]
+            splitted.append(cropped)
+    return splitted, (nrows, ncols)
+
+def get_tiles(tile_kernel, image, target_shape, overlap=48, pixel_mult=1):
     padding_tuple = ((0,0), (0,0), (0,0)) 
     padded_image = image
+    target_shape = (target_shape[0]-(2*overlap), target_shape[1]-(2*overlap))
     if tile_kernel is None:
-            kernel = math.gcd(image.shape[0], image.shape[1])
-            if kernel < min(target_shape): #no GCD - this happens with the screen shots
-                kernel_1 =  image.shape[0]//(target_shape[0]*pixel_mult)
-                kernel_2 = image.shape[1]//(target_shape[1]*pixel_mult)
-                remainders = (image.shape[0]%(target_shape[0]*pixel_mult), image.shape[1]%(target_shape[1]*pixel_mult))
-                if kernel_1 < 1 and kernel_2 < 1: #can only fit one tile
-                    tile_kernel = (image.shape[0], image.shape[1])
-                else: #can fit multiple tiles
-                    tile_kernel = (target_shape[0]*pixel_mult, target_shape[1]*pixel_mult)
-                    padding_tuple = ((0, (target_shape[0]*pixel_mult)-remainders[0]), (0, (target_shape[1]*pixel_mult)-remainders[1]), (0, 0))
-                    padded_image = np.pad(image, padding_tuple, 'constant', constant_values=(0))
-            else:
-                tile_kernel = (kernel, kernel)
-    tiled_array, full_tiled_shape = get_image_tiles_reshape(padded_image, tile_kernel)
-    tile_shape = full_tiled_shape[2:]
+            kernel_1 =  image.shape[0]//(target_shape[0]*pixel_mult)
+            kernel_2 = image.shape[1]//(target_shape[1]*pixel_mult)
+            remainders = (image.shape[0]%(target_shape[0]*pixel_mult), image.shape[1]%(target_shape[1]*pixel_mult))
+            if (kernel_1 < 1 and kernel_2 < 1) or (kernel_1 == 1 and kernel_2 == 1 and remainders==(0,0)): #can only fit one tile
+                tile_kernel = (image.shape[0], image.shape[1])
+            else: #can fit multiple tiles
+                tile_kernel = (target_shape[0]*pixel_mult, target_shape[1]*pixel_mult)
+            if remainders != (0,0):
+                padding_tuple = ((0, (target_shape[0]*pixel_mult)-remainders[0]), (0, (target_shape[1]*pixel_mult)-remainders[1]), (0, 0))
+            padded_image = np.pad(image, padding_tuple, 'constant', constant_values=(0))
+    tiled_array, full_tiled_shape = split(padded_image, target_shape[0], overlap)
     images = tiled_array
-    return images, tile_shape, full_tiled_shape, padding_tuple
+    return images, full_tiled_shape, padding_tuple
 
 def smoke_segmentation_png_jpg(input, segmentation_model, target_shape, output_path, tile=True, tile_kernel=None, plot=False): 
     image = Image.open(input).convert('RGB')
     image = np.asarray(image)
     #tile image
     if tile:
-        images, original_shape, full_tiled_shape, padding_tuple = get_tiles(tile_kernel, image, target_shape)
+        images, full_tiled_shape, padding_tuple = get_tiles(tile_kernel, image, target_shape)
+        original_shape = target_shape
     else:
         images = np.array([image])
         original_shape = images.shape[1:3]
     #format images
-    input_dataset = DataLoader([], images, target_shape)
+    input_dataset = DataLoader(images, target_shape)
     inputs = input_dataset.data_processor()
     inputs_tf = tf.data.Dataset.from_tensor_slices((inputs)).batch(len(images))
     #run segmentation 
