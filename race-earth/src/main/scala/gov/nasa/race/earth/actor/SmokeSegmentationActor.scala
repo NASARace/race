@@ -112,7 +112,7 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
         w.writeStringMember("file", fileRequest.getPath.replace("\\", "/"))
       }
       val bodyJson = writer.toJson
-      val reqEntity = HttpEntity(`application/json`, bodyJson)
+      val reqEntity = HttpEntity(`application/json`, bodyJson) // image/tiff
       httpRequestStrict(apiPort, HttpMethods.POST, entity = reqEntity) { // maybe max time out in
         case Success(strictEntity) =>
           val data = strictEntity.getData().utf8String
