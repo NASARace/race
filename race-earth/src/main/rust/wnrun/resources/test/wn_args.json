@@ -1,0 +1,7 @@
+{
+    "bbox":{"west":-122.4570, "south":36.9300, "east":-121.8730, "north":37.3840}, 
+    "datetime":"2020-04-12T22:10:57Z",
+
+    "mesh_resolution":250,
+    "wind_height":10
+}

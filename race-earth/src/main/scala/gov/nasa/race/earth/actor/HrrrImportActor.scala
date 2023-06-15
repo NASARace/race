@@ -79,7 +79,7 @@ class HrrrImportActor (val config: Config) extends HttpActor with PublishingRace
   val reqDelay = config.getDurationTimeOrElse("request-delay", Minutes(1))
   val maxTry = config.getIntOrElse("max-attempts", 3)
 
-  val dirUrl = config.getStringOrElse("dir-url", "https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/hrrr.${yyyyMMhh}/conus/")
+  val dirUrl = config.getStringOrElse("dir-url", "https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/hrrr.${yyyyMMdd}/conus/")
   val fileUrl = config.getStringOrElse("file-url", "https://nomads.ncep.noaa.gov/cgi-bin/filter_hrrr_2d.pl")
   val fields = config.getStringListOrElse("fields", Seq("TCDC", "TMP", "UGRD", "VGRD"))
   val levels = config.getStringListOrElse("levels", Seq("lev_2_m_above_ground", "lev_10_m_above_ground", "lev_entire_atmosphere"))
@@ -230,7 +230,7 @@ class HrrrImportActor (val config: Config) extends HttpActor with PublishingRace
   }
 
   def dirUrl (date: DateTime): String = {
-    dirUrl.replace("${yyyyMMhh}",date.format_yyyyMMdd)
+    dirUrl.replace("${yyyyMMdd}",date.format_yyyyMMdd)
   }
 
   def initLatencyTable(): Unit = {

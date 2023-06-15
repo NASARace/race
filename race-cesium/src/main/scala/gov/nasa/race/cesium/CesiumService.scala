@@ -41,7 +41,7 @@ import java.util.TimeZone
 object CesiumService {
   val terrainPrefix = "terrain"
 
-  val defaultCesiumJsVersion = "1.105.1"
+  val defaultCesiumJsVersion = "1.106"
 
   val cesiumPathMatcher = PathMatchers.separateOnSlashes("Build/Cesium/")
   def cesiumJsUrl (version: String): String = {

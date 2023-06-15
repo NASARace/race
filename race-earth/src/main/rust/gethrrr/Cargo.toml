@@ -1,0 +1,17 @@
+[package]
+name = "gethrrr"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lazy_static = "1.4"
+tokio = { version = "1.28", features = ["full"] }
+reqwest = { version = "0.11", features = ["json","blocking"] }
+bytes = "1.4"
+structopt = "0.3"
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1"
+thiserror = "1.0"
+anyhow = "1.0"

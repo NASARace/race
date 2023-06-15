@@ -48,6 +48,18 @@ package object common {
     x*x
   }
 
+  // no inverse hyperbolic tangent in Java/Scala Math
+  def atanh (d: Double): Double = {
+    var a = d
+    val  c = if (java.lang.Double.doubleToRawLongBits(a) < 0) {
+       a = Math.abs(a)
+      -0.5
+    } else {
+      0.5d
+    }
+    c * Math.log((1.0 + a) / (1.0 - a))
+  }
+
   // unfortunately we can't def √ for both Double and uom (AnyVal) arguments without ambiguity
 
   implicit class RichDouble (val d: Double) extends AnyVal {
