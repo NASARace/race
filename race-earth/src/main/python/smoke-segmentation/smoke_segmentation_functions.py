@@ -9,6 +9,7 @@ import tensorflow as tf
 import random
 import math
 import os
+gdal.SetConfigOption("GTIFF_SRS_SOURCE", "GEOKEYS")
 
 def convert_mask_to_colors(mask):
     mapping = {0: 0, 1: 127.5, 2: 225}
@@ -89,12 +90,55 @@ def get_segmented_tif(original_tif, mask, output_path):
     output_tif.FlushCache() ##saves to disk
     return output_tif
 
-def smoke_segmentation(tif_dataset, segmentation_model, target_shape, output_path, tile=True, tile_kernel=None, plot=False, separate_layers=False):
+def get_probability_tif(original_tif, probabilities, output_path):
+    driver = gdal.GetDriverByName("GTiff")
+    [rows, cols, layers] = probabilities.shape
+    output_tif= driver.Create(output_path, cols, rows, layers, gdal.GDT_Byte)
+    output_tif.SetGeoTransform(original_tif.GetGeoTransform())##sets same geotransform as input
+    output_tif.SetProjection(original_tif.GetProjection())##sets same projection as input
+    new_metadata = {"1": "no smoke no clouds", "2": "smoke", "3": "cloud"}
+    new_metadata.update(original_tif.GetMetadata())
+    output_tif.SetMetadata(new_metadata)##sets same metadata as input and adds key for interpreting segmetation mask
+    output_tif.GetRasterBand(1).WriteArray(probabilities[:, :, 0])
+    output_tif.GetRasterBand(2).WriteArray(probabilities[:, :, 1])
+    output_tif.GetRasterBand(3).WriteArray(probabilities[:, :, 2])
+    output_tif.FlushCache() ##saves to disk
+    return output_tif
+
+
+def smoke_segmentation_raw(tif_dataset, segmentation_model, target_shape, output_path, tile=True, overlap=0):
+    #convert to image
+    image = convert_tif_to_image(tif_dataset)
+    #tile image
+    overlap = 6
+    if tile:
+        images, full_tiled_shape, padding_tuple, overlap = get_tiles(image, target_shape, overlap=overlap)
+        original_shape = target_shape
+    else:
+        images = np.array([image])
+        original_shape = images.shape[1:3]
+    #format images
+    input_dataset = DataLoader(images, target_shape)
+    inputs = input_dataset.data_processor()
+    inputs_tf = tf.data.Dataset.from_tensor_slices((inputs))
+    inputs_tf = inputs_tf.batch(32)
+    #run segmentation 
+    pred = segmentation_model.predict(inputs_tf)
+    if tile:
+        pred_reshaped = reconstruct_image(pred, full_tiled_shape, padding_tuple, target_shape, overlap=overlap)
+    else:
+        pred_reshaped = pred[0]
+    pred_mask = create_mask(pred_reshaped)
+    #plot_output([image], [pred_mask], create_mask_=False)
+    output_tif = get_probability_tif(tif_dataset, pred_reshaped, output_path)
+    return output_tif, [output_path]
+
+def smoke_segmentation(tif_dataset, segmentation_model, target_shape, output_path, tile=True, plot=False, separate_layers=False, overlap=0):
     #convert to image
     image = convert_tif_to_image(tif_dataset)
     #tile image
     if tile:
-        images, full_tiled_shape, padding_tuple = get_tiles(tile_kernel, image, target_shape)
+        images, full_tiled_shape, padding_tuple, overlap = get_tiles(image, target_shape, overlap)
         original_shape = target_shape
     else:
         images = np.array([image])
@@ -111,7 +155,7 @@ def smoke_segmentation(tif_dataset, segmentation_model, target_shape, output_pat
     original_shape = (original_shape[1], original_shape[0]) # for some reason these are always transposed?
     masks_reshaped = [cv2.resize(np.float32(pred_mask[i]), original_shape, interpolation=0) for i in range(len(pred_mask))]
     if tile:
-        mask_reshaped = reconstruct_image(masks_reshaped, full_tiled_shape, padding_tuple[:2])
+        mask_reshaped = reconstruct_image(masks_reshaped, full_tiled_shape, padding_tuple[:2], target_shape, overlap)
     else:
         mask_reshaped = masks_reshaped[0]
     #plot
@@ -141,83 +185,91 @@ def unpad(x, pad_width):
         slices.append(slice(c[0], e))
     return x[tuple(slices)]
 
-def reconstruct_image(tiled_array, tiled_shape, padding_tuple, target=512, overlap=48):
+def reconstruct_image(tiled_array, tiled_shape, padding_tuple, target, overlap):
     rows = []
-    for i in range(tiled_shape[0]):
-        row = []
-        for j in range(tiled_shape[1]):
-            if i == 0:
-                vert_start = 0
-                vert_stop = target-overlap
-            elif i < tiled_shape[0]-1:
-                vert_start = overlap
-                vert_stop = target-overlap
-            else:
-                vert_start = overlap
-                vert_stop = target
-            if j == 0:
-                horz_start = 0
-                horz_stop = target-overlap
-            elif j < tiled_shape[1]-1:
-                horz_start = overlap
-                horz_stop = target-overlap
-            else:
-                horz_start = overlap
-                horz_stop = target
-            full = tiled_array[tiled_shape[1]*i+j][ vert_start:vert_stop, horz_start:horz_stop]
-            row.append(full)   
-        rows.append(np.concatenate(row, axis=1))
-    full_image = np.concatenate(rows, axis=0)
+    if type(target) != int:
+        target = target[0]
+    if tiled_shape == (1,1):
+        full_image = tiled_array[0]
+    else:
+        for i in range(tiled_shape[0]):
+            row = []
+            for j in range(tiled_shape[1]):
+                if i == 0:
+                    vert_start = 0
+                    vert_stop = target-overlap[0]
+                elif i < tiled_shape[0]-1:
+                    vert_start = overlap[0]
+                    vert_stop = target-overlap[0]
+                else:
+                    vert_start = overlap[0]
+                    vert_stop = target
+                if j == 0:
+                    horz_start = 0
+                    horz_stop = target-overlap[1]
+                elif j < tiled_shape[1]-1:
+                    horz_start = overlap[1]
+                    horz_stop = target-overlap[1]
+                else:
+                    horz_start = overlap[1]
+                    horz_stop = target
+                full = tiled_array[tiled_shape[1]*i+j][vert_start:vert_stop, horz_start:horz_stop]
+                row.append(full)   
+            rows.append(np.concatenate(row, axis=1))
+        full_image = np.concatenate(rows, axis=0)
     full_image = unpad(full_image, padding_tuple)
     return full_image
 
-def split(img, window_size, margin):
+def split(img, target_shape, overlap):
     sh = list(img.shape)
-    sh[0], sh[1] = sh[0] + (margin * 2), sh[1] + (margin * 2)
-    img_ = np.zeros(shape=sh)
-    if margin != 0:
-        img_[margin:-margin, margin:-margin] = img
-    else:
-        img_ = img    
-
-    stride = window_size
-    step = window_size + (2 * margin)
-
-    nrows, ncols = img.shape[0] // window_size, img.shape[1] // window_size
+    sh[0], sh[1] = sh[0] + (overlap[0] * 2), sh[1] + (overlap[1] * 2)
     splitted = []
+    v_stride = target_shape[0]
+    h_stride = target_shape[1]
+    v_step = target_shape[0] + 2 * overlap[0]
+    h_step = target_shape[1] + 2 * overlap[1]
+    nrows, ncols = max((img.shape[0] - overlap[0]*2) // target_shape[0], 1), max((img.shape[1] - overlap[1]*2) // target_shape[1], 1)
     for i in range(nrows):
         for j in range(ncols):
-            h_start = j*stride
-            v_start = i*stride
-            cropped = img[v_start:v_start+step, h_start:h_start+step]
+            h_start = j*h_stride
+            v_start = i*v_stride
+            cropped = img[v_start:v_start+v_step, h_start:h_start+h_step]
             splitted.append(cropped)
     return splitted, (nrows, ncols)
 
-def get_tiles(tile_kernel, image, target_shape, overlap=48, pixel_mult=1):
+def get_tiles(image, target_shape, overlap=0):
     padding_tuple = ((0,0), (0,0), (0,0)) 
     padded_image = image
-    target_shape = (target_shape[0]-(2*overlap), target_shape[1]-(2*overlap))
-    if tile_kernel is None:
-            kernel_1 =  image.shape[0]//(target_shape[0]*pixel_mult)
-            kernel_2 = image.shape[1]//(target_shape[1]*pixel_mult)
-            remainders = (image.shape[0]%(target_shape[0]*pixel_mult), image.shape[1]%(target_shape[1]*pixel_mult))
-            if (kernel_1 < 1 and kernel_2 < 1) or (kernel_1 == 1 and kernel_2 == 1 and remainders==(0,0)): #can only fit one tile
-                tile_kernel = (image.shape[0], image.shape[1])
-            else: #can fit multiple tiles
-                tile_kernel = (target_shape[0]*pixel_mult, target_shape[1]*pixel_mult)
-            if remainders != (0,0):
-                padding_tuple = ((0, (target_shape[0]*pixel_mult)-remainders[0]), (0, (target_shape[1]*pixel_mult)-remainders[1]), (0, 0))
-            padded_image = np.pad(image, padding_tuple, 'constant', constant_values=(0))
-    tiled_array, full_tiled_shape = split(padded_image, target_shape[0], overlap)
-    images = tiled_array
-    return images, full_tiled_shape, padding_tuple
+    overlap = [overlap, overlap]
+    if target_shape == image.shape[:2]:
+        images = [image]
+        full_tiled_shape = (1,1)
+    else:
+        target_shape = list(target_shape)
+        if target_shape[0] < image.shape[0]:
+            target_shape[0] = target_shape[0]-(2*overlap[0])
+        elif target_shape[0] >= image.shape[0]:
+            overlap[0] = 0
+        if target_shape[1] < image.shape[1]:
+            target_shape[1] = target_shape[1]-(2*overlap[1])
+        elif target_shape[1] >= image.shape[1]:
+            overlap[1] = 0
+        target_shape = tuple(target_shape)
+        total_width = (target_shape[0]*np.ceil(image.shape[0]/(target_shape[0]))) + (overlap[0]*2) # *2
+        total_height = (target_shape[1]*np.ceil(image.shape[1]/(target_shape[1]))) + (overlap[1]*2) # *2
+        remainders = (total_width - image.shape[0], total_height - image.shape[1])
+        padding_tuple = ((0, int(remainders[0])), (0, int(remainders[1])), (0,0))
+        padded_image = np.pad(image, padding_tuple, 'constant', constant_values=(0))
+        tiled_array, full_tiled_shape = split(padded_image, target_shape, overlap)
+        images = tiled_array
+    return images, full_tiled_shape, padding_tuple, overlap
 
-def smoke_segmentation_png_jpg(input, segmentation_model, target_shape, output_path, tile=True, tile_kernel=None, plot=False): 
+def smoke_segmentation_png_jpg(input, segmentation_model, target_shape, output_path, tile=True, plot=False, overlap=0): 
     image = Image.open(input).convert('RGB')
     image = np.asarray(image)
     #tile image
     if tile:
-        images, full_tiled_shape, padding_tuple = get_tiles(tile_kernel, image, target_shape)
+        images, full_tiled_shape, padding_tuple, overlap = get_tiles(image, target_shape, overlap)
         original_shape = target_shape
     else:
         images = np.array([image])
@@ -233,7 +285,7 @@ def smoke_segmentation_png_jpg(input, segmentation_model, target_shape, output_p
     original_shape = (original_shape[1], original_shape[0]) # for some reason these are always transposed?
     masks_reshaped = [cv2.resize(np.float32(pred_mask[i]), original_shape, interpolation=0) for i in range(len(pred_mask))]
     if tile:
-        mask_reshaped = reconstruct_image(masks_reshaped, full_tiled_shape, padding_tuple[:2])
+        mask_reshaped = reconstruct_image(masks_reshaped, full_tiled_shape, padding_tuple[:2], target_shape, overlap)
     else:
         mask_reshaped = masks_reshaped[0]
     #plot

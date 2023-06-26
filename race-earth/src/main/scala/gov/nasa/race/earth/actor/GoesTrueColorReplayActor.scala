@@ -28,7 +28,7 @@ import java.io.File
 class GoesTrueColorReplayActor(val config: Config) extends FileReplayActor[TifFileAvailable] {
 
   val tifPattern = raw".*_c(\d{4})(\d{3})(\d{2})(\d{2})(\d{2})(\d)\.tif".r
-  Thread.sleep(4000) // bad practice - needed to allow python server to start
+  Thread.sleep(5000) // bad practice - needed to allow python server to start
   override protected def getFileAvailable(f: File): Option[TifFileAvailable] = { // pattern matching here
     f.getName match {
       case tifPattern(year, day, hour, min, sec, msec) =>

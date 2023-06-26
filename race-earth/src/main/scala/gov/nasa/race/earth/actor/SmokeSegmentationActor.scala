@@ -19,14 +19,16 @@ package gov.nasa.race.earth.actor
 
 import akka.actor.ActorRef
 import akka.http.scaladsl.model.ContentTypes.`application/json`
-import akka.http.scaladsl.model.{HttpEntity, HttpMethods}
+import akka.http.scaladsl.model.MediaTypes.`image/tiff`
+import akka.http.scaladsl.model.{HttpEntity, HttpMethods, MediaTypes}
 import com.typesafe.config.Config
 import gov.nasa.race
 import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{ExternalProc, JsonWriter, StringJsonPullParser}
 import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
+import gov.nasa.race.util.FileUtils
 import gov.nasa.race.earth.Gdal2Tiles
-import gov.nasa.race.http.{FileRetrieved, HttpActor}
+import gov.nasa.race.http.{FileRequestFailed, FileRetrieved, HttpActor}
 import gov.nasa.race.uom.DateTime
 
 import java.io.File
@@ -36,7 +38,7 @@ import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.sys.process.Process
-import scala.util.{Success, Failure => FailureEx}
+import scala.util.{Failure, Success}
 
 trait  SmokeSegmentationActor extends PublishingRaceActor with SubscribingRaceActor{
   // unsure what might go here - may omit
@@ -61,7 +63,7 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
 
   var runningProc:Process = startAPI // starts the Python server hosting model API and checks if it is available
   var requestDate: DateTime = DateTime.UndefinedDateTime
-  var apiAvailable: Boolean = false
+  var apiAvailable: Boolean = true //false
 
   override def onStartRaceActor(originator: ActorRef): Boolean = {
     super.onStartRaceActor(originator)
@@ -74,12 +76,12 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
 
   def startAPI: Process = {
     val runningProc = apiProcess.customExec()
-    Thread.sleep(3000) // bad practice - need to remove?
+    Thread.sleep(5000) // bad practice - need to remove?
     val serviceFuture = IsServiceAvailable()
     Await.result(serviceFuture, 3.seconds)
     serviceFuture.onComplete {
       case Success(v) => info ("smoke api status confirmed")
-      case FailureEx(x) => warning(s"smoke api status could not be confirmed $x")
+      case Failure(x) => warning(s"smoke api status could not be confirmed $x")
     }
     runningProc
   }
@@ -90,7 +92,7 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
         case Success(strictEntity) =>
           info("finished initiating smoke api")
           apiAvailable = true
-        case FailureEx(x) =>
+        case Failure(x) =>
           warning(s"smoke api is not initiated $x")
           apiAvailable = false
       }
@@ -106,29 +108,45 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
 
   def makeRequest(importedImage: FileRetrieved): Unit = {
     if (apiAvailable) {
-      val fileRequest: File = new File(importedImage.req.file.getPath.replace("\\", "/"))
+      val tiffBytes: Array[Byte] = FileUtils.fileContentsAsBytes(importedImage.req.file).get
+      val reqEntity = HttpEntity(MediaTypes.`image/tiff`, tiffBytes) // image/tiff
+      val outputFile: File = new File(dataDir.getPath, importedImage.req.file.getName.replace(".tif", "_segmented.tif"))
+      httpRequestFile(apiPort, outputFile, HttpMethods.POST, entity = reqEntity).onComplete {
+        case Success(f) =>
+          info(s"download complete: $f")
+          // send message with file retrieval to process data set
+        case Failure(x) =>
+          warning(s"download failed: $x")
+      }
+    }
+  }
+
+  // new process dataset - convert layers to contours, send to UI?
+
+  def makeRequestImagery(importedImage: FileRetrieved): Unit = {
+    if (apiAvailable) {
       writer.clear()
       writer.writeObject { w =>
-        w.writeStringMember("file", fileRequest.getPath.replace("\\", "/"))
+        w.writeStringMember("file", importedImage.req.file.getPath.replace("\\", "/"))
       }
       val bodyJson = writer.toJson
       val reqEntity = HttpEntity(`application/json`, bodyJson) // image/tiff
-      httpRequestStrict(apiPort, HttpMethods.POST, entity = reqEntity) { // maybe max time out in
-        case Success(strictEntity) =>
-          val data = strictEntity.getData().utf8String
-          val outputFiles: ArrayBuffer[File] = getOutputFileLocations(data)
-          val f: Future[(Any, Any)] = storeData(importedImage.date, outputFiles)
-          Await.result(f, Duration.Inf) // not in actor thread, add comment to enter and exit thread, could use messages
-          f.onComplete {
-            case Success(v) =>
-              info("finished storing smoke and cloud tiles")
-            case FailureEx(e) =>
-              e.printStackTrace
-          }
-          self ! ProcessDataSet(importedImage.date, data) // move back into actor thread to avoid sync, ! sends the message
-        case FailureEx(x) =>
-          warning(s"retrieving data set failed with $x")
-      }
+      httpRequestStrict(apiPort, HttpMethods.POST, entity = reqEntity) { // maybe max time out in // httpRequestFile
+              case Success(strictEntity) =>
+                val data = strictEntity.getData().utf8String
+                val outputFiles: ArrayBuffer[File] = getOutputFileLocations(data)
+                val f: Future[(Any, Any)] = storeData(importedImage.date, outputFiles)
+                Await.result(f, Duration.Inf) // not in actor thread, add comment to enter and exit thread, could use messages
+                f.onComplete {
+                  case Success(v) =>
+                    info("finished storing smoke and cloud tiles")
+                  case Failure(e) =>
+                    e.printStackTrace
+                }
+                self ! ProcessDataSet(importedImage.date, data) // move back into actor thread to avoid sync, ! sends the message
+              case Failure(x) =>
+                warning(s"retrieving data set failed with $x")
+            }
     }
   }
 
