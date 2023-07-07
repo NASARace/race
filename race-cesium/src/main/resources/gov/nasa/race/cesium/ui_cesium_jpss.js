@@ -5,42 +5,24 @@ import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
 var satelliteEntries = [];
-var satelliteView = undefined;
 var selSat = undefined;
 var selSatOnly = false;
 
 var upcoming = [];  // upcoming overpasses (sorted in ascending time, earliest on top)
-var upcomingView = undefined;
 
 var pastEntries = [];  // past overpass data (sorted in descending time, latest on top)
 var displayPastEntries = [];  // the pastEntries shown
-var pastView = undefined;
 var selPast = undefined;
 var showPastHistory = false;
 
-var hotspotView = undefined;
-
 var areaAsset = undefined;
 var area = undefined;  // bounds as Rectangle
-var areaInfoLabel = undefined;
 
-// those will be initialized by config and can be changed interactively
-var history = 7; // in days
-var resolution = 0.0002; // lat/lon resultion to match pixel positions (in degrees)
-var pixelSize = 3;
-var outlineWidth = 1;
-var timeSteps = undefined;
-var brightThreshold = undefined;
-var brightThresholdColor = Cesium.Color.YELLOW;
-var frpThreshold = undefined;
-var frpThresholdColor = Cesium.Color.BLACK;
 var zoomHeight = 20000;
 
 // the Cesium assets to display fire pixels
 var hsFootprintPrimitive = undefined;  // the surface footprint of fire pixels
 var hsPointPrimitive = undefined;   // the brightness/frp points
-
-var dataSource = undefined; // for areas etc
 
 var utcClock = undefined;
 var now = 0;
@@ -95,50 +77,107 @@ class PastEntry {
 
     setPositions (){
         this.hotspots.forEach( h=> {
-            h.pos = Cesium.Cartographic.fromDegrees(h.lon, h.lat, 10);
+            h.pos = Cesium.Cartographic.fromDegrees(h.lon, h.lat, 1);
             h.xyzPos = Cesium.Cartographic.toCartesian(h.pos);
 
             if (h.bounds){
-                h.bounds = h.bounds.map( p=> Cesium.Cartographic.fromDegrees(p[1], p[0]));
+                h.bounds = h.bounds.map( p=> Cesium.Cartographic.fromDegrees(p[1], p[0], 1));
                 h.xyzBounds = h.bounds.map( p=> Cesium.Cartographic.toCartesian(p));
             }
         });
     }
 }
 
-ui.registerLoadFunction(function initialize() {
-    ui.registerClockMonitor( startTimeUpdate);
+createIcon();
+createWindow();
+var satelliteView = initSatelliteView();
+var upcomingView = initUpcomingView();
+var pastView = initPastView();
+var hotspotView = initHotspotView();
 
-    satelliteView = initSatelliteView();
-    upcomingView = initUpcomingView();
-    pastView = initPastView();
-    hotspotView = initHotspotView();
+var dataSource = new Cesium.CustomDataSource("jpss");
+uiCesium.addDataSource(dataSource);
 
-    dataSource = new Cesium.CustomDataSource("jpss");
-    uiCesium.addDataSource(dataSource);
+var areaInfoLabel = ui.getLabel("jpss.bounds-info");
+areaInfoLabel.classList.add( "align_right");
 
-    areaInfoLabel = ui.getLabel("jpss.bounds-info");
-    areaInfoLabel.classList.add( "align_right");
+ws.addWsHandler(handleWsJpssMessages);
 
-    ws.addWsHandler(config.wsUrl, handleWsJpssMessages);
+var history = config.jpss.history;
+var timeSteps = config.jpss.timeSteps;
+var brightThreshold = config.jpss.bright.value;
+var brightThresholdColor = config.jpss.bright.color;
+var frpThreshold = config.jpss.frp.value;
+var frpThresholdColor = config.jpss.frp.color;
+var resolution = config.jpss.resolution; // lat/lon resolution to match pixel positions (in degrees)
+var pixelSize = config.jpss.pixelSize;
+var outlineWidth = config.jpss.outlineWidth;
+initSliders();
 
-    history = config.jpss.history;
-    timeSteps = config.jpss.timeSteps;
-    brightThreshold = config.jpss.bright.value;
-    brightThresholdColor = config.jpss.bright.color;
-    frpThreshold = config.jpss.frp.value;
-    frpThresholdColor = config.jpss.frp.color;
-    resolution = config.jpss.resolution;
-    pixelSize = config.jpss.pixelSize;
-    outlineWidth = config.jpss.outlineWidth;
-    initSliders();
+ui.setCheckBox("jpss.sel_sat", selSatOnly);
+ui.setCheckBox("jpss.show_history", showPastHistory);
 
-    ui.setCheckBox("jpss.sel_sat", selSatOnly);
-    ui.setCheckBox("jpss.show_history", showPastHistory);
+uiCesium.initLayerPanel("jpss", config.jpss, showJpss);
+ui.registerClockMonitor( startTimeUpdate);
 
-    uiCesium.initLayerPanel("jpss", config.jpss, showJpss);
-    console.log("ui_cesium_jpss initialized");
-});
+console.log("ui_cesium_jpss initialized");
+
+//--- end init
+
+function createIcon() {
+    return ui.Icon("polar-sat-icon.svg", (e)=> ui.toggleWindow(e,'jpss'));
+}
+
+function createWindow() {
+    return ui.Window("Polar Satellites", "jpss", "polar-sat-icon.svg")(
+        ui.LayerPanel("jpss", toggleShowJpss),
+        ui.Panel("satellites", true)(
+            ui.List("jpss.satellites", 5, selectJpssSatellite),
+            ui.RowContainer()(
+              ui.ColumnContainer()(
+                ui.TextInput("area","jpss.bounds", setJpssBounds, true, "enter lat,lon bounds (WSEN order)", "20rem"),
+                ui.Label("jpss.bounds-info")
+              ),
+              ui.Button("pick", pickJpssBounds),
+              ui.Button("clear", clearJpssBounds),
+              ui.Button( "zoom", zoomToJpssBounds)
+            )
+        ),
+        ui.Panel("overpasses:", true)(
+            ui.RowContainer()(
+                ui.RowContainer(null,null,"upcoming overpasses")(
+                    ui.List("jpss.upcoming", 5)
+                ),
+                ui.HorizontalSpacer(0.5),
+                ui.RowContainer(null,null,"completed overpasses")(
+                    ui.List("jpss.past", 5, selectJpssPast)
+                )
+            ),
+            ui.RowContainer()(
+                ui.CheckBox("show history", toggleJpssShowPastHistory, "jpss.show_history"),
+                ui.HorizontalSpacer(2),
+                ui.ListControls("jpss.past")
+            )
+        ),
+        ui.Panel("hotspots", false)(
+            ui.List("jpss.hotspots", 10, null, null, null, zoomToJpssPixel)
+        ),
+        ui.Panel("layer parameters", false)(
+            ui.RowContainer()(
+                ui.ColumnContainer("align_right")(
+                    ui.Slider("history [d]", "jpss.history", setJpssHistory),
+                    ui.Slider("bright [K]", "jpss.bright", setJpssBrightThreshold),
+                    ui.Slider("frp [MW]", "jpss.frp", setJpssFrpThreshold)
+                ),
+                ui.ColumnContainer("align_right")(
+                    ui.Slider("size [pix]", "jpss.pixsize", setJpssPixelSize),
+                    ui.Slider("outline [pix]", "jpss.outline", setJpssOutlineWidth),
+                    ui.Slider("grid [°]", "jpss.resolution", setJpssResolution)
+                )
+            )
+        )
+    );
+}
 
 function startTimeUpdate(clock) {
     utcClock = clock;
@@ -535,9 +574,7 @@ function createPixelAssets(pixels) {
                 let geom = new Cesium.GeometryInstance({
                     geometry: new Cesium.PolygonGeometry({
                         polygonHierarchy: new Cesium.PolygonHierarchy(pix.xyzBounds),
-                        //vertexFormat: Cesium.VertexFormat.POSITION_ONLY,
-                        vertexFormat : Cesium.PerInstanceColorAppearance.VERTEX_FORMAT
-                        //perPositionHeight: true
+                        vertexFormat: Cesium.VertexFormat.POSITION_AND_NORMAL,
                     }),
                     attributes: {
                         color: clrAttr
@@ -564,18 +601,30 @@ function createPixelAssets(pixels) {
     }
 
     if (geoms.length > 0) {
-        hsFootprintPrimitive = new Cesium.Primitive({
+        // should be a GroundPrimitive but that renders incorrectly on macOS
+        hsFootprintPrimitive = new Cesium.GroundPrimitive({
             geometryInstances: geoms,
             allowPicking: false,
             asynchronous: true,
             releaseGeometryInstances: true,
-            
+            vertexCacheOptimize: true,
+            classificationType: Cesium.ClassificationType.BOTH,
+
+            appearance: new Cesium.PerInstanceColorAppearance()
+           /*
             appearance: new Cesium.PerInstanceColorAppearance({
                 faceForward: true,
                 flat: true,
-                translucent: true,
+                //translucent: true,
                 //renderState: { depthTest: { enabled: false, } }, // this makes it appear always on top but translucent
             }),
+            */
+            /*
+            appearance: new Cesium.MaterialAppearance({
+                material : Cesium.Material.fromType('Color'),
+                faceForward : true
+            })
+            */
         });        
         uiCesium.addPrimitive(hsFootprintPrimitive);
     }
@@ -713,37 +762,37 @@ function showPixels() {
 
 //--- interaction
 
-ui.exportToMain(function clearHotspots() {
+function clearHotspots() {
     ui.clearSelectedListItem(pastView);
     clearPrimitives();
     uiCesium.requestRender();
-});
+}
 
-ui.exportToMain(function resetDisplayParams() {
+function resetDisplayParams() {
     timeSteps = structuredClone(config.jpss.timeSteps);
     brightThreshold = structuredClone(config.jpss.bright);
     frpThreshold = structuredClone(config.jpss.frp);
-});
+}
 
-ui.exportToMain(function selectJpssSatellite(event) {
+function selectJpssSatellite(event) {
     selSat = ui.getSelectedListItem(satelliteView);
     if (selSatOnly) {
         updateUpcoming();
         updatePast();
     }
-});
+}
 
-ui.exportToMain(function toggleJpssSelSatOnly(event) {
+function toggleJpssSelSatOnly(event) {
     selSatOnly = ui.isCheckBoxSelected(event);
     updateUpcoming();
     updatePast();
-});
+}
 
-ui.exportToMain(function toggleShowJpss(event) {
+function toggleShowJpss(event) {
     showPrimitives(ui.isCheckBoxSelected(event.target));
-});
+}
 
-ui.exportToMain(function toggleShowJpssRegion(event) {
+function toggleShowJpssRegion(event) {
     let cb = ui.getCheckBox(event.target);
     if (cb) {
         let se = ui.getListItemOfElement(cb);
@@ -753,9 +802,9 @@ ui.exportToMain(function toggleShowJpssRegion(event) {
             } else console.log("no region for selected satellite");
         }
     }
-});
+}
 
-ui.exportToMain(function selectJpssPast(event) {
+function selectJpssPast(event) {
     selPast = ui.getSelectedListItem(pastView);
     if (selPast) {
         showPixels();
@@ -763,28 +812,28 @@ ui.exportToMain(function selectJpssPast(event) {
         clearPrimitives();
     }
     updateHotspots();
-});
+}
 
-ui.exportToMain(function clearJpssHotspots(event) {
+function clearJpssHotspots(event) {
     ui.clearSelectedListItem(pastView);
     clearPrimitives();
     uiCesium.requestRender();
-});
+}
 
-ui.exportToMain(function zoomToJpssPixel(event) {
+function zoomToJpssPixel(event) {
     let h = ui.getSelectedListItem(event);
     if (h) {
         uiCesium.zoomTo(Cesium.Cartesian3.fromDegrees(h.lon, h.lat, zoomHeight));
     }
-});
+}
 
-ui.exportToMain(function toggleJpssShowPastHistory(event) {
+function toggleJpssShowPastHistory(event) {
     showPastHistory = ui.isCheckBoxSelected(event.target);
     if (selPast) {
         showPixels();
         updateHotspots();
     }
-});
+}
 
 //--- interactive area selection
 
@@ -804,13 +853,13 @@ function clearArea() {
     uiCesium.requestRender();
 }
 
-ui.exportToMain(function pickJpssBounds(event) { // mouse selection
+function pickJpssBounds(event) { // mouse selection
     uiCesium.pickSurfaceRectangle( setJpssArea);
-});
+}
 
-ui.exportToMain(function setJpssBounds(event) { // text field input (WSEN)
+function setJpssBounds(event) { // text field input (WSEN)
     // TBD
-});
+}
 
 function setJpssArea (rect) {
     clearArea();
@@ -840,11 +889,11 @@ function setJpssArea (rect) {
     updateHotspots();
 }
 
-ui.exportToMain(function clearJpssBounds(event) {
+function clearJpssBounds(event) {
     clearArea();
-});
+}
 
-ui.exportToMain(function zoomToJpssBounds(event) {
+function zoomToJpssBounds(event) {
     if (area) {
         //let lon = (area.west + area.east) / 2;
         //let lat = (area.south + area.north) / 2;
@@ -854,11 +903,11 @@ ui.exportToMain(function zoomToJpssBounds(event) {
         let cameraPos = uiCesium.viewer.camera.getRectangleCameraCoordinates(rect);
         uiCesium.zoomTo(cameraPos);
     }
-});
+}
 
 //--- layer parameters
 
-ui.exportToMain(function setJpssResolution(event) {
+function setJpssResolution(event) {
     let v = ui.getSliderValue(event.target);
     resolution = v;
     pastEntries.forEach(e => e.setPixelGrid(resolution));
@@ -866,23 +915,23 @@ ui.exportToMain(function setJpssResolution(event) {
     if (hsFootprintPrimitive) {
         showPixels(ui.getSelectedListItemIndex(pastView));
     }
-});
+}
 
-ui.exportToMain(function setJpssBrightThreshold(event) {
+function setJpssBrightThreshold(event) {
     brightThreshold = ui.getSliderValue(event.target);
     if (hsPointPrimitive) {
         showPixels(ui.getSelectedListItemIndex(pastView));
     }
-});
+}
 
-ui.exportToMain(function setJpssFrpThreshold(event) {
+function setJpssFrpThreshold(event) {
     frpThreshold = ui.getSliderValue(event.target);
     if (hsPointPrimitive) {
         showPixels(ui.getSelectedListItemIndex(pastView));
     }
-});
+}
 
-ui.exportToMain(function setJpssPixelSize(event) {
+function setJpssPixelSize(event) {
     pixelSize = ui.getSliderValue(event.target);
     if (hsPointPrimitive) {
         const len = hsPointPrimitive.length;
@@ -891,9 +940,9 @@ ui.exportToMain(function setJpssPixelSize(event) {
         }
         uiCesium.requestRender();
     }
-});
+}
 
-ui.exportToMain(function setJpssOutlineWidth(event) {
+function setJpssOutlineWidth(event) {
     outlineWidth = ui.getSliderValue(event.target);
     if (hsPointPrimitive) {
         const len = hsPointPrimitive.length;
@@ -902,11 +951,11 @@ ui.exportToMain(function setJpssOutlineWidth(event) {
         }
         uiCesium.requestRender();
     }
-});
+}
 
-ui.exportToMain(function setJpssHistory(event) {
+function setJpssHistory(event) {
     history = ui.getSliderValue(event.target);
     if (hsFootprintPrimitive && showPastHistory) {
         showPixels(ui.getSelectedListItemIndex(pastView));
     }
-});
+}

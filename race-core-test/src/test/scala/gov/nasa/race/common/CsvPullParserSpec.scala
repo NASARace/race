@@ -17,6 +17,7 @@
 package gov.nasa.race.common
 
 import gov.nasa.race.test.RaceSpec
+import gov.nasa.race.util.FileUtils
 import org.scalatest.flatspec.AnyFlatSpec
 
 /**
@@ -77,5 +78,74 @@ class CsvPullParserSpec extends AnyFlatSpec with RaceSpec {
 
     println(res)
     assert(res.toString() == input)
+  }
+
+  "a CsvPullParser" should "handle skipping fields" in {
+    val input = "LSGC1,04/10/2023 03:32 UTC,,56.0,34.0,4.0,124.0,7.0,13.0,1.0,40.77,,7.0,53.0,7.7,149.0,27.84,,SE,"
+
+    val p = new StringCsvPullParser {}
+    if (p.initialize(input)) {
+      p.skip(1)
+      val f = p.readNextValue().toString
+      println(s"f='$f'")
+      assert(f == "04/10/2023 03:32 UTC")
+    }
+  }
+
+  "a CsvPullParser" should "handle empty first fields" in {
+    val input = ",42,,44"
+
+    val p = new StringCsvPullParser {}
+    if (p.initialize(input)) {
+      val f1 = p.readNextValue().toString
+      println(s"f1='$f1'")
+      assert(f1 == "")
+      val f2 = p.readNextValue().toString
+      println(s"f2='$f2")
+      assert(f2 == "42")
+      p.skip(1)
+      val f3 = p.readNextValue().toString
+      println(s"f3='$f3")
+      assert(f3 == "44")
+    }
+  }
+
+  "a CsvPullParser" should "support skipping lines and fields" in {
+    val idLineRE = "# STATION: (.+)".r
+    val nameLineRE = "# STATION NAME: (.+)".r
+    val latLineRE = "# LATITUDE: (.+)".r
+    val lonLineRE = "# LONGITUDE: (.+)".r
+    val elevLineRE = """# ELEVATION \[ft\]: (.+)""".r
+    val stateLineRE = "# STATE: (.+)".r
+    val dateSpecRE = """(\d{2})/(\d{2})/(\d{4}) *(\d{2}):(\d{2}) UTC""".r
+
+    val data = FileUtils.fileContentsAsBytes(baseResourceFile("test.csv")).get
+    val parser = new ByteCsvPullParser()
+    if (parser.initialize(data)) {
+      try {
+        val id: String = parser.nextLine().flatMap(idLineRE.findFirstMatchIn(_)).map(_.group(1)).get
+        val name: String = parser.nextLine().flatMap(nameLineRE.findFirstMatchIn(_)).map(_.group(1)).get
+        val lat: Double = parser.nextLine().flatMap(latLineRE.findFirstMatchIn(_)).map(_.group(1).toDouble).get
+        val lon: Double = parser.nextLine().flatMap(lonLineRE.findFirstMatchIn(_)).map(_.group(1).toDouble).get
+        val elev: Double = parser.nextLine().flatMap(elevLineRE.findFirstMatchIn(_)).map(_.group(1).toDouble).get
+        val state: String = parser.nextLine().flatMap(stateLineRE.findFirstMatchIn(_)).map(_.group(1)).get
+        println(s"id=$id elev=$elev")
+        assert(id == "LSGC1")
+        assert(elev == 1842)
+
+        parser.skipToNextRecord() // ignore field header
+        parser.skipToNextRecord() // ignore uom header
+        parser.skip(1) // ignore station id field
+        parser.readNextValue().toString match {
+          case dateSpecRE(mon,day,yr,hr,min) => assert(min.toInt == 32)
+          case s => fail(s"wrong field: '$s'")
+        }
+        // .. we could loop over all entries of report to get the max minute but this seems to be invariant for each station
+      } catch {
+        case x: Throwable =>
+          x.printStackTrace()
+          fail("parser throws exception")
+      }
+    } else fail("parser did not initialize")
   }
 }

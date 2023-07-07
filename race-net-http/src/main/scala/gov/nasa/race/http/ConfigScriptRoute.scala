@@ -30,6 +30,7 @@ import java.net.InetSocketAddress
   */
 trait ConfigScriptRoute extends RaceRouteInfo {
 
+  // this should not be deferred
   def configScript: Text.TypedTag[String] = script(src:="config.js", tpe:="module")
 
   override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments :+ configScript

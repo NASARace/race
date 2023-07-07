@@ -15,25 +15,61 @@ class SourceEntry {
 
 var sources = []; // will be populated by getLayers messages
 var sourceView = undefined;
-var defaultRender = config.geolayer.render;
-
 var objectView = undefined;
+var defaultRender = config.geolayer.render;
 
 const renderModules = new Map();
 var defaultRenderFunc = undefined;
 
-ui.registerLoadFunction(function initialize() {
+initWindow();
+
+uiCesium.setEntitySelectionHandler(geoLayerSelection);
+ws.addWsHandler(handleWsGeoLayerMessages);
+
+if (config.geolayer.render) processRenderOpts(config.geolayer.render);
+
+uiCesium.initLayerPanel("geolayer", config.geolayer, showGeoLayer);
+console.log("ui_cesium_geolayer initialized");
+
+//--- end module init
+
+function initWindow() {
+    createIcon();
+    createWindow();
+
     sourceView = initSourceView();
     objectView = ui.getKvTable("geolayer.object");
+}
 
-    uiCesium.setEntitySelectionHandler(geoLayerSelection);
-    ws.addWsHandler(config.wsUrl, handleWsGeoLayerMessages);
+function createWindow() {
+    return ui.Window("Geo Layers", "geolayer", "geomarker-icon.svg")(
+        ui.LayerPanel("geolayer", toggleShowGeoLayer),
+        ui.Panel("geo layer sources", true)(
+            ui.TreeList("geolayer.source.list", 15, 25, selectGeoLayerSource)
+        ),
+        ui.Panel("object data", false)(
+            ui.KvTable("geolayer.object", 15, 25,25)
+        ),
+        ui.Panel("display parameters", false)()
+    );
+}
 
-    if (config.geolayer.render) processRenderOpts(config.geolayer.render);
+function createIcon() {
+    return ui.Icon("geomarker-icon.svg", (e)=> ui.toggleWindow(e,'geolayer'));
+}
 
-    uiCesium.initLayerPanel("geolayer", config.geolayer, showGeoLayer);
-    console.log("ui_cesium_geolayer initialized");
-});
+function initSourceView() {
+    let view = ui.getList("geolayer.source.list");
+    if (view) {
+        ui.setListItemDisplayColumns(view, ["header"], [
+            { name: "date", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateString(e.source.date)},
+            { name: "objs", tip: "number of loaded objects", width: "5rem", attrs: ["fixed", "alignRight"], map: e => e.nEntities ? e.nEntities : ""},
+            ui.listItemSpacerColumn(),
+            { name: "show", tip: "toggle visibility", width: "2.1rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSource) }
+        ]);
+    }
+    return view;
+}
 
 async function loadRenderModule (modPath,sourceEntry=null) {
     let renderFunc = renderModules.get(modPath);
@@ -57,25 +93,17 @@ async function loadRenderModule (modPath,sourceEntry=null) {
 
 function geoLayerSelection() {
     let e = uiCesium.getSelectedEntity();
+
+    if (e.position && e.position._value) {
+        uiCesium.viewer.selectionIndicator.viewModel.position = e.position._value;  // HACK - cesium has wrong SI height if not clamp-to-ground
+    }
+
     if (e && e.properties && e.properties.propertyNames) {
         let kvList = e.properties.propertyNames.map( key=> [key, e.properties[key]._value]);
         ui.setKvList(objectView,kvList);
     } else {
         ui.setKvList(objectView,null);
     }
-}
-
-function initSourceView() {
-    let view = ui.getList("geolayer.source.list");
-    if (view) {
-        ui.setListItemDisplayColumns(view, ["header"], [
-            { name: "date", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateString(e.source.date)},
-            { name: "objs", tip: "number of loaded objects", width: "5rem", attrs: ["fixed", "alignRight"], map: e => e.nEntities ? e.nEntities : ""},
-            ui.listItemSpacerColumn(),
-            { name: "show", tip: "toggle visibility", width: "2.1rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSource) }
-        ]);
-    }
-    return view;
 }
 
 function toggleShowSource(event) {
@@ -132,34 +160,29 @@ function processRenderOpts (opts, sourceEntry=null) {
     if (util.isString(opts.fill)) opts.fill = Cesium.Color.fromCssColorString(opts.fill);
 }
 
-function loadSource(sourceEntry) {
+async function loadSource(sourceEntry) {
     let url = "geolayer-data/" + sourceEntry.source.pathName;
 
-    return new Promise(function(resolve) {
-        var request = new XMLHttpRequest();
-        request.open('GET', url);
-        request.responseType = "json";
-
-        request.onload = function() {
-            let data = request.response;
+    fetch(url).then( (response) => {
+        if (response.ok) {
+            let data = response.json();
             if (data) {
                 let renderOpts = collectRenderOpts(sourceEntry);
-                new Cesium.GeoJsonDataSource.load(data, renderOpts).then(  // TODO - does that support streams? 
-                    ds => {
-                        sourceEntry.dataSource = ds;
-                        postProcessDataSource(sourceEntry, renderOpts);
-                        sourceEntry.nEntities = ds.entities.values.length;
-                        ui.updateListItem(sourceView, sourceEntry);
+                Cesium.GeoJsonDataSource.load(data, renderOpts).then( (ds) => {
+                    ds.show = true;
+                    sourceEntry.dataSource = ds;
+                    postProcessDataSource(sourceEntry, renderOpts);
+                    sourceEntry.nEntities = ds.entities.values.length;
+                    ui.updateListItem(sourceView, sourceEntry);
+            
+                    uiCesium.addDataSource(ds);
 
-                        uiCesium.viewer.dataSources.add(ds);
-                        uiCesium.requestRender();
-                        setTimeout( () => uiCesium.requestRender(), 300); // ??
-                    } 
-                );
-            }
-        }
-        request.send();
-    });
+                    console.log("loaded ", url);
+                    setTimeout( () => { uiCesium.requestRender(); }, 500);  // not showing if immediate request ?
+                });
+            } else console.log("no data for request: ", url);
+        } else console.log("request failed: ", url);
+    }, (reason) => console.log("failed to retrieve: ", url, ", reason: ", reason));
 }
 
 function collectRenderOpts (sourceEntry) {
@@ -195,9 +218,13 @@ function showGeoLayer(cond) {
     uiCesium.requestRender();
 }
 
-ui.exportToMain(function selectGeoLayerSource(event) {
+function selectGeoLayerSource(event) {
     let e = event.detail.curSelection;
     if (e) {
         console.log("selected: ", e);
     }
-});
+}
+
+function toggleShowGeoLayer(event) {
+    console.log("not yet")
+}

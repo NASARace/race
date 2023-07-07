@@ -27,7 +27,7 @@ import gov.nasa.race.common.ConstAsciiSlice.asc
 import gov.nasa.race.common.{ExternalProc, JsonWriter, StringJsonPullParser}
 import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.util.FileUtils
-import gov.nasa.race.earth.Gdal2Tiles
+import gov.nasa.race.earth.{Gdal2Tiles}//, GdalContour}
 import gov.nasa.race.http.{FileRequestFailed, FileRetrieved, HttpActor}
 import gov.nasa.race.uom.DateTime
 
@@ -64,6 +64,7 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
   var runningProc:Process = startAPI // starts the Python server hosting model API and checks if it is available
   var requestDate: DateTime = DateTime.UndefinedDateTime
   var apiAvailable: Boolean = true //false
+  //val contourCmd = new GdalContour(  getExecutableFile("gdal-contour-prog", "gdal_contour"))
 
   override def onStartRaceActor(originator: ActorRef): Boolean = {
     super.onStartRaceActor(originator)
@@ -120,6 +121,18 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
       }
     }
   }
+
+//  def createContourFile(segmentedFile: File): Option[File] = {
+//    val res = contourCmd.reset()
+//      .setInFile( inFile)
+//      .setOutFile( getOutputFile(area, hrrr, "wn-hrrr-contour", "json"))
+//      .setBand(1)
+//      .setInterval(5.0)
+//      .setPolygon()
+//      .setAttrMinName("prob") // in case
+//      .ignoreConsoleOutput()
+//      .execSync().asOption
+//  }
 
   // new process dataset - convert layers to contours, send to UI?
 

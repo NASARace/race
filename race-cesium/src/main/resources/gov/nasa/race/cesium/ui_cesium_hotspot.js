@@ -24,7 +24,7 @@ var tempPrimitive = undefined;
 ui.registerLoadFunction(function initialize() {
     hotspotView = initHotspotView();
     initHotspotSliders();
-    ws.addWsHandler(config.wsUrl, handleWsHotspotMessages);
+    ws.addWsHandler(handleWsHotspotMessages);
 
     timeSteps = config.hotspot.timeSteps;
     tempThreshold = config.hotspot.temp;

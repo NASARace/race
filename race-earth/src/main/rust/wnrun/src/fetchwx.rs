@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, United States Government, as represented by the
+ * Copyright (c) 2023, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -14,11 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.cesium
 
-import gov.nasa.race.http.TrackWSRoute
+ /// module to obtain weather forecasts
 
-/**
-  * a RaceRoute that uses Cesium to display GpsPos tracks transmitted over a websocket
-  */
-trait CesiumGpsRoute extends CesiumRoute with TrackWSRoute

@@ -58,6 +58,15 @@ trait HttpActor extends RaceActor {
   private implicit val executionContext = scala.concurrent.ExecutionContext.global
   private val http = Http(context.system)
 
+  def timeoutConnectionSettings(timeout: FiniteDuration): ConnectionPoolSettings = {
+    val origSettings = ClientConnectionSettings(system.settings.config)
+    ConnectionPoolSettings(system.settings.config)
+      .withConnectionSettings( origSettings
+        .withConnectingTimeout(maxConnectingTimeout)
+        .withIdleTimeout(timeout)
+      )
+  }
+
   def httpRequest [U] (req: HttpRequest)(f: Try[HttpResponse]=>U): Unit = {
     http.singleRequest(req, settings = clientSettings).onComplete {
       case v@Success(resp) =>
@@ -69,6 +78,19 @@ trait HttpActor extends RaceActor {
     //http.singleRequest(req, settings = clientSettings).onComplete(f)
     //http.singleRequest(req, settings = clientSettings).andThen { case res => f(res) }.andThen { case res => res.get.discardEntityBytes() }
   }
+
+  def httpRequestWithTimeout [U] (req: HttpRequest, timeout: FiniteDuration)(f: Try[HttpResponse]=>U): Unit = {
+    http.singleRequest(req, settings = timeoutConnectionSettings(timeout)).onComplete {
+      case v@Success(resp) =>
+        f(v)
+        resp.discardEntityBytes()
+      case x@Failure(_) => f(x)
+    }
+
+    //http.singleRequest(req, settings = clientSettings).onComplete(f)
+    //http.singleRequest(req, settings = clientSettings).andThen { case res => f(res) }.andThen { case res => res.get.discardEntityBytes() }
+  }
+
 
   def httpRequestWithRetry [U] (req: HttpRequest, retries: Int)(f: Try[HttpResponse]=>U): Unit = {
     httpRequest(req){
@@ -92,6 +114,19 @@ trait HttpActor extends RaceActor {
                         ): Future[File] = {
     val req = HttpRequest( method, uri, headers, entity)
     http.singleRequest(req, settings = clientSettings).flatMap( resp=> {
+      val stream = resp.entity.dataBytes
+      stream.runFold(new FileOutputStream(file))( (fos,data) => {
+        fos.write(data.toArray)
+        fos
+      }).map( fos=> { fos.close(); file})
+    })
+  }
+
+  def httpRequestFileWithTimeout (uri: String, file: File, timeout: FiniteDuration,
+                       method: HttpMethod = HttpMethods.GET, headers: Seq[HttpHeader] = Nil, entity: RequestEntity = HttpEntity.Empty
+                      ): Future[File] = {
+    val req = HttpRequest( method, uri, headers, entity)
+    http.singleRequest(req, settings = timeoutConnectionSettings(timeout)).flatMap( resp=> {
       val stream = resp.entity.dataBytes
       stream.runFold(new FileOutputStream(file))( (fos,data) => {
         fos.write(data.toArray)
@@ -199,5 +234,30 @@ class SimpleFileRetriever (val config: Config) extends HttpFileRetriever {
 
     self ! RequestFile(url,file, true)
     true
+  }
+}
+
+class UrlTester (val config: Config) extends HttpActor {
+  private implicit val materializer: Materializer = Materializer.matFromSystem(context.system)
+
+  val url = config.getString("url")
+  val reqTimeout = config.getFiniteDurationOrElse("timeout", 5.seconds)
+
+  override def onStartRaceActor (originator: ActorRef): Boolean = {
+    sendStrictRequest()
+    super.onStartRaceActor(originator)
+  }
+
+  def sendStrictRequest(): Unit = {
+    println(s"client sending request '$url' with timeout $reqTimeout")
+    httpRequestWithTimeout(HttpRequest(uri=url), reqTimeout) {
+      case Success(resp) =>
+        resp.entity match {
+          case se: HttpEntity.Strict => println(s"client got response '${new String(se.data.toArray[Byte])}'")
+          case o => println(s"response not a strict entity: $o")
+        }
+
+      case Failure(x) => println(s"request failed with exception $x")
+    }
   }
 }

@@ -21,13 +21,14 @@ import akka.actor._
 import com.typesafe.config.{Config, ConfigException}
 import gov.nasa.race._
 import gov.nasa.race.common
-import gov.nasa.race.common.Runner
+import gov.nasa.race.common.{ExternalProc, Runner}
 import gov.nasa.race.common.Status._
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.{NamedConfigurable, SubConfigurable}
 import gov.nasa.race.core.{InitializeRaceActor, StartRaceActor, _}
 import gov.nasa.race.util.ClassLoaderUtils
 
+import java.io.File
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.reflect.{ClassTag, classTag}
@@ -461,6 +462,10 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
     scheduler.scheduleWithFixedDelay(0.seconds, interval, self, msg)
   }
 
+  def scheduleRecurring (delay: FiniteDuration, interval: FiniteDuration, msg: Any) : Cancellable = {
+    scheduler.scheduleWithFixedDelay(delay, interval, self, msg)
+  }
+
   def scheduleOnce(delay: FiniteDuration, msg: Any): Cancellable = scheduler.scheduleOnce(delay,self,msg)
 
   /**
@@ -488,6 +493,15 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
   def initTimeout = _getTimeout("init-timeout")
   def startTimeout = _getTimeout("start-timeout")
 
+  // we don't use the generic 'path' as config key here since this would probably collide with other options
+  def getOptionalExecutableFile (key: String, fileName: String): Option[File] = {
+    config.getOptionalExecutableFile(key).orElse {
+      ExternalProc.find( fileName, config.getOptionalString("executable-paths"),
+                                   raceActorSystem.config.getOptionalString("executable-paths"))
+    }
+  }
+
+  def getExecutableFile(key: String, fileName: String): File = getOptionalExecutableFile(key,fileName).get
 }
 
 

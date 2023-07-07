@@ -446,6 +446,27 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
     println("Ok.")
   }
 
+  "a JsonPullParser" should "parse String arrays" in {
+    val input =
+      """
+         { "foo": [ "a", "b", "c" ],"bar": 42 }
+      """
+    println(s"\n#-- parsing string array member in:\n$input")
+
+    val FOO = asc("foo")
+    val BAR = asc("bar")
+
+    val p = new StringJsonPullParser
+    p.initialize(input)
+    p.readNextObject {
+      val strings = p.readNextStringArrayMemberInto( FOO, ArrayBuffer.empty[String])
+      println(s"foo: ['${strings(0)}', '${strings(1)}', '${strings(2)}']")
+      assert( strings.size == 3)
+      assert( p.readUnQuotedMember( BAR).toInt == 42)
+    }
+    println("Ok.")
+  }
+
   "a JsonPullParser" should "parse empty arrays" in {
     val input =
       """

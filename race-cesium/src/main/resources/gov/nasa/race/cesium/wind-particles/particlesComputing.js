@@ -9,12 +9,13 @@ export class ParticlesComputing {
         this.createComputingPrimitives(data, userInput, viewerParameters);
     }
 
-    createWindTextures(context, data) {
+    createWindTextures(context, data) {        
         var windTextureOptions = {
             context: context,
             width: data.dimensions.lon,
             height: data.dimensions.lat * data.dimensions.lev,
-            pixelFormat: Cesium.PixelFormat.LUMINANCE,
+            //pixelFormat: Cesium.PixelFormat.LUMINANCE, // not a valid combination for WebGL 2
+            pixelFormat: Cesium.PixelFormat.RED, // single component or WebGL will complain about not enough data
             pixelDatatype: Cesium.PixelDatatype.FLOAT,
             flipY: false,
             sampler: new Cesium.Sampler({
@@ -25,8 +26,10 @@ export class ParticlesComputing {
         };
 
         this.windTextures = {
+            H: Util.createTexture(windTextureOptions, data.H.array),
             U: Util.createTexture(windTextureOptions, data.U.array),
-            V: Util.createTexture(windTextureOptions, data.V.array)
+            V: Util.createTexture(windTextureOptions, data.V.array),
+            W: Util.createTexture(windTextureOptions, data.W.array),
         };
     }
 
@@ -75,6 +78,7 @@ export class ParticlesComputing {
         );
         const uSpeedRange = new Cesium.Cartesian2(data.U.min, data.U.max);
         const vSpeedRange = new Cesium.Cartesian2(data.V.min, data.V.max);
+        const wSpeedRange = new Cesium.Cartesian2(data.W.min, data.W.max);
 
         const that = this;
 
@@ -87,6 +91,9 @@ export class ParticlesComputing {
                     },
                     V: function() {
                         return that.windTextures.V;
+                    },
+                    W: function() {
+                        return that.windTextures.W;
                     },
                     currentParticlesPosition: function() {
                         return that.particlesTextures.currentParticlesPosition;
@@ -108,6 +115,9 @@ export class ParticlesComputing {
                     },
                     vSpeedRange: function() {
                         return vSpeedRange;
+                    },
+                    wSpeedRange: function() {
+                        return wSpeedRange;
                     },
                     pixelSize: function() {
                         return viewerParameters.pixelSize;
@@ -163,10 +173,12 @@ export class ParticlesComputing {
                         return that.particlesTextures.particlesSpeed;
                     },
                     lonRange: function() {
-                        return viewerParameters.lonRange;
+                        //return viewerParameters.lonRange;
+                        return new Cesium.Cartesian2(data.lon.min, data.lon.max);
                     },
                     latRange: function() {
-                        return viewerParameters.latRange;
+                        //return viewerParameters.latRange;
+                        return new Cesium.Cartesian2(data.lat.min, data.lat.max);
                     },
                     randomCoefficient: function() {
                         var randomCoefficient = Math.random();
@@ -191,4 +203,37 @@ export class ParticlesComputing {
         }
     }
 
+    forEachPrimitive(func) {
+        func(this.primitives.calculateSpeed);
+        func(this.primitives.updatePosition);
+        func(this.primitives.postProcessingPosition);
+    }
+
+    refreshParticles(context,data,userInput,viewerParameters) {
+        this.destroyParticlesTextures();
+        this.createParticlesTextures(context, data, userInput, viewerParameters);
+        
+        this.updateUserInputUniforms(userInput)
+    }
+
+    updateUserInputUniforms (userInput) {
+        let primitives = this.primitives;
+
+        let map = primitives.calculateSpeed.uniformMap;
+        const speedFactor = userInput.speedFactor;
+        map.speedFactor = function() {
+            return speedFactor;
+        };
+
+        map = primitives.postProcessingPosition.uniformMap;
+        const dropRate = userInput.dropRate;
+        map.dropRate = function() {
+            return dropRate;
+        };
+        const dropRateBump = userInput.dropRateBump;
+        map.dropRateBump = function() {
+            return dropRateBump;
+        }
+
+    }
 }

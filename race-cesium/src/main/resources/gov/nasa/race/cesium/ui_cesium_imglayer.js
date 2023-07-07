@@ -1,36 +1,62 @@
 import * as config from "./config.js";
-import * as ws from "./ws.js";
 import * as util from "./ui_util.js";
 import { ExpandableTreeNode } from "./ui_data.js";
 import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
-var defaultRender = config.imglayer.render;
-var sources = config.imglayer.sources;
-
-var sourceView = undefined;
-var selectedSrc = undefined;
-
-var cmView = undefined;
-
 //--- module initialization
 
-ui.registerLoadFunction(function initialize() {
-    sourceView = initSourceView();
-    cmView = initCmView();
+var defaultRender = config.imglayer.render;
+var sources = config.imglayer.sources;
+var selectedSrc = undefined;
 
-    initImgLayers();
-    initImgSliders();
+createIcon();
+createWindow();
 
-    let srcTree = ExpandableTreeNode.fromPreOrdered( sources, e=> e.pathName);
-    ui.setTree( sourceView, srcTree);
+let sourceView = initSourceView();
+let cmView = initColorMapView();
 
-    ui.registerThemeChangeHandler(themeChanged);
+initImgLayers();
+initImgSliders();
 
-    uiCesium.registerMouseClickHandler(handleMouseClick);
-    uiCesium.initLayerPanel("imglayer", config.imglayer, showImgLayer);
-    console.log("ui_cesium_imglayer initialized");
-});
+let srcTree = ExpandableTreeNode.fromPreOrdered( sources, e=> e.pathName);
+ui.setTree( sourceView, srcTree);
+
+ui.registerThemeChangeHandler(themeChanged);
+
+uiCesium.registerMouseClickHandler(handleMouseClick);
+uiCesium.initLayerPanel("imglayer", config.imglayer, showImgLayer);
+console.log("ui_cesium_imglayer initialized");
+
+//--- end init
+
+function createIcon() {
+    return ui.Icon("globe-icon.svg", (e)=> ui.toggleWindow(e,'imglayer'));
+}
+
+function createWindow() {
+    return ui.Window("Imagery Layers", "imglayer", "globe-icon.svg")(
+        ui.LayerPanel("imglayer", toggleShowImgLayer),
+        ui.Panel("sources", true)(
+          ui.TreeList("imglayer.source.list", 15, 25, selectImgLayerSrc),
+          ui.Text("imglayer.source.info", 25)
+        ),
+        ui.Panel("color map", false)(
+          ui.List("imglayer.cm.list", 15, selectImgCmapEntry),
+          ui.Text("imglayer.cm.info", 25)
+        ),
+        ui.Panel("layer parameters", false)(
+          ui.ColumnContainer("align_right")(
+            ui.Slider("alpha", "imglayer.render.alpha", setImgAlpha),
+            ui.Slider("brightness", "imglayer.render.brightness", setImgBrightness),
+            ui.Slider("contrast", "imglayer.render.contrast", setImgContrast),
+            ui.Slider("hue", "imglayer.render.hue", setImgHue),
+            ui.Slider("saturation", "imglayer.render.saturation", setImgSaturation),
+            ui.Slider("gamma", "imglayer.render.gamma", setImgGamma)
+          )
+        )
+    );
+}
 
 function initSourceView() {
     let view = ui.getList("imglayer.source.list");
@@ -50,16 +76,22 @@ function toggleShowSource(event) {
         let src = ui.getListItemOfElement(cb);
         if (src) {
             let isSelected = ui.isCheckBoxSelected(cb);
-            if (isSelected) hideExclusives(src);
-            src.show = isSelected;
+            if (src.show != isSelected) {
+                let layer = src.layer;
+                if (isSelected) {
+                    hideExclusives(src);
+                    layer.show = src.show = true;
+                } else {
+                    layer.show = src.show = false;
+                }
+            }
 
-            setViewerLayers();
             uiCesium.requestRender();
         }
     }
 }
 
-function initCmView() {
+function initColorMapView() {
     let view = ui.getList("imglayer.cm.list");
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
@@ -74,61 +106,36 @@ function initCmView() {
 
 function initImgLayers() {
     let viewerLayers = uiCesium.viewer.imageryLayers;
-    let defaultImageryLayer = viewerLayers.get(0); // the first one that is currently set (whatever Cesium uses as default)
+    viewerLayers.removeAll(false);
 
     for (var i=0; i<sources.length; i++) {
         let src = sources[i];
-        if (src.provider) {
-            let opts = { show: false };
-            if (src.render) {
-                if (src.render.alphaColor) opts.colorToAlpha = Cesium.Color.fromCssColorString(src.render.alphaColor);
-                if (typeof src.render.alphaColorThreshold !== 'undefined') opts.colorToAlphaThreshold = src.render.alphaColorThreshold;
-            }
-            src.layer = new Cesium.ImageryLayer(src.provider, opts);
-            //viewerLayers.add(src.layer);
-        } else {
-            src.layer = defaultImageryLayer;
+        if (!src.show) src.show = false;
+        let opts = { show: src.show }; // TODO - add other non-render opts here (rectangle, cutoutRectangle, max/minTerrainLevel, ..)
+        if (src.render) {
+            if (src.render.alphaColor) opts.colorToAlpha = Cesium.Color.fromCssColorString(src.render.alphaColor);
+            if (typeof src.render.alphaColorThreshold !== 'undefined') opts.colorToAlphaThreshold = src.render.alphaColorThreshold;
         }
+        // note that src.provider can either return a provider object or a promise
+        let layer = src.provider ? Cesium.ImageryLayer.fromProviderAsync( Promise.resolve(src.provider), opts) : 
+                                   Cesium.ImageryLayer.fromWorldImagery({style: src.style});
+        console.log("loaded imagery provider: ", src.pathName, ", show=", src.show);
 
-        setLayerRendering(src);
+        src.layer = layer;
+        setLayerRendering(layer, {...defaultRender, ...src.render});
+        layer.show = src.show;
+        viewerLayers.add(layer);
+
         loadColorMap(src);
     }
 
-    setViewerLayers();
     console.log("loaded ", sources.length, " imagery layers");
 }
 
-// TODO - this is brute force but with ad hoc added layers we get spurious effects. It probably is also more performant during zoom/pan/redraw
-function setViewerLayers() {
-    let viewerLayers = uiCesium.viewer.imageryLayers;
-    viewerLayers.removeAll(false);
-    sources.forEach( src=> {
-        if (src.show) {
-            viewerLayers.add(src.layer);
-            src.layer.show = true;
-        } else {
-            src.layer.show = false;
-        }
-    });
-}
 
-function hideExclusives (src) {
-    let exclusive = src.exclusive;
-    if (exclusive && exclusive.length > 0) {
-        sources.forEach( s=> {
-            if ((s !== src) && util.haveEqualElements(exclusive, s.exclusive)) {
-                s.show = false;
-                s.layer.show = false;
-                ui.updateListItem(sourceView,s);
-            }
-        });
-    }
-}
 
-function setLayerRendering (src) {
-    let layer = src.layer;
-    let render = { ...defaultRender, ...src.render };
-
+// set rendering parameters in instantiated ImageryLayer
+function setLayerRendering (layer,render) {
     layer.alpha = render.alpha;
     layer.brightness = render.brightness;
     layer.contrast = render.contrast;
@@ -183,7 +190,22 @@ function setImgSliderValues (src) {
     ui.setSliderValue(e, src.layer.gamma);
 }
 
-ui.exportToMain(function selectImgLayerSrc(event) {
+function hideExclusives (src) {
+    let exclusive = src.exclusive;
+    if (exclusive && exclusive.length > 0) {
+        sources.forEach( s=> {
+            if ((s !== src) && util.haveEqualElements(exclusive, s.exclusive)) {
+                if (s.show) {
+                    s.show = false;
+                    s.layer.show = false;
+                    ui.updateListItem(sourceView,s);
+                }
+            }
+        });
+    }
+}
+
+function selectImgLayerSrc(event) {
     let src = ui.getSelectedListItem(sourceView);
     if (src) {
         selectedSrc = src;
@@ -194,12 +216,12 @@ ui.exportToMain(function selectImgLayerSrc(event) {
         ui.clearTextContent("imglayer.source.info");
         ui.clearList(cmView);
     }
-})
+}
 
-ui.exportToMain(function selectImgCmapEntry(event) {
+function selectImgCmapEntry(event) {
     let ce = ui.getSelectedListItem(cmView);
     ui.setTextContent("imglayer.cm.info", ce ? ce.descr : null);
-});
+}
 
 var mouseX;
 var mouseY;
@@ -208,7 +230,7 @@ let pixBuf = new Uint8Array(3);
 // watch out - this runs in the render loop so avoid length computation
 const probeColor = function(scene,time) {
     let canvas = scene.canvas;
-    let gl = canvas.getContext('webgl');
+    let gl = canvas.getContext('webgl2');
 
     gl.readPixels( mouseX, gl.drawingBufferHeight - mouseY, 1, 1, gl.RGB, gl.UNSIGNED_BYTE, pixBuf);
 
@@ -264,18 +286,18 @@ function showImgLayer (cond) {
 
 //--- interactive render parameters
 
-ui.exportToMain(function setImgAlpha(event) {
+function setImgAlpha(event) {
     if (selectedSrc) {
         let v = ui.getSliderValue(event.target);
         selectedSrc.layer.alpha = v;
         uiCesium.requestRender();
     }
-});
+}
 
-ui.exportToMain(function setImgBrightness(event) {
+function setImgBrightness(event) {
     let v = ui.getSliderValue(event.target);
     setImgLayerBrightness(v);
-});
+}
 
 function setImgLayerBrightness(v) {
     if (selectedSrc) {
@@ -284,18 +306,18 @@ function setImgLayerBrightness(v) {
     }
 }
 
-ui.exportToMain(function setImgContrast(event) {
+function setImgContrast(event) {
     if (selectedSrc) {
         let v = ui.getSliderValue(event.target);
         selectedSrc.layer.contrast = v;
         uiCesium.requestRender();
     }
-});
+}
 
-ui.exportToMain(function setImgHue(event) {
+function setImgHue(event) {
     let v = ui.getSliderValue(event.target);
     setImgLayerHue(v);
-});
+}
 
 function setImgLayerHue(v) {
     if (selectedSrc) {
@@ -304,10 +326,10 @@ function setImgLayerHue(v) {
     }
 }
 
-ui.exportToMain(function setImgSaturation(event) {
+function setImgSaturation(event) {
     let v = ui.getSliderValue(event.target);
     setImgLayerSaturation(v);
-});
+}
 
 function setImgLayerSaturation(v) {
     if (selectedSrc) {
@@ -316,13 +338,13 @@ function setImgLayerSaturation(v) {
     }
 }
 
-ui.exportToMain(function setImgGamma(event) {
+function setImgGamma(event) {
     if (selectedSrc) {
         let v = ui.getSliderValue(event.target);
         selectedSrc.layer.gamma = v;
         uiCesium.requestRender();
     }
-});
+}
 
 //--- theme change
 
@@ -364,4 +386,10 @@ function loadColorMap (src) {
             request.send();
         });
     }
+}
+
+//--- micro service visibility (TODO - does this make sense?)
+
+function toggleShowImgLayer(event) {
+    console.log("not yet")
 }

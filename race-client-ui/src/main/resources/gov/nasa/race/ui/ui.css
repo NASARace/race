@@ -346,6 +346,7 @@ div.ui_field_label {
     /* width: var(--field-label-width); */
     height: var(--field-height);
     white-space: pre;
+    font: var(--font);
 }
 
 input.ui_field {
@@ -357,6 +358,7 @@ input.ui_field {
     width: var(--field-value-width);
     height: var(--input-height);
     text-align: left;
+    vertical-align: middle;
     font: var(--font);
 }
 
@@ -465,6 +467,12 @@ input.ui_field.input {
 
 input.ui_field.input.fixed {
     color: var(--input-color);
+    font: var(--mono-font);
+    text-align: right;
+}
+
+input.ui_field.fixed {
+    color: var(--data-color);
     font: var(--mono-font);
     text-align: right;
 }
@@ -979,15 +987,27 @@ div.spacer {
     flex-grow: 10;
 }
 
-div.align_left {
+div.ui_container.column.align_left {
     align-items: flex-start;
 }
 
-div.align_center {
+div.ui_container.column.align_center {
     align-items: center;
 }
 
-div.align_right {
+div.ui_container.column.align_right {
+    align-items: flex-end;
+}
+
+div.ui_container.row.align_top {
+    align-items: flex-start;
+}
+
+div.ui_container.row.align_center {
+    align-items: center;
+}
+
+div.ui_container.row.align_bottom {
     align-items: flex-end;
 }
 

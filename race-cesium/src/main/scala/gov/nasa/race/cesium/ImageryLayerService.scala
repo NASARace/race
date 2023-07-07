@@ -76,16 +76,28 @@ object ImgLayer {
   def apply (conf: Config): ImgLayer = {
     val pathName = conf.getString( "pathname")
     val info = conf.getString("info")
-    val provider = ClassLoaderUtils.newInstance[CesiumImageryProvider]( this, conf.getString("provider-class"),
-      Array(classOf[Config]), Array(conf)).get // the secondary (provider specific) parser
     val exclusive = conf.getStringSeq("exclusive")
     val colorMap = conf.getOptionalString("color-map")
     val proxy = conf.getBooleanOrElse("proxy", false)
     val dir = conf.getOptionalString(("dir"))
     val show = conf.getBooleanOrElse("show", false)
     val renderCfg = conf.getOptionalConfig("render").map( new ImageryRendering(_))
+    val provider = createCesiumImageryProvider(conf.getOptionalConfig("provider"))
 
     ImgLayer(pathName, info, provider, exclusive, proxy, show, colorMap, dir, renderCfg)
+  }
+
+  def createCesiumImageryProvider (optConf: Option[Config]): CesiumImageryProvider = {
+    optConf match {
+      case Some(conf) =>
+        conf.getOptionalString("class") match {
+          case Some(cls) =>
+            val clsName = if (cls.startsWith(".")) "gov.nasa.race" + cls else cls
+            ClassLoaderUtils.newInstance[CesiumImageryProvider]( this, clsName, Array(classOf[Config]), Array(conf)).get
+          case None => new DefaultImageryProvider(conf)
+        }
+      case None => new DefaultImageryProvider()
+    }
   }
 }
 
@@ -103,15 +115,100 @@ case class ImgLayer (pathName: String, info: String, provider: CesiumImageryProv
   def appendJs(sb: StringBuilder): Unit = {
     appendJsStringMember(sb, "pathName", pathName)
     appendJsStringMember(sb, "info", info)
-    appendJsMember(sb, "provider")( sb=>provider.appendJs(sb))
+    provider.appendJs(sb) // this can add several different properties depending on type
     appendJsArrayMember(sb, "exclusive", exclusive)
     if (show) appendJsBooleanMember(sb, "show", show)
-    ifSome(colorMap) { _ => appendJsStringMember(sb, "colorMap", s"${ImageryLayerRoute.clrMapPrefix}/$id.json")}
+    ifSome(colorMap) { _ => appendJsStringMember(sb, "colorMap", s"${ImageryLayerService.clrMapPrefix}/$id.json")}
     appendOptionalJsObjectMember(sb, "render", render)
   }
 }
 
-object ImageryLayerRoute {
+//--- configurable cesium map service abstractions
+
+/**
+ * wrapper for JS code that creates Cesium.ImageryProvider promises
+ * note that some concrete ImageryProvider types are still directly instantiated, hence the appendJS methods
+ * have to return expressions that can be wrapped into Promise.resolve(..) calls
+ */
+
+trait CesiumImageryProvider extends JsConvertible {
+  val config: Config
+  def appendJs (sb:mutable.StringBuilder): Unit
+}
+
+trait UrlCesiumImageryProvider extends CesiumImageryProvider {
+  val url: String = config.getString("url")
+  protected var clientUrl: String = url
+
+  def setProxied (proxyUrl: String): Unit = clientUrl = proxyUrl
+}
+
+class DefaultImageryProvider (val config: Config) extends CesiumImageryProvider {
+  def this() = this(NoConfig)
+  def appendJs (sb: StringBuilder): Unit = {
+      ifSome(config.getOptionalString("style")) {s=> sb.append(s",style: Cesium.IonWorldImageryStyle.${s.toUpperCase()}")
+    }
+  }
+}
+
+class ArcGisMapServerImageryProvider (val config: Config) extends UrlCesiumImageryProvider {
+  def appendJs (sb: StringBuilder): Unit = {
+    sb.append(s",provider: Cesium.ArcGisMapServerImageryProvider.fromUrl('$clientUrl')")
+  }
+}
+
+class OpenStreetMapImageryProvider (val config: Config) extends UrlCesiumImageryProvider {
+  def appendJs (sb: StringBuilder): Unit = {
+    sb.append(",provider: new Cesium.OpenStreetMapImageryProvider({")
+    appendJsStringMember(sb, "url", clientUrl)
+    sb.append("})")
+  }
+}
+
+class WebMapServiceImageryProvider (val config: Config) extends UrlCesiumImageryProvider {
+  def appendJs (sb: StringBuilder): Unit = {
+    sb.append(",provider: new Cesium.WebMapServiceImageryProvider({")
+    appendJsStringMember(sb, "url", clientUrl)
+    appendJsBooleanMember(sb, "enablePickFeatures", false)
+    appendOptionalJsStringMember(sb, "layers", config.getOptionalString("layers"))
+    appendOptionalJsStringMember(sb, "parameters", config.getOptionalString("parameters"))
+    sb.append("})")
+  }
+}
+
+class WebMapTileServiceImageryProvider (val config: Config) extends UrlCesiumImageryProvider {
+  def appendJs (sb: StringBuilder): Unit = {
+    sb.append(",provider: new Cesium.WebMapTileServiceImageryProvider({")
+    appendJsStringMember(sb, "url", clientUrl)
+    appendOptionalJsStringMember(sb, "layer", config.getOptionalString("layer"))
+    appendOptionalJsStringMember(sb, "style", config.getOptionalString("style"))
+    appendOptionalJsStringMember(sb, "tileMatrixSetID", config.getOptionalString("tileMatrixSetID"))
+    appendOptionalJsIntMember(sb, "maximumLevel", config.getOptionalInt("maximumLevel"))
+    appendOptionalJsStringMember(sb, "format", config.getOptionalString("format"))
+    sb.append("})")
+  }
+}
+
+/**
+ * used for gdal2tiles generated imagery
+ */
+class TileMapServiceImageryProvider (val config: Config) extends UrlCesiumImageryProvider {
+  def appendJs (sb: StringBuilder): Unit = {
+    config.getOptionalConfig("tms.rectangle") match {
+      case Some(cfg) =>
+        sb.append(s",provider: Cesium.TileMapServiceImageryProvider.fromUrl('$clientUrl',{rectangle:{")
+        sb.append(cfg.getDouble("west").toRadians); sb.append(",")
+        sb.append(cfg.getDouble("south").toRadians); sb.append(",")
+        sb.append(cfg.getDouble("east").toRadians); sb.append(",")
+        sb.append(cfg.getDouble("north").toRadians)
+        sb.append("}})")
+
+      case None => sb.append(s",provider: Cesium.TileMapServiceImageryProvider.fromUrl('$clientUrl')")
+    }
+  }
+}
+
+object ImageryLayerService {
   val imageryPrefix = "imagery"
   val imageryPrefixMatcher = PathMatcher(imageryPrefix / "[^/?]+".r) // match the imagery prefix plus the imagery id
 
@@ -125,12 +222,12 @@ object ImageryLayerRoute {
   val icon = "globe-icon.svg"
   val windowId = "imglayer"
 }
-import ImageryLayerRoute._
+import ImageryLayerService._
 
 /**
  * a RaceRouteInfo for Cesium Imagery Layers
  */
-trait ImageryLayerRoute extends CesiumRoute with JsonProducer {
+trait ImageryLayerService extends CesiumService with JsonProducer {
   private val defaultRendering = new DefaultImageryRendering(config.getConfigOrElse("imglayer.render", NoConfig))
   private val sources = config.getConfigSeq("imglayer.sources").map(ImgLayer(_))
 
@@ -140,12 +237,15 @@ trait ImageryLayerRoute extends CesiumRoute with JsonProducer {
 
   def createProxyMap (imgLayers: Seq[ImgLayer]): Map[String,String] = {
     imgLayers.foldLeft(Map.empty[String,String]) { (map, layer) =>
-      if (layer.proxy) {
-        val id = layer.id
-        val provider = layer.provider
-        provider.setProxied(s"$imageryPrefix/$id") // has to go into the js instantiation code
-        map + (id -> provider.url)
-      } else map
+      layer.provider match {
+        case provider: UrlCesiumImageryProvider =>
+          if (layer.proxy) {
+            val id = layer.id
+            provider.setProxied(s"$imageryPrefix/$id") // has to go into the js instantiation code
+            map + (id -> provider.url)
+          } else map
+        case _ => map
+      }
     }
   }
 
@@ -161,10 +261,14 @@ trait ImageryLayerRoute extends CesiumRoute with JsonProducer {
   def createTmsMap (imgLayers: Seq[ImgLayer]): Map[String,String] = {
     val prefix = s"$tmsPrefix/"
     imgLayers.foldLeft(Map.empty[String,String]) { (map, layer) =>
-      val url = layer.provider.url
-      if (url.startsWith(prefix) && layer.dir.isDefined) {
-        map + (url.substring(prefix.length) -> layer.dir.get)
-      } else map
+      layer.provider match {
+        case provider: TileMapServiceImageryProvider =>
+          val url = provider.url
+          if (url.startsWith(prefix) && layer.dir.isDefined) {
+            map + (url.substring(prefix.length) -> layer.dir.get)
+          } else map
+        case _ => map
+      }
     }
   }
 
@@ -211,36 +315,10 @@ trait ImageryLayerRoute extends CesiumRoute with JsonProducer {
   //--- document fragments
 
   override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ uiImgLayerResources
-  override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiImgLayerWindow(), uiImgLayerIcon)
+
+  def uiImgLayerResources: Seq[Text.TypedTag[String]] =  Seq( addJsModule(jsModule))
+
   override def getConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = super.getConfig(requestUri,remoteAddr) + imgLayerConfig(requestUri,remoteAddr)
-
-  def uiImgLayerResources: Seq[Text.TypedTag[String]] =  Seq( extModule(jsModule))
-
-  def uiImgLayerWindow (title: String="Imagery Layers"): Text.TypedTag[String] = {
-    uiWindow(title, windowId, icon)(
-      cesiumLayerPanel(windowId, "main.toggleShowImgLayer(event)"),
-      uiPanel("sources", true)(
-        uiTreeList(s"$windowId.source.list", maxRows = 15, minWidthInRem = 25, selectAction="main.selectImgLayerSrc(event)"),
-        uiText(s"$windowId.source.info", maxWidthInRem = 25)
-      ),
-      uiPanel("color map", false)(
-        uiList(s"$windowId.cm.list", maxRows = 15, selectAction = "main.selectImgCmapEntry(event)"),
-        uiText(s"$windowId.cm.info", maxWidthInRem = 25)
-      ),
-      uiPanel("layer parameters", false)(
-        uiColumnContainer("align_right")(
-          uiSlider("alpha", "imglayer.render.alpha", "main.setImgAlpha(event)"),
-          uiSlider("brightness", "imglayer.render.brightness", "main.setImgBrightness(event)"),
-          uiSlider("contrast", "imglayer.render.contrast", "main.setImgContrast(event)"),
-          uiSlider("hue", "imglayer.render.hue", "main.setImgHue(event)"),
-          uiSlider("saturation", "imglayer.render.saturation","main.setImgSaturation(event)"),
-          uiSlider("gamma", "imglayer.render.gamma", "main.setImgGamma(event)")
-        )
-      )
-    )
-  }
-
-  def uiImgLayerIcon: Text.TypedTag[String] = uiIcon(icon, s"main.toggleWindow(event,'$windowId')", "imglayer_icon")
 
   def imgLayerConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
     val cfg = config.getConfig("imglayer")
@@ -255,71 +333,8 @@ export const imglayer = {
     //--- no websocket messages (yet?)
 }
 
-//--- configurable cesium map service abstractions (TODO - needs more complete constructor options
-
-trait CesiumImageryProvider extends JsConvertible {
-  val config: Config
-
-  val url: String = config.getString("url")
-  protected var clientUrl: String = url
-
-  def setProxied (proxyUrl: String): Unit = clientUrl = proxyUrl
-}
-
-class DefaultImageryProvider (val config: Config) extends CesiumImageryProvider {
-  def appendJs (sb: StringBuilder): Unit = sb.append("null") // nothing to instantiate
-}
-
-class ArcGisMapServerImageryProvider (val config: Config) extends CesiumImageryProvider {
-  def appendJs (sb: StringBuilder): Unit = {
-    sb.append("new Cesium.ArcGisMapServerImageryProvider({")
-    appendJsStringMember(sb, "url", clientUrl)
-    sb.append("})")
-  }
-}
-
-class OpenStreetMapImageryProvider (val config: Config) extends CesiumImageryProvider {
-  def appendJs (sb: StringBuilder): Unit = {
-    sb.append("new Cesium.OpenStreetMapImageryProvider({")
-    appendJsStringMember(sb, "url", clientUrl)
-    sb.append("})")
-  }
-}
-
-class WebMapServiceImageryProvider (val config: Config) extends CesiumImageryProvider {
-  def appendJs (sb: StringBuilder): Unit = {
-    sb.append("new Cesium.WebMapServiceImageryProvider({")
-    appendJsStringMember(sb, "url", clientUrl)
-    appendJsBooleanMember(sb, "enablePickFeatures", false)
-    appendOptionalJsStringMember(sb, "layers", config.getOptionalString("wms.layers"))
-    appendOptionalJsStringMember(sb, "parameters", config.getOptionalString("wms.parameters"))
-    sb.append("})")
-  }
-}
-
-class WebMapTileServiceImageryProvider (val config: Config) extends CesiumImageryProvider {
-  def appendJs (sb: StringBuilder): Unit = {
-    sb.append("new Cesium.WebMapTileServiceImageryProvider({")
-    appendJsStringMember(sb, "url", clientUrl)
-    appendOptionalJsStringMember(sb, "layer", config.getOptionalString("wmts.layer"))
-    appendOptionalJsStringMember(sb, "style", config.getOptionalString("wmts.style"))
-    appendOptionalJsStringMember(sb, "tileMatrixSetID", config.getOptionalString("wmts.tileMatrixSetID"))
-    appendOptionalJsIntMember(sb, "maximumLevel", config.getOptionalInt("wmts.maximumLevel"))
-    appendOptionalJsStringMember(sb, "format", config.getOptionalString("wmts.format"))
-    sb.append("})")
-  }
-}
-
-class TileMapServiceImageryProvider (val config: Config) extends CesiumImageryProvider {
-  def appendJs (sb: StringBuilder): Unit = {
-    sb.append("new Cesium.TileMapServiceImageryProvider({")
-    appendJsStringMember(sb, "url", clientUrl)
-    sb.append("})")
-  }
-}
-
 /**
  * single layer test application
  */
-class CesiumImageryLayerApp (val parent: ParentActor, val config: Config) extends DocumentRoute with ImageryLayerRoute with UiSettingsRoute
+class CesiumImageryLayerApp (val parent: ParentActor, val config: Config) extends DocumentRoute with ImageryLayerService with UiSettingsRoute
 

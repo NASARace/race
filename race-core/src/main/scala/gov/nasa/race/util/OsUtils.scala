@@ -14,23 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race.cesium
+package gov.nasa.race.util
 
-import com.typesafe.config.Config
-import gov.nasa.race.core.ParentActor
-import gov.nasa.race.http.DocumentRoute
-import gov.nasa.race.ui.UiSettingsRoute
-
+import java.io.File
 
 /**
-  * app that includes all of our Cesium sub-routes (tracks, layers, ..)
-  */
-class CesiumApp (val parent: ParentActor, val config: Config) extends DocumentRoute
-  with UiSettingsRoute
-  with CesiumBldgRoute
-  with CesiumTrackRoute
-  with CesiumLayerRoute
-  with CesiumWindRoute
-  with CesiumHotspotRoute
+ * util lib for operating system specific functions
+ */
+object OsUtils {
 
+  val pathDirs: Array[String] = System.getenv("PATH").split(File.pathSeparator)
 
+  val osName: String = System.getProperty("os.name")
+  val isWindows: Boolean = osName.contains("Windows")
+  val isMacOS: Boolean = osName.contains("Mac")
+  val isLinux: Boolean = osName.contains("Linux")
+
+  val archName: String = System.getProperty("os.arch")
+  val isAmdArch: Boolean = archName.contains("Amd")
+  val isArmArch: Boolean = archName.contains("aarch")
+
+  def executableName (fname: String): String = {
+    if (isWindows) {
+      if (!fname.endsWith(".exe")) fname + ".exe" else fname
+    } else {
+      fname
+    }
+  }
+}

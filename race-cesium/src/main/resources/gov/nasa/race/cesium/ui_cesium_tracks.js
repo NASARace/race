@@ -85,20 +85,42 @@ var trackSources = []; // ordered list of TrackSource objects
 var selectedTrackSource = undefined;
 
 var trackEntryFilter = noTrackEntryFilter;
-var trackEntryView = undefined; // the UI element to display trackEntries
-var trackSourceView = undefined; // the UI element for our track sources
 
+createIcon();
+createWindow();
+var trackSourceView = initTrackSourceView();
+var trackEntryView = initTrackEntryView();
 
-ui.registerLoadFunction(function initialize() {
-    trackSourceView = initTrackSourceView();
-    trackEntryView = initTrackEntryView();
+uiCesium.setEntitySelectionHandler(trackSelection);
+ws.addWsHandler(handleWsTrackMessages);
 
-    uiCesium.setEntitySelectionHandler(trackSelection);
-    ws.addWsHandler(config.wsUrl, handleWsTrackMessages);
+uiCesium.initLayerPanel("tracks", config.track, showTracks);
+console.log("ui_cesium_tracks initialized");
 
-    uiCesium.initLayerPanel("tracks", config.track, showTracks);
-    console.log("ui_cesium_tracks initialized");
-});
+//--- end init
+
+function createIcon() {
+    return ui.Icon("track-icon.svg", (e)=> ui.toggleWindow(e,'tracks'));
+}
+
+function createWindow() {
+    return ui.Window("Tracks", "tracks", "track-icon.svg")(
+        ui.LayerPanel("tracks", toggleShowTracks),
+        ui.Panel("track sources", true)(
+            ui.List("tracks.sources", 5, selectSource)
+        ),
+        ui.Panel("tracks", true)(
+            ui.TextInput("query","tracks.query", queryTracks, true, "enter track query", "12rem"),
+            ui.List("tracks.list", 10, selectTrack),
+            ui.RowContainer()(
+                ui.CheckBox("show path", toggleShowPath, "tracks.path"),
+                ui.Radio("line", setLinePath, "tracks.line"),
+                ui.Radio("wall", setWallPath, "tracks.wall"),
+                ui.Button("Reset", resetPaths)
+            )
+        )
+    );
+}
 
 function initTrackSourceView() {
     let view = ui.getList("tracks.sources");
@@ -789,7 +811,7 @@ function resetTrackEntryAssets() {
 
 //--- interaction (those cannot be called without a DOM event argument)
 
-ui.exportToMain(function queryTracks(event) {
+function queryTracks(event) {
     let input = ui.getFieldValue(event);
 
     let newFilter = getTrackEntryFilter(input);
@@ -798,9 +820,9 @@ ui.exportToMain(function queryTracks(event) {
         resetTrackEntryList();
         resetTrackEntryAssets();
     }
-});
+}
 
-ui.exportToMain(function selectTrack(event) {
+function selectTrack(event) {
     let te = event.detail.curSelection;
     if (te) {
         if (te.assets.symbol) uiCesium.setSelectedEntity(te.assets.symbol);
@@ -816,9 +838,9 @@ ui.exportToMain(function selectTrack(event) {
         ui.setCheckBox("tracks.path", false);
         ui.clearRadioGroup("tracks.line");
     }
-});
+}
 
-ui.exportToMain(function toggleShowPath(event) {
+function toggleShowPath(event) {
     let te = ui.getSelectedListItem(trackEntryView);
     if (te) {
         if (ui.isCheckBoxSelected(event)) {
@@ -838,9 +860,9 @@ ui.exportToMain(function toggleShowPath(event) {
             }
         }
     }
-});
+}
 
-ui.exportToMain(function setLinePath(event) {
+function setLinePath(event) {
     let te = ui.getSelectedListItem(trackEntryView);
     if (te) {
         if (te.assets.trajectory) {
@@ -856,9 +878,9 @@ ui.exportToMain(function setLinePath(event) {
             ui.setCheckBox("tracks.path", true);
         }
     }
-});
+}
 
-ui.exportToMain(function setWallPath(event) {
+function setWallPath(event) {
     let te = ui.getSelectedListItem(trackEntryView);
     if (te) {
         if (te.assets.trajectory) {
@@ -874,9 +896,9 @@ ui.exportToMain(function setWallPath(event) {
             ui.setCheckBox("tracks.path", true);
         }
     }
-});
+}
 
-ui.exportToMain(function resetPaths() {
+function resetPaths() {
     if (selectedTrackSource) {
         selectedTrackSource.trackEntryList.forEach(te => {
             if (te.assets.trajectory) {
@@ -890,16 +912,16 @@ ui.exportToMain(function resetPaths() {
         ui.clearRadioGroup(ui.getRadio("tracks.wall"));
         uiCesium.clearSelectedEntity();
     }
-});
+}
 
-ui.exportToMain(function selectSource(event) {
+function selectSource(event) {
     selectedTrackSource = event.detail.curSelection;
     if (selectedTrackSource) {
         ui.setListItems(trackEntryView, selectedTrackSource.trackEntryList);
     } else {
         ui.clearList(trackEntryView);
     }
-});
+}
 
 function toggleShowSource(event) {
     let cb = ui.getCheckBox(event.target);
@@ -916,4 +938,8 @@ function showTracks(showIt) {
         tse.setVisible(showIt);
         ui.updateListItem(trackSourceView, tse);
     });
+}
+
+function toggleShowTracks(event) {
+    console.log("not yet")
 }

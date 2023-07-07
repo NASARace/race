@@ -28,7 +28,7 @@ import gov.nasa.race.ui.UiSettingsRoute
  */
 class CesiumLiveApp (val parent: ParentActor, val config: Config) extends DocumentRoute
   with UiSettingsRoute
-  with ImageryLayerRoute
-  with CesiumTrackRoute
-  with CesiumGoesrRoute
-  with CesiumJpssRoute
+  with ImageryLayerService
+  with TrackService
+  with GoesrService
+  with JpssService

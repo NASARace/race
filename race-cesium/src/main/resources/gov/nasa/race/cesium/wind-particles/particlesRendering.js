@@ -6,7 +6,7 @@ export class ParticlesRendering {
     constructor(context, data, userInput, viewerParameters, particlesComputing) {
         this.createRenderingTextures(context, data);
         this.createRenderingFramebuffers(context);
-        this.createRenderingPrimitives(context, userInput, viewerParameters, particlesComputing);
+        this.createRenderingPrimitives(context, data, userInput, viewerParameters, particlesComputing);
     }
 
     createRenderingTextures(context, data) {
@@ -114,8 +114,20 @@ export class ParticlesRendering {
         return geometry;
     }
 
-    createRenderingPrimitives(context, userInput, viewerParameters, particlesComputing) {
+    createRenderingPrimitives(context, data, userInput, viewerParameters, particlesComputing) {
         const that = this;
+        const minimum = new Cesium.Cartesian3(data.lon.min, data.lat.min, data.lev.min);
+        const maximum = new Cesium.Cartesian3(data.lon.max, data.lat.max, data.lev.max);
+
+        const dimension = new Cesium.Cartesian3(data.dimensions.lon, data.dimensions.lat, data.dimensions.lev);
+        const interval = new Cesium.Cartesian3(
+            (maximum.x - minimum.x) / (dimension.x - 1),
+            (maximum.y - minimum.y) / (dimension.y - 1),
+            dimension.z > 1 ? (maximum.z - minimum.z) / (dimension.z - 1) : 1.0
+        );
+
+        const clr = new Cesium.Cartesian4( userInput.color.red, userInput.color.green, userInput.color.blue, userInput.color.alpha);
+
         this.primitives = {
             segments: new CustomPrimitive({
                 commandType: 'Draw',
@@ -146,6 +158,25 @@ export class ParticlesRendering {
                     },
                     particleHeight: function() {
                         return userInput.particleHeight;
+                    },
+                    minimum: function() {
+                        return minimum;
+                    },
+                    maximum: function() {
+                        return maximum;
+                    },
+
+                    dimension: function() {
+                        return dimension;
+                    },
+                    interval: function() {
+                        return interval;
+                    },
+                    H: function() {
+                        return particlesComputing.windTextures.H;
+                    },
+                    color: function() {
+                        return clr;
                     }
                 },
                 vertexShaderSource: new Cesium.ShaderSource({
@@ -260,6 +291,60 @@ export class ParticlesRendering {
                 }),
                 framebuffer: undefined // undefined value means let Cesium deal with it
             })
+        };
+    }
+
+    forEachPrimitive(func) {
+        func(this.primitives.segments);
+        func(this.primitives.trails);
+        func(this.primitives.screen);
+    }
+
+    updateSegments (context,userInput) {
+        let segments = this.primitives.segments;
+        let geometry = this.createSegmentsGeometry(userInput);
+        segments.geometry = geometry;
+
+        if (segments.commandToExecute) {
+            segments.commandToExecute.vertexArray = Cesium.VertexArray.fromGeometry({
+                context: context,
+                geometry: geometry,
+                attributeLocations: segments.attributeLocations,
+                bufferUsage: Cesium.BufferUsage.STATIC_DRAW,
+            });
+        }
+    }
+
+    updateColor (color) {
+        const clr = new Cesium.Cartesian4( color.red, color.green, color.blue, color.alpha);
+
+        this.primitives.segments.uniformMap.color = function() {
+            return clr;
+        };
+    }
+
+    updateUserInputUniforms (userInput) {
+        let primitives = this.primitives;
+
+        let map = primitives.segments.uniformMap;
+        const lineWidth = userInput.lineWidth;
+        map.lineWidth = function() {
+            return lineWidth;
+        };
+        const particleHeight = userInput.particleHeight;
+        map.particleHeight = function() {
+            return particleHeight;
+        };
+        const color = userInput.color;
+        const clr = new Cesium.Cartesian4( color.red, color.green, color.blue, color.alpha);
+        map.color = function() {
+            return clr;
+        };
+
+        map = primitives.trails.uniformMap;
+        const fadeOpacity = userInput.fadeOpacity;
+        map.fadeOpacity = function() {
+            return fadeOpacity;
         };
     }
 }

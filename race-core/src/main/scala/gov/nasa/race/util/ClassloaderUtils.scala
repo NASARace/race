@@ -18,8 +18,7 @@
 package gov.nasa.race.util
 
 import java.io.File
-import java.net.{URL, URLClassLoader}
-
+import java.net.{URI, URL, URLClassLoader}
 import FileUtils._
 
 import scala.reflect._
@@ -41,16 +40,16 @@ object ClassLoaderUtils {
     if (urlSpecs.charAt(0) == '@') { // urls from file
       val file = new File(urlSpecs.substring(1))
       fileContentsAsUTF8String(file) match {
-        case Some(s) => s.split("[,;\n ]+").map(new URL(_))
+        case Some(s) => s.split("[,;\n ]+").map(new URI(_).toURL)
         case None => Array.empty[URL]
       }
 
     } else { // local dirs and jars
       urlSpecs.split("[,;:]+").map { s =>
         if (s.endsWith(".jar")) {
-          new URL(s"jar://$s")
+          new URI(s"jar://$s").toURL
         } else {
-          new URL(s"file://$s")
+          new URI(s"file://$s").toURL
         }
       }
     }

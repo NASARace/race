@@ -6,7 +6,6 @@ import * as util from "./ui_util.js";
 const UI_POSITIONS = "race-ui-positions";
 const LOCAL = "local-";  // prefix for local position set names
 
-
 class LayerEntry {
     constructor (wid,layerConfig,showAction) {
         this.id = layerConfig.name;    // (unique) full path: /cat/.../name
@@ -51,15 +50,14 @@ class Position {
     }
 }
 
-export var viewer = undefined;
+//export var viewer = undefined;
 
 var cameraSpec = undefined;
 var lastCamera = undefined; // saved last position & orientation
 
-var requestRenderMode = false;
-var targetFrameRate = -1;
-
+var requestRenderMode = config.cesium.requestRenderMode;
 var pendingRenderRequest = false;
+var targetFrameRate = -1;
 
 var layerOrder = []; // populated by initLayerPanel calls from modules
 var layerOrderView = undefined; // showing the registered module layers
@@ -68,75 +66,258 @@ var layerHierarchyView = undefined;
 
 var mouseMoveHandlers = [];
 var mouseClickHandlers = [];
+var terrainChangeHandlers = [];
 
 var homePosition = undefined;
-var positionSets = [];
 var selectedPositionSet = undefined;
 var positions = undefined;
 var positionsView = undefined;
-var dataSource = undefined;
-var showPointerLoc = true;
 
-ui.registerLoadFunction(function initialize() {
-    if (config.cesium.accessToken) Cesium.Ion.defaultAccessToken = config.cesium.accessToken;
+const centerOrientation = {
+    heading: Cesium.Math.toRadians(0.0),
+    pitch: Cesium.Math.toRadians(-90.0),
+    roll: Cesium.Math.toRadians(0.0)
+}
 
-    requestRenderMode = config.cesium.requestRenderMode;
+if (config.cesium.accessToken) Cesium.Ion.defaultAccessToken = config.cesium.accessToken;
 
-    viewer = new Cesium.Viewer('cesiumContainer', {
-        //terrainProvider: config.cesium.terrainProvider,
-        skyBox: false,
-        infoBox: false,
-        baseLayerPicker: false,  // if true primitives don't work anymore ?? 
-        sceneModePicker: true,
-        navigationHelpButton: false,
-        homeButton: false,
-        timeline: false,
-        animation: false,
-        requestRenderMode: requestRenderMode
-    });
+export const ellipsoidTerrainProvider = new Cesium.EllipsoidTerrainProvider();
+var terrainProvider = ellipsoidTerrainProvider; // switched on demand
 
-    positionSets = getPositionSets();
-
-    dataSource = new Cesium.CustomDataSource("positions");
-    addDataSource(dataSource);
-
-    setTargetFrameRate(config.cesium.targetFrameRate);
-    initFrameRateSlider();
-
-    if (requestRenderMode) ui.setCheckBox("view.rm", true);
-
-    setCanvasSize();
-    window.addEventListener('resize', setCanvasSize);
-
-    viewer.resolutionScale = window.devicePixelRatio; // 2.0
-    viewer.scene.fxaa = true;
-    //viewer.scene.globe.depthTestAgainstTerrain=true;
-
-    // event listeners
-    viewer.camera.moveEnd.addEventListener(updateCamera);
-
-    registerMouseMoveHandler(updateMouseLocation);
-    viewer.scene.canvas.addEventListener('mousemove', handleMouseMove);
-    viewer.scene.canvas.addEventListener('click', handleMouseClick);
-
-    ws.addWsHandler(config.wsUrl, handleWsViewMessages);
-
-    initCameraWindow();
-    initLayerWindow();
-
-    viewer.scene.postRender.addEventListener(function(scene, time) {
-        pendingRenderRequest = false;
-    });
-
-    ui.registerPostLoadFunction(initModuleLayerViewData);
-    ui.registerPostLoadFunction(setHomeView);  // finally set our home view
-
-    console.log("ui_cesium initialized");
+export const viewer = new Cesium.Viewer('cesiumContainer', {
+    terrainProvider: terrainProvider,
+    skyBox: false,
+    infoBox: false,
+    baseLayerPicker: false,  // if true primitives don't work anymore ?? 
+    baseLayer: false,        // set during imageryService init
+    sceneModePicker: true,
+    navigationHelpButton: false,
+    homeButton: false,
+    timeline: false,
+    animation: false,
+    requestRenderMode: requestRenderMode,
 });
 
+checkImagery();
+
+let positionSets = getPositionSets();
+
+let dataSource = new Cesium.CustomDataSource("positions");
+addDataSource(dataSource);
+
+initTimeWindow();
+initCameraWindow();
+initLayerWindow();
+
+// position fields
+let cameraLat = ui.getField("view.camera.latitude");
+let cameraLon = ui.getField("view.camera.longitude");
+let cameraAlt = ui.getField("view.camera.altitude");
+let pointerLat = ui.getField("view.pointer.latitude");
+let pointerLon = ui.getField("view.pointer.longitude");
+let pointerElev = ui.getField("view.pointer.elevation");
+let pointerUtmN = ui.getField("view.pointer.utmN");
+let pointerUtmE = ui.getField("view.pointer.utmE");
+let pointerUtmZ = ui.getField("view.pointer.utmZ");
+
+setTargetFrameRate(config.cesium.targetFrameRate);
+initFrameRateSlider();
+
+if (requestRenderMode) ui.setCheckBox("view.rm", true);
+
+setCanvasSize();
+window.addEventListener('resize', setCanvasSize);
+
+viewer.resolutionScale = window.devicePixelRatio; // 2.0
+viewer.scene.fxaa = true;
+//viewer.scene.globe.depthTestAgainstTerrain=true;
+
+showContext();
+
+Cesium.GeoJsonDataSource.clampToGround = true; // should this be configured?
+
+// event listeners
+viewer.camera.moveEnd.addEventListener(updateCamera);
+
+registerMouseMoveHandler(updateMouseLocation);
+viewer.scene.canvas.addEventListener('mousemove', handleMouseMove);
+viewer.scene.canvas.addEventListener('click', handleMouseClick);
+
+ws.addWsHandler(handleWsViewMessages);
+
+// FIXME - this seems to be broken as of Cesium 105.1
+viewer.scene.postRender.addEventListener(function() {
+    pendingRenderRequest = false;
+});
+
+setHomeView();
+
+var terrainProviderPromise = undefined; // set in postExec
+var topoTerrainProvider = undefined;
+
+console.log("ui_cesium initialized");
+
+//--- end initialization
+
+export function postExec() {
+    initModuleLayerViewData();
+
+    terrainProviderPromise = getTerrainProviderPromise();
+    terrainProviderPromise.then( (tp) => { 
+        topoTerrainProvider = tp;
+        console.log("topographic terrain loaded");
+    });
+}
+
+function showContext() {
+    let canvas = viewer.canvas;
+    let gl = canvas.getContext("webgl2");
+    let scene = viewer.scene;
+    console.log("webGL extensions: ", gl.getSupportedExtensions());
+    console.log("clamp-to-height supportet:", scene.clampToHeightSupported);
+    console.log("logarithmic depth buffer:", scene.logarithmicDepthBuffer, ", far/near ratio:", scene.logarithmicDepthFarToNearRatio);
+}
+
+//--- terrain handling
+
+function getTerrainProviderPromise() {
+    if (config.cesium.terrainProvider) {
+        return config.cesium.terrainProvider;
+    } else {
+        return Cesium.createWorldTerrainAsync();
+    } 
+}
+
+const ORTHO_PITCH = -Math.PI/2;
+const TERRAIN_HEIGHT = 100000; // in meters
+
+export function isOrthoView () {
+    let pitch = viewer.camera.pitch;
+    return Math.abs(ORTHO_PITCH - pitch) < 0.0005;
+}
+
+function useEllipsoidTerrain() {
+    if (!isOrthoView()) {
+        let height = viewer.camera.positionCartographic.height;
+        return height > TERRAIN_HEIGHT;
+    }
+    return true;
+}
+
+export async function getTopoTerrainProvider() {
+    return await terrainProviderPromise;
+}
+
+function toggleTerrain(event) {
+    let cb = ui.getCheckBox(event.target);
+    if (cb) {
+        if (ui.isCheckBoxSelected(cb)) {
+            switchToTopoTerrain();
+        } else {
+            switchToEllipsoidTerrain();
+        }
+    }
+}
+
+function switchToEllipsoidTerrain() {
+    if (!(terrainProvider === ellipsoidTerrainProvider)) {
+        terrainProvider = ellipsoidTerrainProvider;
+        console.log("switching to ellipsoid terrain");
+        viewer.scene.terrainProvider = terrainProvider;
+        handleTerrainChange();
+        //requestRender();
+    }
+}
+
+async function switchToTopoTerrain() {
+    if (terrainProvider === ellipsoidTerrainProvider) {
+        terrainProvider = await terrainProviderPromise;
+        console.log("switching to topographic terrain");
+        viewer.scene.terrainProvider = terrainProvider;
+        handleTerrainChange();
+        //requestRender();
+    }
+} 
+
+export function isUsingTopoTerrain() {
+    return !(terrainProvider === ellipsoidTerrainProvider);
+}
+
+export function registerTerrainChangeHandler (handler) {
+    terrainChangeHandlers.push(handler);
+}
+
+export function releaseTerrainChangeHandler (handler) {
+    let idx = terrainChangeHandlers.findIndex(h => h === handler);
+    if (idx >= 0) terrainChangeHandlers.splice(idx,1);
+}
+
+function handleTerrainChange() {
+    let e = viewer.scene.terrainProviderChanged;
+    terrainChangeHandlers.forEach( h=> h(e));
+}
+
+//--- imagery
+
+function checkImagery() {
+    if (!config.imglayer) {
+        const imageryProvider = Cesium.ImageryLayer.fromWorldImagery({
+            style: Cesium.IonWorldImageryStyle.AERIAL_WITH_LABELS
+        });
+        viewer.imageryLayers.add(imageryProvider);
+    }
+}
+
 function initCameraWindow() {
+    createCameraIcon();
+    createCameraWindow();
     positionsView = initPositionsView();
-    ui.selectRadio( showPointerLoc ? "view.showPointer" : "view.showCamera");
+}
+
+function createCameraWindow() {
+    return ui.Window("View", "view", "camera-icon.svg")(
+        ui.RowContainer()(
+            ui.CheckBox("fullscreen", toggleFullScreen),
+            ui.HorizontalSpacer(1),
+            ui.CheckBox("terrain", toggleTerrain),
+            ui.HorizontalSpacer(1),
+            ui.Button("⟘", setDownView, 2.5),  // ⇩  ⊾ ⟘
+            ui.Button("⌂", setHomeView, 2.5) // ⌂ ⟐ ⨁
+          ),
+          ui.RowContainer()(
+            ui.TextInput("pointer [φ,λ,m]", "view.pointer.latitude", null, true, null, "5rem"),
+            ui.TextInput("", "view.pointer.longitude", null, true, null, "6rem"),
+            ui.TextInput("", "view.pointer.elevation", null, true, null, "5.5rem"),
+            ui.HorizontalSpacer(0.4)
+          ),
+          ui.RowContainer()(
+            ui.TextInput("UTM [N,E,z]", "view.pointer.utmN", null, true, null, "5rem"),
+            ui.TextInput("", "view.pointer.utmE", null, true, null, "6rem"),
+            ui.TextInput("", "view.pointer.utmZ", null, true, null, "5.5rem"),
+            ui.HorizontalSpacer(0.4)
+          ),
+          ui.RowContainer()(
+            ui.TextInput("camera", "view.camera.latitude", setViewFromFields, true, null, "5rem"),
+            ui.TextInput("", "view.camera.longitude", setViewFromFields, true, null, "6rem"),
+            ui.TextInput("", "view.camera.altitude", setViewFromFields, true, null, "5.5rem"),
+            ui.HorizontalSpacer(0.4)
+          ),
+          ui.RowContainer()(
+            ui.Choice("","view.posSet", selectPositionSet),
+            ui.Button("save", storePositionSet, 3.5),
+            ui.Button("del", removePositionSet, 3.5)
+          ),
+          ui.List("view.positions", 8, setCameraFromSelection),
+          ui.RowContainer()(
+            ui.Button("⨀", pickPoint),
+            ui.Button("⨁", addPoint),
+            ui.Button("⌫", removePoint)
+          ),
+          ui.Panel("view parameters", false)(
+            ui.CheckBox("render on-demand", toggleRequestRenderMode, "view.rm"),
+            ui.Slider("frame rate", "view.fr", setFrameRate)
+          )
+    );
 }
 
 function initPositionsView() {
@@ -144,10 +325,10 @@ function initPositionsView() {
     if (view) {
         ui.setListItemDisplayColumns(view, ["fit", "header"], [
             { name: "", tip: "show/hide ground point", width: "2rem", attrs: [], map: e => ui.createCheckBox(e.asset, toggleShowPosition) },
-            { name: "name", tip: "place name name", width: "4rem", attrs: [], map: e => e.name },
+            { name: "name", tip: "place name name", width: "6rem", attrs: [], map: e => e.name },
             { name: "lat", tip: "latitude [deg]", width:  "5.5rem", attrs: ["fixed", "alignRight"], map: e => util.formatFloat(e.lat,4)},
             { name: "lon", tip: "longitude [deg]", width:  "6.5rem", attrs: ["fixed", "alignRight"], map: e => util.formatFloat(e.lon,4)},
-            { name: "alt", tip: "altitude [m]", width:  "5.2rem", attrs: ["fixed", "alignRight"], map: e => Math.round(e.alt)}
+            { name: "alt", tip: "altitude [m]", width:  "5.5rem", attrs: ["fixed", "alignRight"], map: e => Math.round(e.alt)}
         ]);
 
         selectedPositionSet = positionSets[0];
@@ -159,14 +340,79 @@ function initPositionsView() {
     return view;
 }
 
-ui.exportToMain(function selectPositionSet(event) {
+function createCameraIcon() {
+    return ui.Icon("camera-icon.svg", (e)=> ui.toggleWindow(e,'view'));
+}
+
+//--- time window
+
+function initTimeWindow() {
+    createTimeIcon();
+    createTimeWindow();
+}
+
+function createTimeWindow() {
+    return ui.Window("clock", "time", "time-icon.svg")(
+        ui.Clock("time UTC", "time.utc", "UTC"),
+        ui.Clock("time loc", "time.loc",  config.cesium.localTimeZone),
+        ui.Timer("elapsed", "time.elapsed")
+    );
+}
+
+function createTimeIcon() {
+    return ui.Icon("time-icon.svg", (e)=> ui.toggleWindow(e,'time'));
+}
+
+//--- layer window
+
+function initLayerWindow() {
+    createLayerIcon();
+    createLayerWindow();
+    layerOrderView = initLayerOrderView();
+    layerHierarchyView = initLayerHierarchyView();
+}
+
+function createLayerWindow() {
+    return ui.Window("module layers", "layer", "layer-icon.svg")(
+        ui.Panel("module Z-order", true)(
+            ui.List("layer.order", 10),
+            ui.RowContainer()(
+                ui.Button("↑", raiseModuleLayer),
+                ui.Button("↓", lowerModuleLayer)
+            )
+        ),
+        ui.Panel("module hierarchy", false)(
+            ui.TreeList("layer.hierarchy", 15, 25)
+        )
+    );
+}
+
+function createLayerIcon() {
+    return ui.Icon("layer-icon.svg", (e)=> ui.toggleWindow(e,'layer'));
+}
+
+function initLayerOrderView() {
+    let v = ui.getList("layer.order");
+    if (v) {
+        ui.setListItemDisplayColumns(v, ["fit", "header"], [
+            { name: "", width: "2rem", attrs: [], map: e =>  setLayerOrderCb(e) },
+            { name: "name", width: "8rem", attrs: [], map: e => e.name },
+            { name: "cat", width: "10rem", attrs: [], map: e => e.category}
+        ]);
+    }
+    return v;
+}
+
+//--- view position sets
+
+function selectPositionSet(event) {
     let posSet = ui.getSelectedChoiceValue(event);
     if (posSet) {
         selectedPositionSet = posSet;
-        positions = selectPositionSet.positions;
+        positions = selectedPositionSet.positions;
         ui.setListItems(positionsView, positions);
     }
-});
+}
 
 function toggleShowPosition(event) {
     let cb = ui.getCheckBox(event.target);
@@ -182,7 +428,7 @@ function toggleShowPosition(event) {
     }
 }
 
-ui.exportToMain( function addPoint() {
+function addPoint() {
     let latDeg = Number.parseFloat(ui.getFieldValue("view.latitude"));
     let lonDeg = Number.parseFloat(ui.getFieldValue("view.longitude"));
     let altM = Number.parseFloat(ui.getFieldValue("view.altitude"));
@@ -199,9 +445,9 @@ ui.exportToMain( function addPoint() {
         positions.push(pt);
         ui.setListItems(positionsView, positions);
     }
-});
+}
 
-ui.exportToMain( function pickPoint() {
+function pickPoint() {
     let btn = ui.getButton("view.pickPos");
     ui.setElementColors( btn, ui.getRootVar("--selected-data-color"), ui.getRootVar("--selection-background"));
 
@@ -229,13 +475,12 @@ ui.exportToMain( function pickPoint() {
             ui.resetElementColors(btn);
         }
     }, 100);
-});
+}
 
-ui.exportToMain( function namePoint() {
+function namePoint() {
+}
 
-});
-
-ui.exportToMain( function removePoint() {
+function removePoint() {
     let pos = ui.getSelectedListItem(positionsView);
     if (pos) {
         let idx = positions.findIndex( p=> p === pos);
@@ -245,7 +490,7 @@ ui.exportToMain( function removePoint() {
             ui.setListItems(positionsView, positions);
         }
     }
-});
+}
 
 function getPositionSets() {
     let sets = [];
@@ -270,21 +515,12 @@ function getLocalPositionSets() { // from local storage
     return psets ? JSON.parse(psets) : [];
 }
 
-ui.exportToMain(function selectPositionSet(event) {
-    let ps = ui.getSelectedChoiceValue(event);
-    if (ps) {
-        selectedPositionSet = ps;
-        positions = ps.positions;
-        ui.setListItems(positionsView, positions);
-    }
-});
-
 function filterAssets(k,v) {
     if (k === 'asset') return undefined;
     else return v;
 }
 
-ui.exportToMain(function storePositionSet() {
+function storePositionSet() {
     if (selectedPositionSet) {
         let psName = selectedPositionSet.name;
         if (!psName.startsWith(LOCAL)) psName = LOCAL + psName;
@@ -313,9 +549,9 @@ ui.exportToMain(function storePositionSet() {
             ui.setListItems(positionsView, positions);
         }
     }
-});
+}
 
-ui.exportToMain(function removePositionSet() {
+function removePositionSet() {
     if (selectedPositionSet) {
         let psName = selectedPositionSet.name;
         if (!psName.startsWith(LOCAL)) {
@@ -342,8 +578,7 @@ ui.exportToMain(function removePositionSet() {
             }
         }
     }
-});
-
+}
 
 function setPositionAsset(pos) {
     let cfg = config.cesium;
@@ -382,15 +617,6 @@ function clearPositionAsset(pos) {
         requestRender();
     }
 }
-
-ui.exportToMain( function showPointer(){
-    showPointerLoc = true;
-});
-
-ui.exportToMain( function showCamera(){
-    showPointerLoc = false;
-});
-
 
 function initFrameRateSlider() {
     let e = ui.getSlider('view.fr');
@@ -432,6 +658,12 @@ export function setRequestRenderMode(cond) {
 
 export function isRequestRenderMode() {
     return requestRenderMode;
+}
+
+export function toggleRequestRenderMode() {
+    requestRenderMode = !requestRenderMode;
+    viewer.scene.requestRenderMode = requestRenderMode;
+    ui.setCheckBox("view.rm", requestRenderMode);
 }
 
 export function requestRender() {
@@ -502,9 +734,30 @@ export function addPrimitive(prim) {
     viewer.scene.primitives.add(prim);
 }
 
-export function removePrimitive(prim) {
-    viewer.scene.primitives.remove(prim);
+export function addPrimitives(primitives) {
+    let pc = viewer.scene.primitives;
+    primitives.forEach( p=> pc.add(p));
+    requestRender();
 }
+
+export function showPrimitive(prim, show) {
+    prim.show = show;
+    requestRender();
+}
+export function showPrimitives(primitives, show) {
+    primitives.forEach( p=> p.show = show);
+    requestRender();
+}
+
+export function removePrimitive(prim) {
+    viewer.scene.primitives.remove(prim); // watch out - this destroys prim
+}
+export function removePrimitives(primitives) {
+    let pc = viewer.scene.primitives;
+    primitives.forEach( p=> pc.remove(p));
+    requestRender();
+}
+
 
 export function clearSelectedEntity() {
     viewer.selectedEntity = null;
@@ -556,9 +809,24 @@ function handleSetClock(setClock) {
 
 function updateCamera() {
     let pos = viewer.camera.positionCartographic;
-    ui.setField("view.altitude", Math.round(pos.height).toString());
+    let longitudeString = Cesium.Math.toDegrees(pos.longitude).toFixed(4);
+    let latitudeString = Cesium.Math.toDegrees(pos.latitude).toFixed(4);
+
+    ui.setField(cameraLat, latitudeString);
+    ui.setField(cameraLon, longitudeString);
+    ui.setField(cameraAlt, Math.round(pos.height).toString());
+
+    /*
+    if (useEllipsoidTerrain()) {
+        switchToEllipsoidTerrain(); // this checks if we already use it
+    } else {
+        switchToTopoTerrain();
+    }
+    */
+
     //saveCamera();
 }
+
 
 //--- mouse event handlers
 
@@ -598,25 +866,43 @@ function getCartographicMousePosition(e) {
     }
 }
 
+var deferredMouseUpdate = undefined;
+
 function updateMouseLocation(e) {
-    if (showPointerLoc) {
+    if (deferredMouseUpdate) clearTimeout(deferredMouseUpdate);
+    deferredMouseUpdate = setTimeout( () => {
         let pos = getCartographicMousePosition(e)
         if (pos) {
-            let longitudeString = Cesium.Math.toDegrees(pos.longitude).toFixed(4);
-            let latitudeString = Cesium.Math.toDegrees(pos.latitude).toFixed(4);
+            let latDeg = Cesium.Math.toDegrees(pos.latitude);
+            let lonDeg = Cesium.Math.toDegrees(pos.longitude);
 
-            ui.setField("view.latitude", latitudeString);
-            ui.setField("view.longitude", longitudeString);
+            let longitudeString = lonDeg.toFixed(4);
+            let latitudeString = latDeg.toFixed(4);
+    
+            ui.setField(pointerLat, latitudeString);
+            ui.setField(pointerLon, longitudeString);
+    
+            if (topoTerrainProvider) {
+                let a = [pos];
+                Cesium.sampleTerrainMostDetailed(topoTerrainProvider, a).then( (a) => {
+                    ui.setField(pointerElev, Math.round(a[0].height));
+                });
+            }
+
+            let utm = util.latLon2Utm(latDeg, lonDeg);
+            ui.setField(pointerUtmN, utm.northing);
+            ui.setField(pointerUtmE, utm.easting);
+            ui.setField(pointerUtmZ, `${utm.utmZone} ${utm.band}`);
         }
-    }
+    }, 300);
 }
 
 //--- user control 
 
 function setViewFromFields() {
-    let lat = ui.getFieldValue("view.latitude");
-    let lon = ui.getFieldValue("view.longitude");
-    let alt = ui.getFieldValue("view.altitude");
+    let lat = ui.getFieldValue(cameraLat);
+    let lon = ui.getFieldValue(cameraLon);
+    let alt = ui.getFieldValue(cameraAlt);
 
     if (lat && lon && alt) {
         let latDeg = parseFloat(lat);
@@ -636,7 +922,6 @@ function setViewFromFields() {
         alert("please enter latitude, longitude and altitude");
     }
 }
-ui.exportToMain(setViewFromFields);
 
 export function saveCamera() {
     let camera = viewer.camera;
@@ -651,16 +936,10 @@ export function saveCamera() {
         roll: util.toDegrees(camera.roll)
     };
 
+    // TODO - this should be triggered by a copy-to-clipboard button
     let spec = `{ lat: ${util.fmax_4.format(lastCamera.lat)}, lon: ${util.fmax_4.format(lastCamera.lon)}, alt: ${Math.round(lastCamera.alt)} }`;
-    //navigator.clipboard.writeText(spec);  // this is still experimental in browsers and needs to be enabled explicitly for sec reasons
-    console.log(spec);
-}
-ui.exportToMain(saveCamera);
-
-const centerOrientation = {
-    heading: Cesium.Math.toRadians(0.0),
-    pitch: Cesium.Math.toRadians(-90.0),
-    roll: Cesium.Math.toRadians(0.0)
+    navigator.clipboard.writeText(spec);  // this is still experimental in browsers and needs to be enabled explicitly for sec reasons
+    //console.log(spec);
 }
 
 export function zoomTo(cameraPos) {
@@ -675,7 +954,6 @@ export function zoomTo(cameraPos) {
 export function setHomeView() {
     setCamera(homePosition);
 }
-ui.exportToMain(setHomeView);
 
 export function setCamera(camera) {
     saveCamera();
@@ -688,7 +966,7 @@ export function setCamera(camera) {
     });
 }
 
-ui.exportToMain( function setCameraFromSelection(event){
+function setCameraFromSelection(event){
     let places = ui.getList(event);
     if (places) {
         let cp = ui.getSelectedListItem(places);
@@ -696,7 +974,7 @@ ui.exportToMain( function setCameraFromSelection(event){
             setCamera(cp);
         }
     }
-})
+}
 
 var minCameraHeight = 50000;
 
@@ -719,7 +997,6 @@ export function setDownView() {
         orientation: centerOrientation
     });
 }
-ui.exportToMain(setDownView);
 
 export function restoreCamera() {
     if (lastCamera) {
@@ -728,42 +1005,19 @@ export function restoreCamera() {
         setCamera(last);
     }
 }
-ui.exportToMain(restoreCamera);
 
 
 export function toggleFullScreen(event) {
     ui.toggleFullScreen();
 }
-ui.exportToMain(toggleFullScreen);
 
-ui.exportToMain(function toggleRequestRenderMode() {
-    requestRenderMode = !requestRenderMode;
-    viewer.scene.requestRenderMode = requestRenderMode;
-});
-
-ui.exportToMain(function setFrameRate(event) {
+function setFrameRate(event) {
     let v = ui.getSliderValue(event.target);
     setTargetFrameRate(v);
-});
-
-//--- layer panel init
-
-function initLayerWindow() {
-    layerOrderView = initLayerOrderView();
-    layerHierarchyView = initLayerHierarchyView();
 }
 
-function initLayerOrderView() {
-    let v = ui.getList("layer.order");
-    if (v) {
-        ui.setListItemDisplayColumns(v, ["fit", "header"], [
-            { name: "", width: "2rem", attrs: [], map: e =>  setLayerOrderCb(e) },
-            { name: "name", width: "8rem", attrs: [], map: e => e.name },
-            { name: "cat", width: "10rem", attrs: [], map: e => e.category}
-        ]);
-    }
-    return v;
-}
+//--- module layers
+
 
 function setLayerOrderCb(le) {
     let cb = ui.createCheckBox(le.show, toggleShowLayer);
@@ -820,15 +1074,15 @@ export function isLayerShowing(layerPath) {
     return (le && le.show);
 }
 
-ui.exportToMain(function raiseModuleLayer(event){
+function raiseModuleLayer(event){
     let le = ui.getSelectedListItem(layerOrderView);
     console.log("TBD raise layer: " + le);
-});
+}
 
-ui.exportToMain(function lowerModuleLayer(event){
+function lowerModuleLayer(event){
     let le = ui.getSelectedListItem(layerOrderView);
     console.log("TBD lower layer: " + le);
-});
+}
 
 //--- interactive geo input
 

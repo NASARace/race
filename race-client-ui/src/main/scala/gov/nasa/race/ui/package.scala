@@ -97,7 +97,7 @@ package object ui {
   }
 
   def uiNumField (label: String, eid: UiID, width: String=NoWidth, labelWidth: String=NoWidth): Text.TypedTag[String] = {
-    var mods = List(cls:="ui_field num", data("id"):=eid, data("label"):= label)
+    var mods = List(cls:="ui_field num", data("id"):=eid, data("label"):= label, data("type"):="text")
     if (width.nonEmpty) mods = (data("width"):=width) :: mods
     if (labelWidth.nonEmpty) mods = (data("label_width"):=labelWidth) :: mods
     div(mods: _*)
@@ -105,7 +105,7 @@ package object ui {
 
   def uiField (label: String, eid: UiID, isFixed: Boolean = false, width: String=NoWidth, labelWidth: String=NoWidth): Text.TypedTag[String] = {
     val classes = if (isFixed) "ui_field fixed" else "ui_field"
-    var mods = List(cls:=classes, data("id"):=eid, data("label"):= label)
+    var mods = List(cls:=classes, data("id"):=eid, data("label"):= label, data("type"):="text")
     if (width.nonEmpty) mods = (data("width"):=width) :: mods
     if (labelWidth.nonEmpty) mods = (data("label_width"):=labelWidth) :: mods
     div(mods: _*)
@@ -171,7 +171,7 @@ package object ui {
     div(mods: _*)
   }
 
-  def uiTextInput (label: String, eid: UiID, isFixed: Boolean = false, action: String=NoAction, placeHolder: String="", width: String=NoWidth): Text.TypedTag[String] = {
+  def uiTextInput(label: UiID, eid: UiID, action: UiID = NoAction, isFixed: Boolean = false, placeHolder: UiID = "", width: UiID = NoWidth): Text.TypedTag[String] = {
     var classes = "ui_field text input"
     if (isFixed) classes += " fixed"
     var mods = List(cls:=classes, data("id"):=eid, data("label"):= label)
@@ -210,7 +210,7 @@ package object ui {
 
   def uiTreeList (eid: UiID, maxRows: Int, maxWidthInRem: Int = 0, minWidthInRem: Int = 0,
                   selectAction: String=NoAction, clickAction: String=NoAction, contextMenuAction: String=NoAction, dblClickAction: String=NoAction): Text.TypedTag[String] = {
-    genList(eid,"ui_tree", maxRows,maxWidthInRem,minWidthInRem,selectAction,clickAction,contextMenuAction,dblClickAction)
+    genList(eid,"tree", maxRows,maxWidthInRem,minWidthInRem,selectAction,clickAction,contextMenuAction,dblClickAction)
   }
 
   def uiListControls (listId: UiID, first: String=NoAction, up: String=NoAction, down: String=NoAction, last: String=NoAction, clear: String=NoAction): Text.TypedTag[String] = {

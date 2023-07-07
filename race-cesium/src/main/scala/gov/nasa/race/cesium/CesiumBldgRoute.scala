@@ -25,11 +25,9 @@ import scalatags.Text
 /**
   * a Cesium Route that adds an OSM buildings layer
   *
-  * TODO - should be part of a generic CesiumPrimitiveRoute
-  *
-  * TODO - will have to handle per-building info
+  * TODO - this is just a stub for now that initializes/loads the OSM-buildings 3D tile set.
   */
-trait CesiumBldgRoute extends CesiumRoute with DocumentRoute with CachedFileAssetRoute
+trait CesiumBldgRoute extends CesiumService with DocumentRoute with CachedFileAssetRoute
 {
   //--- resources & fragments
 

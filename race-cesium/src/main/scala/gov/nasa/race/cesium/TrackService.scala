@@ -32,16 +32,16 @@ import scalatags.Text.all._
 import java.net.InetSocketAddress
 import scala.collection.immutable.{Iterable, ListMap}
 
-object CesiumTrackRoute {
+object TrackService {
   val jsModule = "ui_cesium_tracks.js"
   val icon = "track-icon.svg"
 }
-import CesiumTrackRoute._
+import TrackService._
 
 /**
   * a RaceRoute that uses Cesium to display tracks transmitted over a websocket
   */
-trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute with CachedFileAssetRoute {
+trait TrackService extends CesiumService with TrackWSRoute with CachedFileAssetRoute {
 
   val trackColor = config.getStringOrElse("color", "yellow")
 
@@ -129,31 +129,6 @@ trait CesiumTrackRoute extends CesiumRoute with TrackWSRoute with CachedFileAsse
 
   override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ uiCesiumTrackResources
 
-  override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiTrackWindow(), uiTrackIcon)
-
-  def uiTrackWindow(title: String="Tracks"): Text.TypedTag[String] = {
-    uiWindow(title,"tracks", icon)(
-      cesiumLayerPanel("tracks", "main.toggleShowTracks(event)"),
-      uiPanel("track sources")(
-        uiList("tracks.sources", 5, "main.selectSource(event)", NoAction)
-      ),
-      uiPanel("tracks")(
-        uiTextInput("query","tracks.query", false, "main.queryTracks(event)", "enter track query", width="12rem"),
-        uiList("tracks.list", 10, "main.selectTrack(event)"),
-        uiRowContainer()(
-          uiCheckBox("show path", "main.toggleShowPath(event)", "tracks.path"),
-          uiRadio("line", "main.setLinePath(event)", "tracks.line"),
-          uiRadio("wall", "main.setWallPath(event)", "tracks.wall"),
-          uiButton("Reset", "main.resetPaths()")
-        )
-      )
-    )
-  }
-
-  def uiTrackIcon: Text.TypedTag[String] = {
-    uiIcon(icon, "main.toggleWindow(event,'tracks')", "track_icon")
-  }
-
   def uiCesiumTrackResources: Seq[Text.TypedTag[String]] = {
     Seq( extModule(jsModule))
   }
@@ -218,4 +193,4 @@ export const track = {
 /**
   * a single page application that processes track channels
   */
-class CesiumTrackApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumTrackRoute
+class CesiumTrackApp (val parent: ParentActor, val config: Config) extends DocumentRoute with ImageryLayerService with TrackService

@@ -22,12 +22,15 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{PathMatchers, Route}
 import com.typesafe.config.Config
+import gov.nasa.race.common.ExternalProc
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.config.SubConfigurable
 import gov.nasa.race.core.{ConfigLoggable, ParentActor, RaceActorSystem, RaceDataClient, RaceDataClientMessage}
 import gov.nasa.race.util.StringUtils
 import scalatags.Text
+import scalatags.Text.all._
 
+import java.io.File
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -129,6 +132,23 @@ trait RaceRouteInfo extends SubConfigurable with ConfigLoggable {
   // loaded after all RACE specific resources
   def getPostambleBodyFragments: Seq[Text.TypedTag[String]] = Seq.empty
 
+  //--- special content fragments
+
+  protected def modPath(jsModule: String): String = if (jsModule.startsWith("./")) jsModule else s"./$jsModule"
+
+  // override if we have to accumulate
+  protected def addJsModule(jsModule: String): Text.TypedTag[String] = {
+    script(src:=modPath(jsModule), tpe:="module")
+  }
+
+  def getOptionalExecutableFile (key: String, fileName: String): Option[File] = {
+    config.getOptionalExecutableFile(key).orElse {
+      ExternalProc.find( fileName, config.getOptionalString("executable-paths"),
+        RaceActorSystem(system).config.getOptionalString("executable-paths"))
+    }
+  }
+
+  def getExecutableFile(key: String, fileName: String): File = getOptionalExecutableFile(key,fileName).get
 }
 
 /**

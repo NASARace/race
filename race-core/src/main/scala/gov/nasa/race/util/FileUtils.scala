@@ -29,10 +29,13 @@ import scala.io.BufferedSource
 import StringUtils._
 import gov.nasa.race._
 import gov.nasa.race.uom.DateTime
+import gov.nasa.race.util.OsUtils.pathDirs
 
+import java.util
 import scala.annotation.tailrec
 import scala.collection.immutable.HashSet
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
 
 /**
@@ -220,10 +223,45 @@ object FileUtils {
   }
   def getExtension (file: File): String = getExtension(file.getName)
 
+  // get potentially gzipped extension - if it ends with .gz add the previous . group (e.g. *.csv.gz)
+  def getGzExtension (fn: String): String = {
+    var i = fn.lastIndexOf('.')
+    if (i < 0) {
+      ""
+    } else {
+      val ext = fn.substring(i+1).toLowerCase
+      if (ext == "gz") {
+        i = fn.lastIndexOf('.', i-1)
+        if (i < 0) ext else fn.substring(i+1).toLowerCase
+      } else {
+        ext
+      }
+    }
+  }
+  def getGzExtension (file: File): String = getGzExtension(file.getName)
+
+  def isGzipped (fn: String): Boolean = fn.endsWith(".gz")
+  def isGzipped (file: File): Boolean = isGzipped(file.getName)
+
+  /**
+   * if a file extension ends in ".gz" answer the extension group before it (e.g. "blah.csv.gz" -> "csv")
+   * if it doesn't end in "*.gz" just return None
+   */
+  def getGzippedExtension (fn: String): Option[String] = {
+    if (isGzipped(fn)) {
+      var i = fn.lastIndexOf('.', fn.length-4)
+      if (i>= 0) Some(fn.substring(i+1,  fn.length-3).toLowerCase) else None
+    } else None
+  }
+  def getGzippedExtension (file: File): Option[String] = getGzippedExtension(file.getName)
+
   def hasAnyExtension( f: File, exts: String*): Boolean = exts.contains(getExtension(f))
 
   def hasExtension (fn: String): Boolean = fn.lastIndexOf('.') >= 0
   def hasExtension (file: File): Boolean = hasExtension(file.getName)
+
+  def hasPath (fn: String): Boolean = (fn.indexOf(File.separatorChar) >= 0)
+  def hasPath (file: File): Boolean = hasPath(file.getPath)
 
   def lastModification (file: File): DateTime = DateTime.ofEpochMillis(file.lastModified) // Date0 if not exist
 
@@ -546,6 +584,51 @@ object FileUtils {
 
     f = new File(pathName)
     if (f.isFile) f.renameTo(fLast)
+  }
+
+  def checkFileHeader (file: File, header: Array[Byte]): Boolean = {
+    val buf = new Array[Byte](header.length)
+    val is = new FileInputStream(file)
+    var res = false
+    try {
+      res = (is.read(buf) == buf.length && ArrayUtils.haveEqualElements(buf, header))
+    } finally {
+      is.close()
+    }
+    res
+  }
+  def checkFileHeader (file: File, header: String): Boolean = checkFileHeader(file, header.getBytes)
+
+  def getDirElements (pathSpec: String): Array[File] = {
+    pathSpec.split(if (pathSpec.contains('\\')) ";" else ":").foldLeft(ArrayBuffer.empty[File]) { (acc,e)=>
+      val f = new File(e)
+      // we could check for duplicates in already added paths here
+      if (f.isDirectory) acc += f else acc
+    }.toArray
+  }
+
+  def findExecutableFile (exeName: String, dirs: Array[String] = pathDirs): Option[File] = {
+    val fname = OsUtils.executableName(exeName)
+
+    if (hasPath(fname)) {
+      val file = new File(fname)
+      if (file.isFile() && file.canExecute()) return Some(file)
+
+    } else {
+      dirs.foreach { dirName =>
+        val file = new File(dirName, fname)
+        if (file.isFile() && file.canExecute()) return Some(file)
+      }
+    }
+
+    None
+  }
+
+  def executableFile(exeName: String, dirs: Array[String] = pathDirs): File = {
+    findExecutableFile(exeName, dirs) match {
+      case Some(file) => file
+      case None => throw new RuntimeException(s"executable not found: $exeName")
+    }
   }
 }
 

@@ -144,4 +144,16 @@ object ArrayUtils {
       i += 1
     }
   }
+
+  def haveEqualElements[T] (a: Array[T], b: Array[T]): Boolean = {
+    val len = a.length
+    if (b.length != len) return false
+
+    var i=0
+    while (i<len) {
+      if (a(i) != b(i)) return false
+      i += 1
+    }
+    true
+  }
 }

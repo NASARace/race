@@ -1,17 +1,22 @@
-import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
+// TBD - should come from config
+let opts = {
+    style: new Cesium.Cesium3DTileStyle( {
+        color: {
+            conditions: [
+                ["${feature['building']} === 'hospital'", "color('#ff00000')"],
+                [true, "color('#ffffff')"] // default white
+            ]
+        },
+        // for other features see https://github.com/CesiumGS/3d-tiles/tree/main/specification/Styling
+    })
+}
 
-ui.registerLoadFunction(function initialize() {
+Cesium.createOsmBuildingsAsync(opts).then( (tileset) => {
+    console.log("osmBuildings 3D tileset initialized")
 
-    //uiCesium.viewer.scene.primitives.add(Cesium.createOsmBuildings());
+    uiCesium.viewer.scene.primitives.add(tileset);
+})
 
-    new Promise((resolve, reject) => {
-        setTimeout(() => {
-            resolve(Cesium.createOsmBuildings());
-        }, 5000)
-    }).then((osmBldgs) => {
-        console.log("osmBuildings 3D tileset initialized")
-        uiCesium.viewer.scene.primitives.add(osmBldgs);
-    });
-});
+// TBD - add interactive selection

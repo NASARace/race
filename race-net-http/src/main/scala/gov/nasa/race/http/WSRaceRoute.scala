@@ -45,13 +45,22 @@ case class AuthWSContext (sockConn: SocketConnection, sessionToken: String) exte
   *
   * implementations provide a route directive that ends in a 'promoteToWebSocket()'
   */
-trait WSRaceRoute extends RaceRouteInfo with CachedFileAssetRoute {
+trait WSRaceRoute extends RaceRouteInfo with ConfigScriptRoute with CachedFileAssetRoute {
   implicit val materializer: Materializer = HttpServer.materializer
   implicit val ec = HttpServer.ec // scala.concurrent.ExecutionContext.global
 
   override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ Seq(
-    script(src:="ws.js", tpe:="module")
+    addJsModule("ws.js")
   )
+
+  override def getConfig(requestUri: Uri, remoteAddr: InetSocketAddress): String = {
+    val wsUrl = getWsUrl(requestUri, remoteAddr)
+    super.getConfig(requestUri, remoteAddr) +  s"export const ws = { url: '$wsUrl' };"
+  }
+
+  def getWsUrl(requestUri: Uri, remoteAddr: InetSocketAddress): String = {
+    s"ws://${requestUri.authority}/$requestPrefix/ws"
+  }
 
   // no body fragments
 
@@ -128,6 +137,10 @@ trait WSRaceRoute extends RaceRouteInfo with CachedFileAssetRoute {
   */
 trait TokenizedWSRaceRoute extends WSRaceRoute {
   private val registeredTokens: MutMap[String,InetSocketAddress] = MutMap.empty
+
+  override def getWsUrl (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
+    s"${super.getWsUrl(requestUri, remoteAddr)}/${registerTokenForClient(remoteAddr)}"
+  }
 
   /**
     * register and return a new (un-registered) token for the provided client

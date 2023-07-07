@@ -151,7 +151,7 @@ object ConfigUtils {
     }
 
     def getStringOrElse(key: String, fallback: String) = getWithFallback(key,fallback)(conf.getString(key))
-    def getOptionalString(key: String): Option[String] = getOptional(key)(conf.getString(key))
+    def getOptionalString(key: String): Option[String] = Option.when(conf.hasPath(key))( conf.getString(key))
 
     def getOverridableStringOrElse (key: String, fallback: String): String = {
       val sysProp = System.getProperty(key.replace('-', '.'))
@@ -498,6 +498,13 @@ object ConfigUtils {
       } catch {
         case _: ConfigException.Missing => None
       }
+    }
+
+    def getOptionalExecutableFile (key: String): Option[File] = {
+      if (conf.hasPath(key)) {
+        val f = new File(conf.getString(key))
+        if (f.isFile && f.canExecute) Some(f) else None
+      } else None
     }
 
     def translateFile[T] (key: String)(f: Array[Byte]=>Option[T]): Option[T] = {

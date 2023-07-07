@@ -1,22 +1,22 @@
-// TODO - should we support multiple web sockets per document ? 
+import * as config from "./config.js";
+
+// TODO - should we support multiple web sockets per document ? if so we have to keep a map url->handler
 
 var ws = undefined;
-var wsUrl = undefined;
+var wsUrl = config.ws.url;
 var isShutdown = false;
 
-window.addEventListener('load', e => {
-    setTimeout(() => {
-        initialize()
-    }, 0); // make sure this load handler runs last;
-});
+// each handler is a function that takes two parameters: (msgType,msg) and returns true if message dispatch should be shortcut
+var wsHandlers = [];
 
 window.addEventListener('unload', shutdown);
 
-export function initialize() {
-    if ("WebSocket" in window) {
-        console.log("initializing websocket: " + wsUrl);
-
-        if (wsUrl) {
+// execute after all js modules have initialized to make sure handlers have been set
+// this is crucial for modules that get initialization data through the ws - as soon as we are connected this is sent by the server
+export function postExec() {
+    if (wsUrl) {
+        if ("WebSocket" in window) {
+            console.log("initializing websocket: " + wsUrl);            
             ws = new WebSocket(wsUrl);
 
             ws.onopen = function() {
@@ -46,18 +46,14 @@ export function initialize() {
             };
 
         } else {
-            console.log("no WebSocket url set");
+            console.log("WebSocket NOT supported by your Browser!");
         }
     } else {
-        console.log("WebSocket NOT supported by your Browser!");
+        console.log("no WebSocket url set");
     }
 }
 
-// each handler is a function that takes two parameters: (msgType,msg) and returns true if message dispatch should be shortcut
-var wsHandlers = [];
-
-export function addWsHandler(url, newHandler) {
-    wsUrl = url;
+export function addWsHandler(newHandler, url = wsUrl) {
     wsHandlers.push(newHandler);
 }
 

@@ -44,6 +44,7 @@ object DateTime {
   final val MsecPerHour: Long = 1000*60*60
 
   final val utcId = ZoneId.of("UTC")
+  final val localId = ZoneId.systemDefault
 
   //--- the constructors
 
@@ -470,6 +471,15 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
     (zdt.getYear, zdt.getMonthValue, zdt.getDayOfMonth, zdt.getHour, getMinute, getSecond, getMillisecond)
   }
 
+  def getYMDH: (Int,Int,Int,Int) = {
+    val zdt = toZonedDateTime
+    (zdt.getYear, zdt.getMonthValue, zdt.getDayOfMonth, zdt.getHour)
+  }
+  def getYMDHm: (Int,Int,Int,Int,Int) = {
+    val zdt = toZonedDateTime
+    (zdt.getYear, zdt.getMonthValue, zdt.getDayOfMonth, zdt.getHour, zdt.getMinute)
+  }
+
   //--- these refer to UTC
   @inline def getHour: Int = ((millis % Time.MillisInDay) / Time.MillisInHour).toInt
   @inline def getHour (zoneId: ZoneId): Int = toZonedDateTime(zoneId).getHour
@@ -592,6 +602,10 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
   def format_yMd: String = {
     val (year,month,day) = getYMD
     f"$year%4d-$month%02d-$day%02d"
+  }
+  def format_yyyyMMdd: String = {
+    val (year,month,day) = getYMD
+    f"$year%4d$month%02d$day%02d"
   }
 
   def format_E_Mdy (zdt: ZonedDateTime): String = {

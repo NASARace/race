@@ -321,4 +321,6 @@ object Datum {
   def lonDegreeLength (φ: Angle): Length = {
     Meters(111412.84 * Cos(φ) - 93.5 * Cos(φ * 3) + 0.118 * Cos(φ * 5))
   }
+
+  def wgs84ToUtm (pos: GeoPosition): Option[UtmPosition] = UtmPosition.from(pos)
 }

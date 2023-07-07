@@ -498,7 +498,17 @@ package object race {
 
     // NOTE - calling this without override causes allocation
     def isUndefined: Boolean  = !isDefined
+    def foreach[U](f: (MaybeUndefined)=>U): Unit = if (isDefined) f(this)
   }
+
+  class MaybeUndefinedOptionWrapper (val o: Option[_]) extends AnyVal with  MaybeUndefined {
+    def isDefined: Boolean = o.isDefined
+  }
+  implicit def optionToMaybeUndefined (o: Option[_]): MaybeUndefinedOptionWrapper = new MaybeUndefinedOptionWrapper(o)
+
+  def allDefined(opts: MaybeUndefined*): Boolean = !opts.exists(_.isUndefined)
+  def anyDefined(opts: MaybeUndefined*): Boolean = opts.exists(_.isDefined)
+  def noneDefined(opts: MaybeUndefined*): Boolean = !opts.exists(_.isDefined)
 
 
   /**

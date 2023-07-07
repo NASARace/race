@@ -110,7 +110,6 @@ def smoke_segmentation_raw(tif_dataset, segmentation_model, target_shape, output
     #convert to image
     image = convert_tif_to_image(tif_dataset)
     #tile image
-    overlap = 6
     if tile:
         images, full_tiled_shape, padding_tuple, overlap = get_tiles(image, target_shape, overlap=overlap)
         original_shape = target_shape

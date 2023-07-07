@@ -22,31 +22,46 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{ExceptionHandler, PathMatcher, PathMatchers, Route}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.typesafe.config.Config
-import gov.nasa.race.cesium.CesiumRoute.cesiumJsUrl
+import gov.nasa.race.cesium.CesiumService.{cesiumJsUrl, terrainPrefix}
+import gov.nasa.race.common.JsConvertible
 import gov.nasa.race.config.ConfigUtils.ConfigWrapper
+import gov.nasa.race.config.NoConfig
 import gov.nasa.race.geo.GeoPosition
 import gov.nasa.race.http._
-import gov.nasa.race.ui.{uiRadio, uiRowContainer, uiSlider, _}
+import gov.nasa.race.ifSome
+import gov.nasa.race.ui._
 import gov.nasa.race.uom.Length.Meters
-import gov.nasa.race.util.{FileUtils, StringUtils}
+import gov.nasa.race.util.{ClassLoaderUtils, FileUtils, StringUtils}
 import scalatags.Text
 import scalatags.Text.all._
 
 import java.net.InetSocketAddress
 import java.util.TimeZone
 
-
-object CesiumRoute {
+object CesiumService {
   val terrainPrefix = "terrain"
 
-  val defaultCesiumJsVersion = "1.101"
+  val defaultCesiumJsVersion = "1.106"
 
   val cesiumPathMatcher = PathMatchers.separateOnSlashes("Build/Cesium/")
   def cesiumJsUrl (version: String): String = {
     s"https://cesium.com/downloads/cesiumjs/releases/$version/Build/Cesium/"
   }
+
+  def createTerrainProvider (optConf: Option[Config]): CesiumTerrainProvider = {
+    optConf match {
+      case Some(conf) =>
+        conf.getOptionalString("class") match {
+          case Some(cls) =>
+            val clsName = if (cls.startsWith(".")) "gov.nasa.race" + cls else cls
+            ClassLoaderUtils.newInstance[CesiumTerrainProvider]( this, clsName, Array(classOf[Config]), Array(conf)).get
+          case None => new DefaultTerrainProvider(conf)
+        }
+      case None => new DefaultTerrainProvider()
+    }
+  }
 }
-import CesiumRoute._
+import CesiumService._
 
 object CameraPosition {
   def apply (conf: Config): CameraPosition = {
@@ -62,6 +77,55 @@ case class CameraPosition (name: String, pos: GeoPosition) {
   override def toString(): String = f"{name: \"$name\", lat: ${pos.latDeg}%.5f, lon: ${pos.lonDeg}%.5f, alt: ${pos.altMeters.round}}"
 }
 
+
+/**
+ * abstraction for a Cesium TerrainProvider that can be stored in a config.js module either
+ * as a Promise.<TerrainProvider> or as a TerrainProvider object
+ */
+trait CesiumTerrainProvider extends JsConvertible {
+  val config: Config
+  def appendJs (sb:StringBuilder): Unit
+}
+
+case class DefaultTerrainProvider(config: Config) extends CesiumTerrainProvider {
+  def this() = this(NoConfig)
+
+  def appendJs (sb: StringBuilder): Unit = {
+    config.getOptionalString("options") match {
+      case Some(opts) => sb.append(s"Cesium.createWorldTerrainAsync($opts)")
+      case None => sb.append(s"Cesium.createWorldTerrainAsync()")
+    }
+  }
+}
+
+trait ExternalTerrainProvider extends CesiumTerrainProvider {
+  def url: String
+  def clientUrl: String = if (config.getBooleanOrElse("proxy", false)) terrainPrefix else url
+}
+
+case class UrlTerrainProvider (config: Config)  extends ExternalTerrainProvider {
+  val url = config.getString("url")
+
+  def appendJs (sb: StringBuilder): Unit = {
+    config.getOptionalString("options") match {
+      case Some(opts) => sb.append(s"Cesium.TerrainProvider.fromUrl('$clientUrl',$opts)")
+      case None => sb.append(s"Cesium.TerrainProvider.fromUrl('$clientUrl')")
+    }
+  }
+}
+
+case class ArcGisTiledElevationTerrainProvider (config: Config) extends ExternalTerrainProvider {
+  val url = config.getStringOrElse("url","https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
+
+  def appendJs (sb: StringBuilder): Unit = {
+    config.getOptionalVaultableString("arcgis.token") match {
+      case Some(tok) => sb.append(s"Cesium.ArcGISTiledElevationTerrainProvider.fromUrl('$clientUrl',{token:'$tok'})")
+      case None => sb.append(s"Cesium.ArcGISTiledElevationTerrainProvider.fromUrl('$clientUrl')")
+    }
+  }
+}
+
+
 /**
   * a RaceRouteInfo that servers Cesium related content, including:
   *  - Cesium code,
@@ -72,7 +136,7 @@ case class CameraPosition (name: String, pos: GeoPosition) {
   * control Cesium appearance. However, config usually also has to provide layer/dataSource (i.e. application-specific)
   * settings and hence we provide only config artifacts here
   */
-trait CesiumRoute
+trait CesiumService
   extends FSCachedProxyRoute // we might cache cesium content
     with UiRoute // we provide race-ui windows for controlling Cesium view and entities
     with CachedFileAssetRoute
@@ -85,11 +149,9 @@ trait CesiumRoute
 
   val accessToken = config.getVaultableStringOrElse("access-token", "")
   val cesiumVersion = config.getStringOrElse("cesium-version", defaultCesiumJsVersion)
-  val requestRenderMode = config.getBooleanOrElse("request-render", false)
-  val targetFrameRate = config.getIntOrElse("frame-rate", -1)
-  val proxyTerrain = config.getBooleanOrElse("proxy-elevation-provider", true)
-  val terrainProvider = config.getStringOrElse("elevation-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
   val cameraPositions = getCameraPositions()
+  val terrainProvider = createTerrainProvider(config.getOptionalConfig("terrain"))
+  //val terrainProvider = config.getStringOrElse("terrain-provider", "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")
 
   def getCameraPositions(): Seq[CameraPosition] = {
     val places = config.getConfigSeq("camera-positions").map( cfg=> CameraPosition(cfg))
@@ -116,14 +178,15 @@ trait CesiumRoute
   def uiCesiumRoute: Route = {
     get {
       //--- dynamic geospatial content requested by Cesium at runtime
-      pathPrefix(CesiumRoute.terrainPrefix) { // also just when configured as proxy
-        completeProxied(terrainProvider)
+      pathPrefix(CesiumService.terrainPrefix) { // also just when configured as proxy
+        terrainProvider match {
+          case etp: ExternalTerrainProvider => completeProxied(etp.url)
+          case _ => complete(StatusCodes.NotFound)
+        }
 
         //--- the standard Cesium assets - note we always proxy these fs-cached with a pre-configured host URL
       } ~ pathPrefix(cesiumPathMatcher) {
         completeProxied(cesiumJsUrl(cesiumVersion))
-
-        //--- our Cesium assets
       } ~
         fileAssetPath("ui_cesium.js") ~
         fileAssetPath("ui_cesium.css") ~
@@ -132,6 +195,7 @@ trait CesiumRoute
         fileAssetPath("layer-icon.svg") ~
         fileAssetPath("map-cursor.png")
     }
+    // TODO - we should have a path for own/proxied terrain
   }
 
   //--- cesium web socket handling
@@ -178,29 +242,22 @@ trait CesiumRoute
 
   override def getPreambleBodyFragments: Seq[Text.TypedTag[String]] = super.getPreambleBodyFragments :+ fullWindowCesiumContainer
 
-  override def getBodyFragments: Seq[Text.TypedTag[String]] = {
-    super.getBodyFragments ++ Seq(uiViewWindow(), uiViewIcon, uiTimeWindow(), uiTimeIcon, uiModuleLayerWindow(), uiModuleLayerIcon)
-  }
-
   override def getConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
     super.getConfig(requestUri, remoteAddr) + basicCesiumConfig(requestUri,remoteAddr)
   }
 
   // to be called from the concrete getConfig() implementation
   def basicCesiumConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
-    val wsToken = registerTokenForClient(remoteAddr)
-    val terrain = if (proxyTerrain) CesiumRoute.terrainPrefix else terrainProvider
-    // new Cesium.CesiumTerrainProvider({ url: Cesium.IonResource.fromAssetId(1),}),
     val places = cameraPositions.mkString(",\n    ")
 
     s"""
-export const wsUrl = 'ws://${requestUri.authority}/$requestPrefix/ws/$wsToken';
 export const cesium = {
   accessToken: '$accessToken',
-  requestRenderMode: $requestRenderMode,
-  targetFrameRate: $targetFrameRate,
-  terrainProvider: new Cesium.ArcGISTiledElevationTerrainProvider({url: '$terrain'}),
+  terrainProvider: ${terrainProvider.toJs},
+  requestRenderMode: ${config.getBooleanOrElse("request-render", false)},
+  targetFrameRate: ${config.getIntOrElse("frame-rate", -1)},
   cameraPositions: [\n    $places\n  ],
+  localTimeZone: '${config.getStringOrElse("local-timezone", TimeZone.getDefault.getID)}',
   color: ${cesiumColor(config, "color", "red")},
   outlineColor: ${cesiumColor(config, "outline-color", "yellow")},
   font: '${config.getStringOrElse("label-font", "16px sans-serif")}',
@@ -224,82 +281,8 @@ export const cesium = {
   def uiCesiumResources: Seq[Text.TypedTag[String]] = {
     Seq(
       cssLink("ui_cesium.css"),
-      extModule("ui_cesium.js")
+      addJsModule("ui_cesium.js")
     )
-  }
-
-  //--- the standard Ui windows/icons we provide (can be overridden for more app specific versions)
-
-  // positions can be set in main css (ids: 'view', 'view_icon', 'time', 'time_icon')
-
-  def uiViewWindow(title: String="View"): Text.TypedTag[String] = {
-    val bw = 3.5
-    uiWindow(title, "view", "camera-icon.svg")(
-      uiRowContainer()(
-        uiCheckBox("fullscreen", "main.toggleFullScreen(event)"),
-        uiHorizontalSpacer(1),
-        uiRadio("pointer", "main.setDisplayPointerLoc(event)", "view.showPointer"),
-        uiRadio( "camera", "main.setDisplayCameraLoc(event)", "view.showCamera"),
-        uiHorizontalSpacer(1),
-        uiButton("⟘", "main.setDownView()", 2.5),  // ⇩  ⊾ ⟘
-        uiButton("⌂", "main.setHomeView()", 2.5) // ⌂ ⟐ ⨁
-      ),
-      uiRowContainer()(
-        uiButton(text = "⨀", eid = "view.pickPos", action = "main.pickPoint()", widthInRem = 2.5),
-        uiButton("⨁", "main.addPoint()", 2.5),
-        uiTextInput("", "view.latitude", isFixed = true, action = "main.setViewFromFields()", width = "5rem"),
-        uiTextInput("", "view.longitude", isFixed = true, action = "main.setViewFromFields()", width = "6rem"),
-        uiTextInput("", "view.altitude", isFixed = true, action = "main.setViewFromFields()", width = "5.2rem"),
-        uiHorizontalSpacer(0.4)
-      ),
-      uiList("view.positions", 8, dblClickAction = "main.setCameraFromSelection(event)"),
-      uiRowContainer()(
-        uiChoice("","view.posSet", "main.selectPositionSet(event)"),
-        uiButton("save", "main.storePositionSet()", bw),
-        uiButton("del", "main.removePositionSet()", bw),
-        uiHorizontalSpacer(4),
-        uiButton("⌫", "main.removePoint()", 2.5)
-      ),
-      uiPanel("view parameters", false)(
-        uiCheckBox("render on-demand", "main.toggleRequestRenderMode()", "view.rm"),
-        uiSlider("frame rate", "view.fr", "main.setFrameRate(event)")
-      )
-    )
-  }
-
-  def uiViewIcon: Text.TypedTag[String] = {
-    uiIcon("camera-icon.svg", "main.toggleWindow(event,'view')", "view_icon")
-  }
-
-  def uiTimeWindow(title: String="Time"): Text.TypedTag[String] = {
-    uiWindow(title, "time", "time-icon.svg")(
-      uiClock("time UTC", "time.utc", "UTC"),
-      uiClock("time loc", "time.loc",  TimeZone.getDefault.getID),
-      uiTimer("elapsed", "time.elapsed")
-    )
-  }
-
-  def uiTimeIcon: Text.TypedTag[String] = {
-    uiIcon("time-icon.svg", "main.toggleWindow(event,'time')", "time_icon")
-  }
-
-  def uiModuleLayerWindow(title: String="Layers"): Text.TypedTag[String] = {
-    uiWindow(title, "layer", "layer-icon.svg")(
-      uiPanel("order", true)(
-        uiList("layer.order", 10),
-        uiRowContainer()(
-          uiButton("↑", "main.raiseModuleLayer()"),
-          uiButton("↓", "main.lowerModuleLayer()")
-        )
-      ),
-      uiPanel("hierarchy", false)(
-        uiList("layer.hierarchy", 15)
-      )
-    )
-  }
-
-  def uiModuleLayerIcon: Text.TypedTag[String] = {
-    uiIcon("layer-icon.svg", "main.toggleWindow(event,'layer')", "layer_icon")
   }
 
   //--- misc

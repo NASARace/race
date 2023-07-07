@@ -39,7 +39,7 @@ import java.net.InetSocketAddress
 import scala.collection.mutable
 import scala.concurrent.duration.DurationInt
 
-object CesiumJpssRoute {
+object JpssService {
   val HOTSPOTS = asc("hotspots")
   val HOURS = asc("hours")
   val COLOR = asc("color")
@@ -57,14 +57,14 @@ object CesiumJpssRoute {
   val jsModule = "ui_cesium_jpss.js"
   val icon = "polar-sat-icon.svg"
 }
-import gov.nasa.race.cesium.CesiumJpssRoute._
+import gov.nasa.race.cesium.JpssService._
 
 
 /**
   * a RaceRouteInfo that serves active fires detected by polar orbiting satellites
   * note this can handle multiple satellites
   */
-trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTimeRaceRoute with RaceDataClient with JsonProducer {
+trait JpssService extends CesiumService with PushWSRaceRoute with ContinuousTimeRaceRoute with RaceDataClient with JsonProducer {
 
   val jpssAssets = getSymbolicAssetMap("jpss.assets", config, Seq(("fire","fire.png")))
 
@@ -99,69 +99,12 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
 
   override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ uiCesiumJpssResources
 
-  override def getBodyFragments: Seq[Text.TypedTag[String]] = super.getBodyFragments ++ Seq(uiJpssWindow(), uiJpssIcon)
-
   override def getConfig (requestUri: Uri, remoteAddr: InetSocketAddress): String = {
     super.getConfig(requestUri,remoteAddr) + jpssConfig(requestUri,remoteAddr)
   }
 
   def uiCesiumJpssResources: Seq[Text.TypedTag[String]] = {
     Seq( extModule(jsModule))
-  }
-
-  def uiJpssWindow(title: String="Polar Satellites"): Text.TypedTag[String] = {
-    uiWindow(title,"jpss", icon)(
-      cesiumLayerPanel("jpss", "main.toggleShowJpss(event)"),
-      uiPanel("satellites", true)(
-        uiList("jpss.satellites", 5, "main.selectJpssSatellite(event)"),
-        uiRowContainer()(
-          uiColumnContainer()(
-            uiTextInput("area","jpss.bounds", true, "main.setJpssBounds(event)", "enter lat,lon bounds (WSEN order)", width="20rem"),
-            uiLabel("jpss.bounds-info")
-          ),
-          uiButton("pick", "main.pickJpssBounds()"),
-          uiButton("clear", "main.clearJpssBounds()"),
-          uiButton( "zoom", "main.zoomToJpssBounds()")
-        )
-      ),
-      uiPanel("overpasses:")(
-        uiRowContainer()(
-          uiRowContainer(title="upcoming overpasses")(
-            uiList("jpss.upcoming", 5)
-          ),
-          uiHorizontalSpacer(0.5),
-          uiRowContainer(title="completed overpasses")(
-            uiList("jpss.past", 5, "main.selectJpssPast(event)")
-          )
-        ),
-        uiRowContainer()(
-          uiCheckBox("show history", "main.toggleJpssShowPastHistory(event)", "jpss.show_history"),
-          uiHorizontalSpacer(2),
-          uiListControls("jpss.past")
-        )
-      ),
-      uiPanel("hotspots", false)(
-        uiList("jpss.hotspots", 10, dblClickAction = "main.zoomToJpssPixel(event)")
-      ),
-      uiPanel("layer parameters", false)(
-        uiRowContainer()(
-          uiColumnContainer("align_right")(
-            uiSlider("history [d]", "jpss.history", "main.setJpssHistory(event)"),
-            uiSlider("bright [K]", "jpss.bright", "main.setJpssBrightThreshold(event)"),
-            uiSlider("frp [MW]", "jpss.frp", "main.setJpssFrpThreshold(event)")
-          ),
-          uiColumnContainer("align_right")(
-            uiSlider("size [pix]", "jpss.pixsize", "main.setJpssPixelSize(event)"),
-            uiSlider("outline [pix]", "jpss.outline", "main.setJpssOutlineWidth(event)"),
-            uiSlider("grid [°]", "jpss.resolution", "main.setJpssResolution(event)")
-          )
-        )
-      )
-    )
-  }
-
-  def uiJpssIcon: Text.TypedTag[String] = {
-    uiIcon(icon, "main.toggleWindow(event,'jpss')", "jpss_icon")
   }
 
   def jpssConfig(requestUri: Uri, remoteAddr: InetSocketAddress): String = {
@@ -306,4 +249,4 @@ trait CesiumJpssRoute extends CesiumRoute with PushWSRaceRoute with ContinuousTi
 /**
   * simple service to show JPSS hotspots
   */
-class CesiumJpssApp (val parent: ParentActor, val config: Config) extends DocumentRoute with CesiumJpssRoute
+class CesiumJpssApp (val parent: ParentActor, val config: Config) extends DocumentRoute with ImageryLayerService with JpssService
