@@ -84,7 +84,7 @@ class HrrrImportActor (val config: Config) extends HttpActor with PublishingRace
   val fields = config.getStringListOrElse("fields", Seq("TCDC", "TMP", "UGRD", "VGRD"))
   val levels = config.getStringListOrElse("levels", Seq("lev_2_m_above_ground", "lev_10_m_above_ground", "lev_entire_atmosphere"))
 
-  val staticQuery = s"$varQuery&$levelQuery&$regionQuery"
+  val staticQuery = filterQuery
   val outputDir: File = FileUtils.ensureWritableDir( config.getStringOrElse("directory", "tmp/hrrr")).get
 
   val grib2Header = "GRIB".getBytes
@@ -199,12 +199,14 @@ class HrrrImportActor (val config: Config) extends HttpActor with PublishingRace
   //--- helpers to build URLs and filenames
 
   def requestUrl (date: DateTime, forecastHour: Int): String = {
-    s"$fileUrl?${varQuery(date,forecastHour)}&$staticQuery"
+    s"$fileUrl?${fileQuery(date,forecastHour)}&$staticQuery"
   }
 
-  def varQuery (date: DateTime, forecastHour: Int): String = {
+  def fileQuery(date: DateTime, forecastHour: Int): String = {
     f"dir=%%2Fhrrr.${date.format_yyyyMMdd}%%2Fconus&file=hrrr.t${date.getHour}%02dz.wrfsfcf${forecastHour}%02d.grib2"
   }
+
+  def filterQuery: String = s"$varQuery&$levelQuery&$regionQuery"
 
   def varQuery: String = {
     fields.foldLeft(new StringBuilder()) { (sb, v) =>
