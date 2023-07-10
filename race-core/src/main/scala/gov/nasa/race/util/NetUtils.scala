@@ -74,6 +74,15 @@ object NetUtils {
     }
   }
 
+  def getBaseName (url: String): String = {
+    var i0 = url.lastIndexOf('/')  // this is a url, not a file path
+    i0 += 1
+    var i1 = url.lastIndexOf('.', url.length-1)
+    if (i1 < 0 || i1 < i0) i1 = url.length
+
+    url.substring(i0,i1)
+  }
+
   def hasScheme(url: String): Boolean = SchemeRE.matches(url)
 
   /** turn URL into a string that can be used as a filename. This is mostly to avoid Windows problems */

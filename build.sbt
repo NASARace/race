@@ -10,7 +10,8 @@ ThisBuild / shellPrompt := { state => "[" + Project.extract(state).currentRef.pr
 enablePlugins(LaikaPlugin)
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
-version := "1.8.1"
+  version := "1.8.1",
+  dependencyOverrides ++= raceDependencyOverrides
 )
 
 lazy val testSettings = commonSettings ++ noPublishSettings  // test projects don't publish artifacts

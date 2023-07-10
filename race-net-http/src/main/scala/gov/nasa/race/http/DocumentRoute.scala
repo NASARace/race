@@ -19,7 +19,7 @@ package gov.nasa.race.http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import gov.nasa.race.util.FileUtils
+import gov.nasa.race.util.{FileUtils, NetUtils}
 import scalatags.Text
 import scalatags.Text.all.{script, _}
 
@@ -111,7 +111,7 @@ trait DocumentRoute extends RaceRouteInfo {
     val sb = new StringBuilder()
     sb.append("\n")
     jsModules.foreach { jsMod =>
-      val baseName = FileUtils.getBaseName(jsMod)
+      val baseName = NetUtils.getBaseName(jsMod)
       baseNames += baseName
       sb.append(s"import * as $baseName from '$jsMod';\n")
     }

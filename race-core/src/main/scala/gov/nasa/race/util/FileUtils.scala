@@ -206,8 +206,8 @@ object FileUtils {
   }
 
   // filename without extension
-  def getBaseName (fn: String): String = {
-    var i0 = fn.lastIndexOf(File.separator)
+  def getBaseName (fn: String, sep: Char = File.separatorChar): String = {
+    var i0 = fn.lastIndexOf(sep)
     i0 += 1
     var i1 = fn.lastIndexOf('.', fn.length-1)
     if (i1 < 0 || i1 < i0) i1 = fn.length
