@@ -9,9 +9,9 @@ pub struct Arguments {
        #[structopt(long)]
        schedule_only: bool,
    
-        /// name of example config file to generate (no downloads)
-        #[structopt(long)]
-        generate_config: String,
+       /// name of example config file to generate (no downloads)
+       #[structopt(long)]
+       generate_config: String,
 
        /// if true no HRRR files will be downloaded (useful to debug schedule)
        #[structopt(long)]
@@ -21,9 +21,33 @@ pub struct Arguments {
        #[structopt(short,long)]
        verbose: bool,
 
-       /// config file to run
+       /// path of config file to run or generate
        config_file: String
 }
+
+#[derive(Debug,Serialize,Deserialize)]
+enum DurationUnit {
+    Seconds(i64),
+    Minutes(i64),
+    Hours(i64)
+}
+
+impl DurationUnit {
+    fn num_seconds (&self) -> i64 {
+        match *self {
+            Seconds(n) => n,
+            Minutes(n) => n * 60,
+            Hours(n) => n * 3600
+        }
+    }
+}
+
+impl From<DurationUnit> for chrono::Duration {
+    fn from (du: DurationUnit) -> chrono::Duration {
+      chrono::Duration::seconds(du.num_seconds())
+    }
+}
+
 
 /// configured values from config file
 #[derive(Debug,Serialize,Deserialize,Default)]
@@ -54,16 +78,16 @@ pub struct Config {
     bbox: BoundingBox,
 
     /// download delay in minutes, used to compute schedule
-    download_delay_minutes: u32,
+    download_delay: DurationUnit,
 
     /// max age (in hours) after which report files are deleted. If 0 (default) they are never automatically deleted
-    max_age_hours: u32,
+    max_age: DurationUnit,
 
     /// max attempts to retrieve not yet available file
     max_retry: u32,
 
     /// delay in seconds before next attempt to retrieve not yet available file
-    retry_delay_seconds: u32
+    retry_delay: DurationUnit
 }
 
 //--- auxiliary config types
@@ -104,10 +128,10 @@ impl Default for Config {
                 east: -104.0, 
                 north: 50.0
             },
-            download_delay_minutes: 2,
-            max_age_hours: 2,
+            download_delay: Minutes(2),
+            max_age: Hours(2),
             max_retry: 10,
-            retry_delay_seconds: 60
+            retry_delay: Seconds(60)
         }
     }
 }

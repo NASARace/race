@@ -51,6 +51,7 @@
 }
 
 .fit {
+    /* min-width: 0; */
     width: inherit;
 }
 

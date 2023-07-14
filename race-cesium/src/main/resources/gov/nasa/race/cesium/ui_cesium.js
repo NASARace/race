@@ -164,6 +164,7 @@ export function postExec() {
 
     terrainProviderPromise = getTerrainProviderPromise();
     terrainProviderPromise.then( (tp) => { 
+        console.log("topoTerrainProvider set: ", tp);
         topoTerrainProvider = tp;
         console.log("topographic terrain loaded");
     });

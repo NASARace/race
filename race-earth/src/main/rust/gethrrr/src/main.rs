@@ -96,7 +96,7 @@ struct Opt {
 
     /// url pattern for directory listing of available forecast files
     #[structopt(long,default_value="https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/hrrr.${yyyyMMdd}/conus/")]
-    hrrr_list_url: String, 
+    hrrr_dir_url: String, 
 
     /// directory to store downloaded HRRR forecast files
     #[structopt(long,default_value="hrrr")]
@@ -163,7 +163,6 @@ struct Opt {
     verbose: bool,
 }
 
-fn config_delay_minutes() -> &'static str { "2" }
 
 lazy_static! {
     #[derive(Debug)]
@@ -603,7 +602,7 @@ async fn main() -> anyhow::Result<()> {
     if !check_output_dir() {
         Err(anyhow!("can't write output dir, aborting."))
     } else {
-        if let Result::Ok((reg_schedule,ext_schedule)) = get_schedules(OPT.hrrr_list_url.as_str()).await {
+        if let Result::Ok((reg_schedule,ext_schedule)) = get_schedules(OPT.hrrr_dir_url.as_str()).await {
             if !OPT.schedule_only {
                 spawn_downloads(&reg_schedule, &ext_schedule).await;
             }

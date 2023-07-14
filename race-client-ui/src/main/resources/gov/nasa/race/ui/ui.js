@@ -1881,6 +1881,10 @@ export function setKvList (o, kvList, createValueElement = undefined) {
     }
 }
 
+export function clearKvList(o) {
+    setKvList(o,null);
+}
+
 // no interaction for kv tables
 
 
@@ -2052,6 +2056,7 @@ export function setListItemDisplay(o, styleWidth, attrs, mapFunc) {
         if (attrs.includes("alignLeft")) _addClass(e, "align_left");
         else if (attrs.includes("alignRight")) _addClass(e, "align_right");
         if (attrs.includes("fixed")) _addClass(e, "fixed");
+        if (attrs.includes("small")) _addClass(e, "small");
     }
 }
 
