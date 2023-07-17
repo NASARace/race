@@ -1,3 +1,8 @@
+/*
+ * this is still based on the "Fire Progression" database from https://data-nifc.opendata.arcgis.com/
+ * we are moving to the "Historical Operational Data" database (which is structured around polygons/lines/points) the structure will change
+ */
+
 import * as config from "./config.js";
 import * as ws from "./ws.js";
 import * as util from "./ui_util.js";
