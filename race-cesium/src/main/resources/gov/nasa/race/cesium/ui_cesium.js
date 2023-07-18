@@ -939,8 +939,8 @@ export function saveCamera() {
 
     // TODO - this should be triggered by a copy-to-clipboard button
     let spec = `{ lat: ${util.fmax_4.format(lastCamera.lat)}, lon: ${util.fmax_4.format(lastCamera.lon)}, alt: ${Math.round(lastCamera.alt)} }`;
-    navigator.clipboard.writeText(spec);  // this is still experimental in browsers and needs to be enabled explicitly for sec reasons
-    //console.log(spec);
+    //navigator.clipboard.writeText(spec);  // this is still experimental in browsers and needs to be enabled explicitly (for each doc?) for security reasons
+    console.log(spec);
 }
 
 export function zoomTo(cameraPos) {
