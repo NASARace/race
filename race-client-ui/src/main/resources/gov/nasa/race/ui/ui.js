@@ -153,6 +153,7 @@ function initializeRecursive (e) {
         case "ui_timer": initializeTimer(e); break;
         case "ui_kvtable": initializeKvTable(e); break;
         case "ui_menuitem": initializeMenuItem(e); break;
+        case "ui_progress_bar": initializeProgressBar(e); break;
         // default does not need initialization
     }
 
@@ -2785,6 +2786,64 @@ export function createColorInput(initClr, size, action) {
     //e.onchange = action;
     e.oninput = action;
     return e;
+}
+
+//--- progress bars (simple nested DIVs)
+
+export function createProgressBar (percent0=0, percent1=0) {
+    let e = _createElement("DIV", "ui_progress_bar");
+    e._uiP0 = Math.round(percent0);
+    e._uiP1 = Math.round(percent1);
+    addProgressBarComponents(e);
+    return e;
+}
+
+function addProgressBarComponents (e) {
+    let e0 = _createElement("DIV", "ui_progress_0");
+    let p0 = e._uiP0;
+    e0.style.width = `${e._uiP0}%`;
+    e.appendChild(e0);
+
+    let e1 = _createElement("DIV", "ui_progress_1");
+    e1.style.width = `${e._uiP1}%`;
+    e0.appendChild(e1);
+}
+
+export function ProgressBar (eid,percent0=0,percent1=0) {
+    let e = createProgressBar(percent0,percent1);
+    if (eid) e.id = eid;
+    return e;
+}
+
+function initializeProgressBar(e) {
+    if (_hasNoChildElements(e)) {
+        addProgressBarComponents(e);
+    }
+}
+
+export function setProgress2Bar (o, percent0=0, percent1=0) {
+    let e = getProgressBar(o);
+    if (e) {
+        e._uiP0 = Math.round(percent0);
+        e._uiP1 = Math.round(percent1);
+
+        let p0 = e.firstElementChild();
+        if (p0) {
+            p0.style.width = `${e._uiP0}%`;
+            let p1 = p0.firstElementChild();
+            p1.style.width = `${e._uiP1}%`;
+        }
+    }
+}
+
+export function getProgressBar(o) {
+    let e = _elementOf(o);
+    if (e && e.tagName == "DIV") {
+        if (e.classList.contains("ui_progress_bar")) return e;
+        else if (e.classList.contains("ui_progress_0")) return e.parentElement;
+        else if (e.classList.contains("ui_progress_1")) return e.parentElement.parentElement;
+    }
+    throw "not a progress bar";
 }
 
 //--- common panels

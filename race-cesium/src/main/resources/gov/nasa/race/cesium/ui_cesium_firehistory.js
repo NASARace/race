@@ -219,6 +219,28 @@ function initFirePerimeterView() {
     return view;
 }
 
+function initFireContainmentView() {
+    let view = ui.getList("firehistory.perimeters");
+    if (view) {
+        ui.setListItemDisplayColumns(view, ["fit", "header"], [
+            { name: "dtg", tip: "local date/time of perimeter", width: "7rem", attrs:["fixed"], map: e=> util.toLocalMDHMString(e.datetime) },
+            { name: "acres", tip: "size in acres", width: "4rem", attrs:["fixed", "alignRight"], map: e=> e.acres },
+            { name: "cnt", tip: "% containment", width: "3rem", attrs:["fixed", "alignRight"], map: e=> e.percent },
+            { name: "", tip: "", width: "15rem", attrs:[], map: e => ui.createProgressBar(getSizePercent(e.acres), e.percent) }
+        ]);
+    }
+    return view;
+}
+
+function getSizePercent(curSize) {
+    if (selectFire) {
+        let finalArea = selectedFire.fireSummary.acres;
+        return curSize * 100 / finalArea;
+    } else {
+        return 0;
+    }
+}
+
 function initFirePerimeterDisplayControls() {
     let e = ui.getSlider('firehistory.perimeter.stroke_width');
     ui.setSliderRange(e, 0, 5.0, 0.5, util.f_1);

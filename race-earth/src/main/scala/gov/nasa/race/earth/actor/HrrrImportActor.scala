@@ -53,7 +53,7 @@ object HrrrFile {
 case class HrrrFileAvailable (hrrrType: String, area: String, file: File, baseDate: DateTime, forecastDate: DateTime, bounds: BoundingBoxGeoFilter) extends FileAvailable {
   def date = baseDate
 
-  override def toString(): String = file.getName
+  //override def toString(): String = file.getName
 }
 
 /**

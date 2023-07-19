@@ -138,6 +138,14 @@
     --container-padding: 4px;
     --container-margin: var(--margin) 0 var(--margin) 0;
     --container-gap: 4px;
+    --progress-border: none;
+    --progress-padding: 0;
+    --progress-0-background: transparent;
+    --progress-0-border: var(--border-width);
+    --progress-0-padding: 2px;
+    --progress-1-background: rgb(24, 141, 20);
+    --progress-1-border: none;
+    --progress-1-padding: 1px 0px 1px 0px;
     --map-brightness: 0.4;
     --map-hue: 200;
     --map-saturation: 0.6;

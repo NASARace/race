@@ -955,6 +955,31 @@ div.ui_menuitem:not([class*="disabled"]):hover {
     background: var(--menuitem-selection-background);
 }
 
+/* leveled progress bar */
+
+div.ui_progress_bar {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    background: transparent;
+    border: var(--progress-border);
+    padding: var(--progress-padding);
+}
+
+div.ui_progress_0 {
+    display: inline-block;
+    background: var(--progress-0-background);
+    border: var(--progress-0-border);
+    padding: var(--progress-0-padding);
+}
+
+div.ui_progress_1 {
+    display: inline-block;
+    background: var(--progress-1-background);
+    border: var(--progress-1-border);
+    padding: var(--progress-1-padding);
+}
 
 /* layout container */
 
