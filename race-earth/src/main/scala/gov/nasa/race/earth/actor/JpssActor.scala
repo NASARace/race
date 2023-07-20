@@ -187,6 +187,6 @@ trait JpssActor extends PublishingRaceActor with ContinuousTimeRaceActor {
       if (n.isUndefined || lat > n) n = lat
     }
 
-    s"${w.toNormalizedDegrees180},${s.toDegrees},${e.toNormalizedDegrees180},${n.toDegrees}"
+    s"${w.toNormalizedDegrees180.round},${s.toDegrees.round},${e.toNormalizedDegrees180.round},${n.toDegrees.round}"
   }
 }
