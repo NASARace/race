@@ -748,7 +748,7 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
   }
 
   "a JsonPullParser" should "skip inner objects" in {
-    val msg =
+    val msg1 =
       """
         |{
         |  "foo": 42,
@@ -757,6 +757,15 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
         |    "b": { "x": -1, "y": [1,2,3] }
         |  },
         |  "blah": -42
+        |}
+        |""".stripMargin
+
+    val msg2 =
+      """
+        |{
+        |  "foo": 43,
+        |  "bar": null,
+        |  "blah": -43
         |}
         |""".stripMargin
 
@@ -779,12 +788,18 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
       }
     }
 
-    println(s"\n-- parsing json input skipping member 'bar':\n$msg")
-
     val p = new Parser
-    p.initialize(msg)
-    val res = p.parse()
+
+    println(s"\n-- parsing json input skipping non-null member 'bar':\n$msg1")
+    p.initialize(msg1)
+    var res = p.parse()
     println(s"res = $res")
     assert( res == (42,-42))
+
+    println(s"\n-- parsing json input skipping null member 'bar':\n$msg2")
+    p.initialize(msg2)
+    res = p.parse()
+    println(s"res = $res")
+    assert( res == (43,-43))
   }
 }
