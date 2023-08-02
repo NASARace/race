@@ -360,9 +360,12 @@ function updateNow() { // periodic upcoming cleanup (if we didn't get matching h
 function updateSatEntryNext (satId) {
     let se = satEntry(satId);
     if (se) {
-        let nextUp = upcoming.find(e => e.satId == satId);
-        se.next = nextUp.lastDate;
-        ui.updateListItem(satelliteView, se);
+        let tNow = ui.getClockEpochMillis(utcClock);
+        let nextUp = upcoming.find(e => (e.satId == satId) && (e.lastDate > tNow));
+        if (nextUp) {
+            se.next = nextUp.lastDate;
+            ui.updateListItem(satelliteView, se);
+        }
     }
 }
 

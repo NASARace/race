@@ -56,7 +56,7 @@ object Angle {
   final val UndefinedAngle = new Angle(Double.NaN)
   @inline def isDefined(x: Angle): Boolean  = !x.d.isNaN
 
-  final implicit val εAngle = Degrees(1.0e-10)  // provide your own if application specific
+  final implicit val εAngle: Angle = Degrees(1.0e-10)  // provide your own if application specific
   def fromVxVy (vx: Speed, vy: Speed) = Radians(normalizeRadians2Pi(Math.atan2(vx.d, vy.d)))
 
   //--- utilities

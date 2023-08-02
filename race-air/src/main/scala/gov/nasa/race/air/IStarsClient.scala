@@ -17,6 +17,7 @@
 package gov.nasa.race.air
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.event.LoggingAdapter
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse, StatusCodes}
 import akka.stream.Materializer
@@ -46,7 +47,7 @@ class IStarRequester extends Actor {
   val http = Http(context.system)
 
   val ras = RaceActorSystem(context.system)
-  implicit val log = ras.log
+  implicit val log: LoggingAdapter = ras.log
   private val url = ras.config.getVaultStringOrElse("istars.url", "https://v4p4sz5ijk.execute-api.us-east-1.amazonaws.com")
   private val key = ras.config.getVaultString("istars.key")
 

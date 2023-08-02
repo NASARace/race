@@ -195,22 +195,7 @@ fn get_static_query() -> String {
 
 //--- arg utility funcs
 
-/// stringify iterator for Display elements with given delimiter without per-element allocation
-fn mk_string<T: Display> (it: std::slice::Iter<'_,T>, delim: &str) -> String {
-    it.fold(String::new(), |mut acc:String, x:&T| {
-        if !acc.is_empty() {acc.push_str(delim)}
-        write!(acc,"{}", x);
-        acc
-    })
-}
 
-fn parse_string_vec (s: &str, delim: char) -> Vec<String> {
-    s.split(delim).map(|x| x.trim().to_string()).collect()
-}
-
-fn parse_vec<T: FromStr> (s: &str, delim: char) -> Vec<T> where <T as FromStr>::Err: core::fmt::Debug {
-    s.split(delim).map( |x| x.trim().parse::<T>().unwrap()).collect()
-}
 
 //--- time utility funcs
 
@@ -254,14 +239,7 @@ async fn sleep_secs (secs: u32) {
     }
 }
 
-fn elapsed_minutes_since (base: &DateTime<Utc>) -> u32 {
-    let now = chrono::offset::Utc::now();
-    if now > *base {
-        (now - *base).num_minutes() as u32
-    } else {
-        0
-    }
-}
+
 
 async fn wait_for (minutes: u32) {
     if minutes > 0 {
@@ -279,29 +257,6 @@ async fn wait_for_schedule (base: &DateTime<Utc>, scheduled: u32) {
 
 //--- input validation
 
-fn check_output_dir() -> bool {
-    let path = Path::new(&OPT.output_dir);
-
-    if path.is_dir() {
-        let md = fs::metadata(&path).unwrap();
-        if md.permissions().readonly() {
-            error!("output_dir {:?} not writable", &path);
-            false
-        } else {
-            true
-        }
-
-    } else {
-        match fs::create_dir(&path) {
-            Result::Ok(_) =>  
-                true,
-            Err(e) => {
-                error!("failed to create output_dir {:?}: {:?}", &path, e);
-                false
-            }
-        }
-    }
-}
 
 //--- output cleanup
 

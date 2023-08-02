@@ -52,7 +52,7 @@ class XmlMsgStatsCollector (val config: Config) extends StatsCollectorActor {
   // Note - this can't be calculated from the time we process a message since Akka might not schedule
   // this actor until it has a number of pending messages, which means there would be no time gap
   // and hence an infinite peak rate
-  implicit val rateBaseMillis = config.getIntOrElse("rate-base", defaultRateBaseMillis)
+  implicit val rateBaseMillis: Int = config.getIntOrElse("rate-base", defaultRateBaseMillis)
 
   val msgStats = MSortedMap.empty[String,MsgStatsData]
 

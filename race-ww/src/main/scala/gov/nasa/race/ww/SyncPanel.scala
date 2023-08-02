@@ -17,6 +17,7 @@
 
 package gov.nasa.race.ww
 
+import akka.event.LoggingAdapter
 import com.typesafe.config.{Config, ConfigFactory}
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.BusEvent
@@ -44,7 +45,7 @@ class SyncPanel (raceView: RaceViewer, config: Option[Config]=None)
   val actor: SyncActor = raceView.createActor("viewerSync") {
     new SyncActor(this,config.getOrElse(ConfigFactory.empty))
   }
-  implicit val log = actor.log
+  implicit val log: LoggingAdapter = actor.log
 
   val syncChannels = raceView.config.getStringListOrElse("sync-channels", Seq("viewer/sync"))
   var syncChannel: Option[String] = None

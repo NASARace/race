@@ -1,5 +1,5 @@
 [package]
-name = "opendata_splitter"
+name = "odin-common"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,3 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.26"
-geojson = "0.24.1"
-lazy_static = "1.4.0"
-serde_json = "1.0.103"
-structopt = "0.3.26"

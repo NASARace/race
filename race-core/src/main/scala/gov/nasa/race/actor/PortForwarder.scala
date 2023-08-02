@@ -49,7 +49,7 @@ object PortForwarder {
   * have to be explicitly enabled in krb5.conf
   */
 class PortForwarder (val config: Config) extends PeriodicRaceActor {
-  implicit val client = getClass
+  implicit val client: Class[_] = getClass
 
   class JSchLoggingAdapter extends Logger {
     // Akka: debug: 4, info: 3, warning: 2, error: 1

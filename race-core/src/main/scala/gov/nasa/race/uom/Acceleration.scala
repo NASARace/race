@@ -29,7 +29,7 @@ object Acceleration {
 
   final val Acceleration0 = new Acceleration(0)
   final val UndefinedAcceleration = new Acceleration(Double.NaN)
-  final implicit val εAcceleration = MetersPerSecond2(1e-10)
+  final implicit val εAcceleration: Acceleration = MetersPerSecond2(1e-10)
 
 
   @inline def isDefined(x: Acceleration): Boolean = !x.d.isNaN

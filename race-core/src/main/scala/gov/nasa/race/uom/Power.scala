@@ -20,7 +20,7 @@ import gov.nasa.race.MaybeUndefined
 import gov.nasa.race.uom.Power.wattToHp
 
 object Power {
-  final implicit val εPower = Watts(1e-9)
+  final implicit val εPower: Power = Watts(1e-9)
   final val UndefinedPower = new Power(Double.NaN)
 
   @inline def Watts(d: Double): Power = Watt(d)

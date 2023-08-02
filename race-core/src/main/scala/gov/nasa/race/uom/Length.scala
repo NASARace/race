@@ -43,7 +43,7 @@ object Length {
   final val UndefinedLength = Meters(Double.NaN)
   @inline def isDefined(x: Length): Boolean = !x.d.isNaN
 
-  final implicit val εLength = Meters(1e-9)
+  final implicit val εLength: Length = Meters(1e-9)
 
   @inline def Abs(l: Length) = Meters(abs(l.d))
 

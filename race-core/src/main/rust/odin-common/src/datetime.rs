@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, United States Government, as represented by the
+ * Copyright (c) 2023, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -15,15 +15,10 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.core
+use chrono::{DateTime,Timelike,Datelike,Utc};
 
-import akka.actor.{Actor, ActorLogging}
-import akka.event.LoggingAdapter
-
-/**
-  * a helper trait to make an actors LoggingAdapter implicit
-  */
-trait ImplicitActorLogging extends ActorLogging {
-  this: Actor =>
-  implicit lazy val _loggingAdapter: LoggingAdapter = log
+/// return minutes since given given DateTime<Utc> (negative if in future)
+pub fn elapsed_minutes_since (dt: &DateTime<Utc>) -> i64 {
+    let now = chrono::offset::Utc::now();
+    (now - *dt).num_minutes()
 }

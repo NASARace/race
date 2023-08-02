@@ -197,7 +197,8 @@ val kafkaVersion = "3.1.0"
   val jakartaMail = "com.sun.mail" % "jakarta.mail" % "2.0.1"
 
   //--- AWS SDK
-  val awsS3 = "software.amazon.awssdk" % "s3" % "2.19.8"
+  val awsS3 = "software.amazon.awssdk" % "s3" % "2.20.115"
+  //val awsS3 = "software.amazon.awssdk" % "s3" % "2.19.8"
   //val awsS3 = "software.amazon.awssdk" % "s3" % "1.12.376"
   
 

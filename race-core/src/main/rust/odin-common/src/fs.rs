@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, United States Government, as represented by the
+ * Copyright (c) 2023, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
  * All rights reserved.
  *
@@ -15,15 +15,23 @@
  * limitations under the License.
  */
 
-package gov.nasa.race.core
+use std::io;
+use std::fs;
+use std::path::{Path};
 
-import akka.actor.{Actor, ActorLogging}
-import akka.event.LoggingAdapter
+/// check if dir pathname exists and is writable, try to create dir otherwise
+pub fn ensure_writable_dir (dir: &str) -> io::Result<()> {
+    let path = Path::new(dir);
 
-/**
-  * a helper trait to make an actors LoggingAdapter implicit
-  */
-trait ImplicitActorLogging extends ActorLogging {
-  this: Actor =>
-  implicit lazy val _loggingAdapter: LoggingAdapter = log
+    if path.is_dir() {
+        let md = fs::metadata(&path)?;
+        if md.permissions().readonly() {
+            Err(io::Error::new(io::ErrorKind::PermissionDenied, format!("output_dir {:?} not writable", &path)))
+        } else {
+            Ok(())
+        }
+
+    } else {
+        fs::create_dir(&path)
+    }
 }

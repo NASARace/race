@@ -2544,7 +2544,7 @@ function initializeListControls(e) {
             e.appendChild( createListControlButton("⋀︎", e.dataset.up ? e.dataset.up :()=>selectPrevListItem(le)));
             e.appendChild( createListControlButton("⋁︎", e.dataset.down ? e.dataset.down :()=>selectNextListItem(le)));
             e.appendChild( createListControlButton("⊻", e.dataset.last ? e.dataset.last :()=>selectLastListItem(le)));
-            e.appendChild( createListControlButton("⌫", e.dataset.clear ? e.dataset.clear :()=>clearSelectedListItem(le)));
+            e.appendChild( createListControlButton("∅", e.dataset.clear ? e.dataset.clear :()=>clearSelectedListItem(le))); // alternatives: ⌫ ∅ ⎚
         }
     }
 }

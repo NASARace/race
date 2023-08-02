@@ -206,6 +206,7 @@ class GoesrImportActor(val config: Config) extends PublishingRaceActor {
       Some( S3Client.builder()
         .region(getRegion)
         .credentialsProvider(getAwsCredentialsProvider)
+        .forcePathStyle(true)  // to avoid spurious SdkClientExceptio (UnknownHostException)
         .build()
       )
     } catch {

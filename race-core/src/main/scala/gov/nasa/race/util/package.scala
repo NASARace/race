@@ -17,6 +17,7 @@
 
 package gov.nasa.race
 
+import java.util.function
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
@@ -38,7 +39,7 @@ package object util {
   //--- Java interoperability
 
   // to use Scala lambdas as Java method arguments
-  implicit def sfunc1Tojfunc1[A](f: (A) => Any) = new java.util.function.Function[A, Any]() {
+  implicit def sfunc1Tojfunc1[A](f: (A) => Any): function.Function[A, Any] = new java.util.function.Function[A, Any]() {
     override def apply(a: A): Any = f(a)
   }
 
