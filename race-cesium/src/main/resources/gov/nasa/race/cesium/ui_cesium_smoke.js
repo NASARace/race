@@ -4,59 +4,178 @@ import * as util from "./ui_util.js";
 import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
-class SourceEntry {
-    constructor(source) {
-        this.source = source;
-        this.show = false;
+// smoke entry definition
+const defaultContourRender = config.smokelayer.contourRender;
+console.log(defaultContourRender.fillColors);
+const SmokeLayerType = {
+    SMOKE: "smoke",
+    CLOUD: "cloud"
+}
+
+const LOADED = "○";
+const SHOWING = "●";
+
+class SmokeCloudEntry {
+
+    // factory method
+    static create (smokeLayer) { // js unhappy with smokeLayer - says undefined
+        if (smokeLayer.scType == SmokeLayerType.SMOKE) return new SmokeEntry(smokeLayer); // add parathensis
+        if (smokeLayer.scType == SmokeLayerType.CLOUD) return new CloudEntry(smokeLayer);
+    }
+
+    constructor(smokeLayer) {
+        // come from server message
+        this.date = smokeLayer.date // date and time from data
+        this.type = smokeLayer.scType // smoke or cloud
+        this.satellite = smokeLayer.satellite // satellite from data
+        this.srs = smokeLayer.srs // srs from data
+        this.url = smokeLayer.url // where to get data
         this.dataSource = undefined;
+        this.render = {...defaultContourRender};
+    }
+
+    setStatus (newStatus) {
+        this.status = newStatus;
+        // update view
+    }
+
+    replaceWith (other) {
+        console.log("not yet.");
+    }
+
+    SetVisible (showIt) { // needs to fetch the contours
+        if (showIt != this.show) {
+            this.show = showIt;
+            if (showIt) {
+                if (!this.dataSource) {
+                    this.loadContoursFromUrl(); // this is async, it will set vectorPrimitives when done
+                } else {
+                    this.dataSource.show = true;
+                    uiCesium.requestRender();
+                }
+                this.setStatus( SHOWING);
+
+            } else {
+                if (this.dataSource) {
+                    this.dataSource.show = false;
+                    uiCesium.requestRender();
+                    this.setStatus( LOADED);
+                }
+            }
+        }
+    }
+
+    async loadContoursFromUrl() { // handles new data source
+        let renderOpts = this.getRenderOpts(); //
+        let response = await fetch(this.url);
+        let data = await response.json();
+
+        Cesium.GeoJsonDataSource.load(data, renderOpts).then(  // TODO - does this support streams?
+            ds => {
+                this.dataSource = ds;
+                //console.log("@@ before post process")
+                this.postProcessDataSource();
+                uiCesium.addDataSource(ds);
+                uiCesium.requestRender();
+                 //setTimeout( () => uiCesium.requestRender(), 300); // ?? // rerender when changes
+            } // have after any change - colors, new data source, etc
+        );
+    }
+
+    getRenderOpts() {
+        return { // could add a poly line
+            stroke: this.render.strokeColor,
+            strokeWidth: this.render.strokeWidth,
+            fill: this.render.fillColors[0], // replace with solid CSS color // try remove fill
+            clampToGround: false // may be the issue
+        };
+    }
+
+    postProcessDataSource() {
+        let entities = this.dataSource.entities.values;
+        let render = this.render;
+
+        for (const e of entities) {
+            let props = e.properties;
+            //console.log("@@ post process")
+            if (props) {
+                let prob = this.getPropValue(props, "prob");
+                //console.log("@@ prop");
+                //console.log(prob);
+                if (prob!== null) {
+                    //console.log("@@ prob")
+                    let i = this.getPropValue(props, "ID");
+//                    console.log(i, prob);
+//                    console.log("@@ after if")
+                    e.polygon.material = render.fillColors[i];
+//                    console.log(i, prob);
+//                    console.log(e.polygon.material);
+//                    console.log(" @@ post processed the data set");
+                }
+            }
+        }
+    }
+
+    getPropValue(props,key) {
+        let p = props[key];
+        return p ? p._value : undefined;
+    }
+
+    updateDisplayPanel() {
+        console.log("Selected")
+        let render = this.render;
     }
 }
 
-class SmokeEntry {
+class SmokeEntry extends SmokeCloudEntry {
+    constructor (smokeLayer) {
+        super(smokeLayer)
+        this.smokeFile = smokeLayer.smokeFile
+    }
 }
 
-var sources = []; // will be populated by getLayers messages
-var sourceView = undefined;
-var objectView = undefined;
-var defaultRender = config.smokelayer.contourRender;
+class CloudEntry extends SmokeCloudEntry {
+    constructor (smokeLayer) {
+        super(smokeLayer)
+        this.cloudFile = smokeLayer.cloudFile
+    }
+}
 
-const renderModules = new Map();
-var defaultRenderFunc = undefined;
+// initialization
+
+const smokeCloudEntries = new Map(); // unique-key -> SmokeCloudEntries
+var displayEntries = [];
+var selectedEntry = undefined;
+var selectedType = ["smoke", "cloud"];
+var selectedSat = ["G16", "G17", "G18"];
+var followLatest = config.smokelayer.followLatest;
 
 initWindow();
 
-//uiCesium.setEntitySelectionHandler(smokeLayerSelection);
+ui.setCheckBox("smoke.followLatest", followLatest);
+ui.setCheckBox("smoke.showSmoke", selectedType.includes("smoke"));
+ui.setCheckBox("smoke.showCloud", selectedType.includes("cloud"));
+ui.setCheckBox("smoke.G16", selectedSat.includes("G16"));
+ui.setCheckBox("smoke.G17", selectedSat.includes("G17"));
+ui.setCheckBox("smoke.G18", selectedSat.includes("G18"));
+
+var entryView = initEntryView();
+initContourDisplayControls();
+
 ws.addWsHandler(handleWsSmokeLayerMessages); // filters out other
-
-//if (config.smokelayer.render) processRenderOpts(config.smokelayer.render);
-
-uiCesium.initLayerPanel("smokelayer", config.smokelayer, showSmokeLayer);
-console.log("ui_cesium_smokelayer initialized");
+//setupEventListeners(); // what is an event listener?
 
 //--- end module init
+// add clear or ui reset, widget for moving through list controls
 
 function initWindow() {
     createIcon();
     createWindow();
-//
-//    entryView = initEntryView();
-//    objectView = ui.getKvTable("smokelayer.object");
+    console.log("ui_cesium_smokelayer initialized");
 }
 
-//ui.registerLoadFunction(function initialize() {
-//    sourceView = initSourceView();
-//    objectView = ui.getKvTable("smokelayer.object");
-//
-//    uiCesium.setEntitySelectionHandler(smokeLayerSelection);
-//    ws.addWsHandler(handleWsSmokeLayerMessages); // filters out other
-//
-//    if (config.geolayer.render) processRenderOpts(config.smokelayer.render);
-//
-//    uiCesium.initLayerPanel("smoke", config.smokelayer, showSmokeLayer);
-//    console.log("ui_cesium_smokelayer initialized");
-//});
-
 function createIcon() {
+    console.log("created smoke icon");
     return ui.Icon("smoke-icon.svg", (e)=> ui.toggleWindow(e,'smoke'));
 }
 
@@ -64,39 +183,44 @@ function initEntryView() {
     let view = ui.getList("smokelayer.entries");
     if (view) {
         ui.setListItemDisplayColumns(view, ["header"], [
-            { name: "date", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalDateString(e.source.date)},
-            { name: "objs", tip: "number of loaded objects", width: "5rem", attrs: ["fixed", "alignRight"], map: e => e.nEntities ? e.nEntities : ""},
-            ui.listItemSpacerColumn(),
-            { name: "show", tip: "toggle visibility", width: "2.1rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSource) }
+            { name: "type", tip: "type of entry", width: "5rem", attrs: [], map: e => e.type },
+            { name: "sat", tip: "name of satellite", width: "3rem", attrs: [], map: e => e.satellite },
+            { name: "date", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.date)},
         ]);
     }
     return view;
 }
 
 function createWindow() {
-    return ui.Window("Smoke and Cloud", "smoke", "smoke-icon.svg")(
-        ui.Panel("Smoke Contour Display")(
-                ui.Slider("stroke width", "smoke.contour.stroke_width", contourStrokeWidthChanged),
-                ui.ColorField("stroke color", "smoke.contour.stroke_color", true, contourStrokeColorChanged),
-                ui.ColorField("p<0.2", "smoke.contour.color0", true, contourFillColorChanged),
-                ui.ColorField("0.2<p<0.4", "smoke.contour.color1", true, contourFillColorChanged),
-                ui.ColorField("0.4<p<0.6", "smoke.contour.color2", true, contourFillColorChanged),
-                ui.ColorField("0.6<p<0.8", "smoke.contour.color3", true, contourFillColorChanged),
-                ui.ColorField("0.8<p", "smoke.contour.color4", true, contourFillColorChanged)
+    return ui.Window("Smoke and Cloud Layers", "smoke", "smoke-icon.svg")(
+        ui.Panel("Data Selection", true)(
+            ui.RowContainer()(
+                ui.CheckBox("show smoke", selectSmokeEntries, "smoke.showSmoke"), // label, function on click, value to follow
+                ui.CheckBox("show cloud", selectCloudEntries, "smoke.showCloud"),
+            ),
+            ui.RowContainer()(
+                ui.CheckBox("follow latest", toggleFollowLatest, "smoke.followLatest"),
+                ui.HorizontalSpacer(2),
+                ui.CheckBox("G16", selectSatellite, "smoke.G16"),
+                ui.CheckBox("G17", selectSatellite, "smoke.G17"),
+                ui.CheckBox("G18", selectSatellite, "smoke.G18"),
+            ),
+            ui.List("smokelayer.entries", 6, selectSmokeCloudEntry)
         ),
-        ui.Panel("Cloud Contour Display")(
+        ui.Panel("Contour Display")(
                 ui.Slider("stroke width", "smoke.contour.stroke_width", contourStrokeWidthChanged),
                 ui.ColorField("stroke color", "smoke.contour.stroke_color", true, contourStrokeColorChanged),
-                ui.ColorField("p<0.2", "smoke.contour.color0", true, contourFillColorChanged),
-                ui.ColorField("0.2<p<0.4", "smoke.contour.color1", true, contourFillColorChanged),
-                ui.ColorField("0.4<p<0.6", "smoke.contour.color2", true, contourFillColorChanged),
-                ui.ColorField("0.6<p<0.8", "smoke.contour.color3", true, contourFillColorChanged),
-                ui.ColorField("0.8<p", "smoke.contour.color4", true, contourFillColorChanged)
+                ui.ColorField("0<p<0.25", "smoke.contour.color0", true, contourFillColorChanged),
+                ui.ColorField("0.25<p<0.5", "smoke.contour.color1", true, contourFillColorChanged),
+                ui.ColorField("0.5<p<0.75", "smoke.contour.color2", true, contourFillColorChanged),
+                ui.ColorField("0.75<p<1", "smoke.contour.color3", true, contourFillColorChanged),
+                ui.ColorField("p=1", "smoke.contour.color4", true, contourFillColorChanged)
         ),
     );
  }
 
- function initContourDisplayControls() {
+
+ function initContourDisplayControls() { // add alpha channel
      var e = undefined;
 
      e = ui.getSlider("smoke.contour.stroke_width");
@@ -105,49 +229,89 @@ function createWindow() {
 
      e = ui.getField("smoke.contour.stroke_color");
      ui.setField(e, defaultContourRender.strokeColor.toCssHexString());
-
+     console.log("initiated controls");
      for (var i = 0; i<defaultContourRender.fillColors.length; i++) {
-         e = ui.getField(`wind.contour.color${i}`);
+         e = ui.getField(`smoke.contour.color${i}`);
+         console.log(e);
+         console.log(i);
          if (e) {
              ui.setField(e, defaultContourRender.fillColors[i].toCssHexString());
          }
      }
  }
 
-function showSmokeLayer(cond) {
-    sources.forEach( src=> {
-        if (src.dataSource) src.dataSource.show = cond;
-    });
-    uiCesium.requestRender();
+//--- contour controls - request redraw after
+
+function contourStrokeWidthChanged(event) {
+
 }
 
-async function loadSource(sourceEntry) {
-    let url = "smokelayer-data/" + sourceEntry.source.pathName;
+function contourStrokeColorChanged(event) {
 
-    fetch(url).then( (response) => {
-        if (response.ok) {
-            let data = response.json();
-            if (data) {
-                let renderOpts = collectRenderOpts(sourceEntry);
-                Cesium.GeoJsonDataSource.load(data, renderOpts).then( (ds) => {
-                    ds.show = true;
-                    sourceEntry.dataSource = ds;
-                    postProcessDataSource(sourceEntry, renderOpts);
-                    sourceEntry.nEntities = ds.entities.values.length;
-                    ui.updateListItem(sourceView, sourceEntry);
+}
 
-                    uiCesium.addDataSource(ds);
+function contourFillColorChanged(event) {
 
-                    console.log("loaded ", url);
-                    setTimeout( () => { uiCesium.requestRender(); }, 500);  // not showing if immediate request ?
-                });
-            } else console.log("no data for request: ", url);
-        } else console.log("request failed: ", url);
-    }, (reason) => console.log("failed to retrieve: ", url, ", reason: ", reason));
+}
+
+// look into distance display conditions, display according zoom
+
+// interactions - behavior for clicking boxes and filtering entries
+
+function toggleFollowLatest(event) {
+    followLatest = ui.isCheckBoxSelected(event.target);
+    if (followLatest && ui.getSelectedListItemIndex(entryView) != 0) {
+        ui.selectFirstListItem(entryView);
+    }
+}
+
+function selectSmokeCloudEntry(event) { // does this need update display panel and set visible?
+    selectedEntry = ui.getSelectedListItem(entryView);
+    if (selectedEntry) selectedEntry.SetVisible(true);//.updateDisplayPanel(); // probably not needed for this case
+}
+
+function selectCloudEntries(event) {
+    if (ui.isCheckBoxSelected(event.target)){
+        if (!selectedType.includes("cloud")) selectedType.push("cloud");
+    }
+    else {
+        var index = selectedType.indexOf("cloud");
+        if (index > -1) {
+            selectedType.splice(index, 1);
+        }
+    }
+    updateEntryView();
+}
+
+function selectSatellite(event) {
+    let cb = ui.getCheckBox(event.target);
+    let satName = ui.getCheckBoxLabel(cb)
+    if (ui.isCheckBoxSelected(event.target)){
+        if (!selectedSat.includes(satName)) selectedSat.push(satName);
+    }
+    else {
+        var index = selectedSat.indexOf(satName);
+        if (index > -1) {
+            selectedSat.splice(index, 1);
+        }
+    }
+    updateEntryView();
+}
+
+function selectSmokeEntries(event) {
+    if (ui.isCheckBoxSelected(event.target)){
+            if (!selectedType.includes("smoke")) selectedType.push("smoke");
+        }
+    else {
+        var index = selectedType.indexOf("smoke");
+        if (index > -1) {
+            selectedType.splice(index, 1);
+        }
+    }
+    updateEntryView();
 }
 
 // websocket messages
-function smokeLayerSelection() {}
 
 function handleWsSmokeLayerMessages(msgType, msg) {
     switch (msgType) {
@@ -160,6 +324,20 @@ function handleWsSmokeLayerMessages(msgType, msg) {
 }
 
 function handleSmokeLayerMessage(smokeLayer) {
-    let se = SmokeEntry.create(smokeLayer);
-    smokeEntries.set(smokeLayer.url, we);
+    let se = SmokeCloudEntry.create(smokeLayer);
+    smokeCloudEntries.set(smokeLayer.url, se);
+    if (isSelected(se)) updateEntryView();
+    if (followLatest) {
+            ui.selectFirstListItem(entryView)
+    }
+}
+
+function updateEntryView() {
+    displayEntries = util.filterMapValues(smokeCloudEntries, se=> isSelected(se));
+    displayEntries.sort(SmokeCloudEntry.compareFiltered);
+    ui.setListItems(entryView, displayEntries);
+}
+
+function isSelected (se) {
+    return (selectedType.includes(se.type) && selectedSat.includes(se.satellite));
 }

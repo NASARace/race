@@ -22,10 +22,10 @@ import scala.collection.mutable
 
 // define default contours
 
-class DefaultContourRendering (conf: Config) {
+class DefaultContourRenderingS (conf: Config) {
   val strokeWidth = conf.getDoubleOrElse("stroke-width", 1.5)
   val strokeColor = conf.getStringOrElse( "stroke-color", "grey")
-  val fillColors = conf.getNonEmptyStringsOrElse( "fill-color", Array( "#f0000010", "#f0000040", "#f0000080", "#f00000c0", "#f00000f0")) //update colors
+  val fillColors = conf.getNonEmptyStringsOrElse( "fill-color", Array("#ffffff", "#bfbfbf", "#808080", "#404040", "#000000"))//"e6e6e6", "808080", "404040"))//"#f0000010", "#f0000040", "#f0000080", "#f00000c0", "#f00000f0")) //update colors
 
   def jsFillColors: String = {
     StringUtils.mkString( fillColors, "[",",","]")( clr=> s"Cesium.Color.fromCssColorString('$clr')")
@@ -41,10 +41,10 @@ object SmokeLayerService {
 import SmokeLayerService._
 
 
-trait SmokeLayerService extends CesiumRoute with FileServerRoute with PushWSRaceRoute with CachedFileAssetRoute with PipedRaceDataClient with JsonProducer{
+trait SmokeLayerService extends CesiumService with FileServerRoute with PushWSRaceRoute with CachedFileAssetRoute with PipedRaceDataClient with JsonProducer{
   case class SmokeLayer (sla: SmokeAvailable) {
     // this serves as the resource name and also a unique key (note we don't include baseDate as newer entries should take precedence)
-    val urlName = f"${sla.satellite}-${sla.date.format_yMd_Hms_z}" // need hour
+    val urlName = f"${sla.scType}-${sla.satellite}-${sla.date.format_yMd_Hms_z}"
     val json = sla.toJsonWithUrl(s"smoke-data/$urlName")
   }
 
@@ -67,7 +67,6 @@ trait SmokeLayerService extends CesiumRoute with FileServerRoute with PushWSRace
 
   //--- route
   def smokeRoute: Route = {
-    println("in smokeRoute")
     get {
       pathPrefix("smoke-data" ~ Slash) {
         extractUnmatchedPath { p =>
@@ -114,11 +113,12 @@ trait SmokeLayerService extends CesiumRoute with FileServerRoute with PushWSRace
 
   def smokeLayerConfig(requestUri: Uri, remoteAddr: InetSocketAddress): String = {
     val cfg = config.getConfig("smokelayer")
-    val defaultContourRendering = new DefaultContourRendering(cfg.getConfigOrElse("contour.render", NoConfig))
+    val defaultContourRenderingS = new DefaultContourRenderingS(cfg.getConfigOrElse("contour.render", NoConfig))
 
     s"""
 export const smokelayer = {
-  contourRender: ${defaultContourRendering.toJsObject}
+  contourRender: ${defaultContourRenderingS.toJsObject},
+  followLatest: ${cfg.getBooleanOrElse("follow-latest", true)}
 };"""
   }
 }
@@ -126,4 +126,4 @@ export const smokelayer = {
 /**
   * a single page application that processes wind channels
   */
-class CesiumSmokeApp(val parent: ParentActor, val config: Config) extends DocumentRoute with SmokeLayerService with ImageryLayerRoute
+class CesiumSmokeApp(val parent: ParentActor, val config: Config) extends DocumentRoute with SmokeLayerService with ImageryLayerService
