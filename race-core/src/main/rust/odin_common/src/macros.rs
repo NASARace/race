@@ -31,16 +31,16 @@
 /// ...
 /// // purely for side effects
 /// if_let! {
-///     Some(a) = { p },         // binds 'a'
-///     Ok(b) = { foo(a) } => {  // not evaluated of first match clause fails
+///     Some(a) = p;         // binds 'a'
+///     Ok(b) = foo(a) => {  // not evaluated of first match clause fails
 ///         println!("a={}, b={}", a,b);
 ///     }
 /// };
 ///
 /// // expression with per-clause short-circuits
 /// let r = if_let! {
-///     Some(a) = { p.or(q) } ? { println!("neither p nor q"); 1 },
-///     Ok(b)   = { foo(a) }  ? { println!("wrong result"); 2 } => {
+///     Some(a) = p.or(q) , { println!("neither p nor q"); 1 };
+///     Ok(b)   = foo(a)  , { println!("wrong result"); 2 } => {
 ///         println!("a={}, b={}", a,b); 3
 ///     }
 ///  };
@@ -57,54 +57,53 @@
 ///     println!("neither p nor q"); 1
 /// }
 /// ```
+#[macro_export]
 macro_rules! if_let {
-    {$p:pat = $x:block $(? $e:block)? => $r:block} =>
-    { if let $p=$x $r $(else $e)? };
-
-    {$p1:pat = $x1:block  $(? $e1:block)?,
-     $p2:pat = $x2:block  $(? $e2:block)? => $r:block}  =>
-    { if let $p1=$x1 {
-        if let $p2=$x2 $r $(else $e2)?
-      } $(else $e1)?
+    { $p:pat = $x:expr $(, $e:expr)? => $r:expr } =>
+    {
+        if let $p = $x { $r } $(else { $e })?
     };
 
-    {$p1:pat = $x1:block  $(? $e1:block)?,
-     $p2:pat = $x2:block  $(? $e2:block)?,
-     $p3:pat = $x3:block  $(? $e3:block)? => $r:block}  =>
-    { if let $p1=$x1 {
-        if let $p2=$x2 {
-            if let $p3=$x3 $r $(else $e3)?
-        } $(else $e2)?
-      } $(else $e1)?
+    { $p:pat = $x:expr , $i:ident => $e:expr => $r:expr } =>
+    {
+        match $x {
+            $p => { $r }
+            $i => { $e }
+        }
     };
 
-    {$p1:pat = $x1:block  $(? $e1:block)?,
-     $p2:pat = $x2:block  $(? $e2:block)?,
-     $p3:pat = $x3:block  $(? $e3:block)?,
-     $p4:pat = $x4:block  $(? $e4:block)? => $r:block}  =>
-    { if let $p1=$x1 {
-        if let $p2=$x2 {
-            if let $p3=$x3 {
-                if let $p4=$x4 $r $(else $e4)?
-            } $(else $e3)?
-        } $(else $e2)?
-      } $(else $e1)?
+    { $p:pat = $x:expr $(, $e:expr)? ; $($ts:tt)+ } =>
+    {
+        if let $p = $x {
+            if_let! { $($ts)+ }
+        } $(else { $e })?
     };
 
-    {$p1:pat = $x1:block  $(? $e1:block)?,
-     $p2:pat = $x2:block  $(? $e2:block)?,
-     $p3:pat = $x3:block  $(? $e3:block)?,
-     $p4:pat = $x4:block  $(? $e4:block)?,
-     $p5:pat = $x5:block  $(? $e5:block)? => $r:block}  =>
-    { if let $p1=$x1 {
-        if let $p2=$x2 {
-            if let $p3=$x3 {
-                if let $p4=$x4 {
-                    if let $p5=$x5 $r $(else $e5)?
-                } $(else $e4)?
-            } $(else $e3)?
-        } $(else $e2)?
-      } $(else $e1)?
-    };
-  //... and possibly more to follow
+    { $p:pat = $x:expr , $i:ident => $e:expr ; $($ts:tt)+ } =>
+    {
+        match $x {
+            $p => { if_let! { $($ts)+ } }
+            $i => { $e }
+        }
+    }
 }
+pub use if_let; // preserve 'macros' module across crates
+
+/// syntactic sugar for "format!(...).as_str()" - can only be used for arguments, not to bind variables
+#[macro_export]
+macro_rules! str {
+    ( $fmt:literal, $($arg:expr),* ) =>
+    {
+        format!($fmt,$($arg),*).as_str()
+    }
+}
+pub use str;
+
+#[macro_export]
+macro_rules! io_error {
+    ( $kind:expr, $fmt:literal, $($arg:expr)* ) =>
+    {
+        io::Error::new( $kind, format!($fmt,$($arg),*).as_str())
+    }
+}
+pub use io_error;

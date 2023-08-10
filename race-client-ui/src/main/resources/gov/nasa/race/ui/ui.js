@@ -2082,7 +2082,7 @@ function _setListItem(e, ie, item) {
     if (ie.childElementCount > 0) {
         _setSubItemsOf(ie, item);
     } else {
-        ie.innerText = e._uiMapFunc(item);
+        ie.innerText = e._uiMapFunc(item,ie);
     }
     ie._uiItem = item;
     e._uiItemMap.set(item, ie);
@@ -3050,6 +3050,16 @@ function _nthChildOf(element, n) {
         c = c.nextElementSibling;
     }
     return undefined;
+}
+
+function indexOfElement (e) {
+    let idx = 0;
+    while (e.previousElementSibling) {
+        idx++;
+        e = e.previousElementSibling;
+    }
+
+    return idx;
 }
 
 function _removeLastNchildrenOf(element, n) {

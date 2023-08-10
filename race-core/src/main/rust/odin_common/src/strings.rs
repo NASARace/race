@@ -30,6 +30,56 @@ pub fn mk_string<T: Display> (it: std::slice::Iter<'_,T>, delim: &str) -> Result
     Ok(s)
 }
 
+/// does a str have mixed lower and upper case chars
+pub fn is_mixed_case (s:&str) -> bool {
+    let mut has_upper = false;
+    let mut has_lower = false;
+
+    for s in s.chars() {
+        if s.is_uppercase() {
+            if has_lower { return true; }
+            has_upper = true;
+        } else {
+            if has_upper { return true; }
+            has_lower = true;
+        }
+    }
+    false
+}
+
+/// does a str start with an uppercase char that is followed by a lowercase char (if any)
+pub fn is_capitalized(s: &str) -> bool {
+    if s.len() > 1 {
+        let mut it = s.chars();
+        it.next().unwrap().is_uppercase() && it.next().unwrap().is_lowercase()
+    } else if !s.is_empty() {
+        s.chars().next().unwrap().is_uppercase()
+    } else {
+        false
+    }
+}
+
+/// return a new String that turns the first char of a given ascii str into uppercase and the rest into lowercase
+pub fn ascii_capitalize(s: &str) -> String {
+    if s.len() > 1 {
+        let mut is_first = true;
+        let cs = s.chars();
+        cs.map(|c| {
+            if is_first {
+                is_first = false;
+                c.to_ascii_uppercase()
+            } else {
+                c.to_ascii_lowercase()
+            }
+        }).collect::<String>()
+
+    } else if !s.is_empty() {
+        s.to_uppercase()
+    } else {
+        String::new()
+    }
+}
+
 /// turn a str with char separated values into a Vec<String>
 pub fn parse_string_vec (s: &str, delim: char) -> Vec<String> {
     s.split(delim).map(|x| x.trim().to_string()).collect()

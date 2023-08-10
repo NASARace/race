@@ -25,4 +25,4 @@ serde_derive = "1.0.167"
 ron = "0.8.0"
 
 # our ODIN crates
-odin_common = { path = "../../../../../race-core/src/main/rust/odin-common" }
+odin_common = { path = "../odin_common" }

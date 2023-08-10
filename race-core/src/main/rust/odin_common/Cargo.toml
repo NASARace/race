@@ -1,5 +1,5 @@
 [package]
-name = "odin-common"
+name = "odin_common"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.26"
+serde = "1.0.183"
