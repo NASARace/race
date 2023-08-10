@@ -9,6 +9,9 @@ import tensorflow as tf
 import random
 import math
 import os
+from tensorflow.python.ops.numpy_ops import np_config
+
+np_config.enable_numpy_behavior()
 gdal.SetConfigOption("GTIFF_SRS_SOURCE", "GEOKEYS")
 
 def convert_mask_to_colors(mask):
@@ -90,6 +93,27 @@ def get_segmented_tif(original_tif, mask, output_path):
     output_tif.FlushCache() ##saves to disk
     return output_tif
 
+def get_segmeneted_mutiband_tif(original_tif, mask, output_path):
+    driver = gdal.GetDriverByName("GTiff")
+    mask = mask.reshape(mask.shape[:2])
+    [rows, cols] = mask.shape
+    output_tif= driver.Create(output_path, cols, rows, 2, gdal.GDT_Byte)
+    output_tif.SetGeoTransform(original_tif.GetGeoTransform())##sets same geotransform as input
+    output_tif.SetProjection(original_tif.GetProjection())##sets same projection as input
+    new_metadata = {'0': 'no smoke no clouds', '1': 'smoke', '2': 'cloud'}
+    new_metadata.update(original_tif.GetMetadata())
+    output_tif.SetMetadata(new_metadata)##sets same metadata as input and adds key for interpreting segmetation mask
+    smoke_mask = np.zeros(mask.shape)
+    smoke_mask[np.where(mask==1)] = 1
+    cloud_mask = np.zeros(mask.shape)
+    cloud_mask[np.where(mask==2)] = 2
+    output_tif.GetRasterBand(1).WriteArray(smoke_mask)
+    output_tif.GetRasterBand(1).SetNoDataValue(0)
+    output_tif.GetRasterBand(2).WriteArray(cloud_mask)
+    output_tif.GetRasterBand(2).SetNoDataValue(0)
+    output_tif.FlushCache() ##saves to disk
+    return output_tif
+
 def get_probability_tif(original_tif, probabilities, output_path):
     driver = gdal.GetDriverByName("GTiff")
     [rows, cols, layers] = probabilities.shape
@@ -97,7 +121,7 @@ def get_probability_tif(original_tif, probabilities, output_path):
     output_tif.SetGeoTransform(original_tif.GetGeoTransform())##sets same geotransform as input
     output_tif.SetProjection(original_tif.GetProjection())##sets same projection as input
     new_metadata = {"1": "no smoke no clouds", "2": "smoke", "3": "cloud"}
-    new_metadata.update(original_tif.GetMetadata())
+    #new_metadata.update(original_tif.GetMetadata())
     output_tif.SetMetadata(new_metadata)##sets same metadata as input and adds key for interpreting segmetation mask
     output_tif.GetRasterBand(1).WriteArray(probabilities[:, :, 0])
     output_tif.GetRasterBand(2).WriteArray(probabilities[:, :, 1])
@@ -130,6 +154,7 @@ def smoke_segmentation_raw(tif_dataset, segmentation_model, target_shape, output
     pred_mask = create_mask(pred_reshaped)
     #plot_output([image], [pred_mask], create_mask_=False)
     output_tif = get_probability_tif(tif_dataset, pred_reshaped, output_path)
+    #output_tif = get_segmeneted_mutiband_tif(tif_dataset, pred_mask, output_path)
     return output_tif, [output_path]
 
 def smoke_segmentation(tif_dataset, segmentation_model, target_shape, output_path, tile=True, plot=False, separate_layers=False, overlap=0):

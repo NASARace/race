@@ -36,11 +36,9 @@ def predict():
     elif request.method == 'POST':
         # check if the post request has the file part
         if 'file' not in request.files:
-            print('No file part, using data')
             with open(os.path.join(UPLOAD_FOLDER, "temp.tif"), "wb") as f:
                 f.write(request.data)
             file_path = os.path.join(UPLOAD_FOLDER, "temp.tif")
-            #return redirect(request.url)
         else:
             file = request.files['file']
             filename = file.filename
@@ -71,7 +69,6 @@ def predict():
         
             data["success"] = True
             data["output"] = output_paths
-            print("Ran Prediction")
             return send_file(output_paths[0], mimetype='image/tiff', as_attachment=True)
     else: #input file is not a tif, jpg, or png
         abort(400) 
