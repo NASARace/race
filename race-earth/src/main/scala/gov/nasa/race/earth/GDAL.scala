@@ -325,4 +325,5 @@ class GdalContour (val prog: File) extends GdalFileCreatorCommand {
   def setAttrMinName (name: String): this.type = addArg( s"-amin $name")
   def setAttrMaxName (name: String): this.type = addArg(s"-amax $name")
   def setPolygon(): this.type = addArg("-p")
+  def setExponent(base: Int): this.type = addArg( s"-e $base")
 }
