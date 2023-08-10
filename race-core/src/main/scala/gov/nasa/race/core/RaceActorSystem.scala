@@ -105,7 +105,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
   protected var status = Initializing
   val name = config.getString("name")
   val system = createActorSystem(name, config)
-  implicit val log = getLoggingAdapter(system)
+  implicit val log: LoggingAdapter = getLoggingAdapter(system)
   val classLoader = ClassLoaderUtils.setRaceClassloader(system, config.getOptionalString("classpath"))
   val bus = createBus(system)
 

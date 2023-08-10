@@ -20,7 +20,6 @@ import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{BusEvent, ContinuousTimeRaceActor, PublishingRaceActor, RaceActor, SubscribingRaceActor}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.util.FileUtils
-
 import akka.actor.ActorRef
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpEntity, HttpHeader, HttpMethod, HttpMethods, HttpRequest, HttpResponse, RequestEntity}
@@ -29,7 +28,7 @@ import akka.stream.{BufferOverflowException, Materializer}
 import com.typesafe.config.Config
 
 import java.io.{File, FileOutputStream}
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -55,7 +54,7 @@ trait HttpActor extends RaceActor {
 
   // we might get ambiguities if those are public or protected
   private implicit val materializer: Materializer = Materializer.matFromSystem(context.system)
-  private implicit val executionContext = scala.concurrent.ExecutionContext.global
+  private implicit val executionContext: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
   private val http = Http(context.system)
 
   def timeoutConnectionSettings(timeout: FiniteDuration): ConnectionPoolSettings = {

@@ -27,7 +27,7 @@ import gov.nasa.race.uom.Area.{squareMetersInAcre, squareMetersInSquareMile}
   * TODO - still needs lots of conversions
   */
 object Area {
-  final implicit val εArea = SquareMeters(1e-10)
+  final implicit val εArea: Area = SquareMeters(1e-10)
 
   final val UndefinedArea = new Area(Double.NaN)
   final val Area0 = new Area(0.0)

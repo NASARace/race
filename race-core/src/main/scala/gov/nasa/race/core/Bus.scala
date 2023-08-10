@@ -18,7 +18,7 @@
 package gov.nasa.race.core
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.event.{ActorEventBus, Logging, SubchannelClassification}
+import akka.event.{ActorEventBus, Logging, LoggingAdapter, SubchannelClassification}
 import akka.util.Subclassification
 
 import scala.collection.concurrent.{TrieMap, Map => CMap}
@@ -69,7 +69,7 @@ class Bus (val system: ActorSystem) extends ActorEventBus with SubchannelClassif
   type Event = ChannelMessage // (selector,payload,sender) - <2do> do we need a common event payload type?
   type Classifier = String
 
-  implicit val log = Logging(system, this.getClass)
+  implicit val log: LoggingAdapter = Logging(system, this.getClass)
 
   // SubChannelClassification.subscriptions is unfortunately private
   protected val channelSubscriptions: CMap[Classifier,Set[ActorRef]] = TrieMap.empty

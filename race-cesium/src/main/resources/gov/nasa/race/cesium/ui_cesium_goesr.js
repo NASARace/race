@@ -85,8 +85,8 @@ function createWindow() {
                 ui.CheckBox("G17", toggleShowGoesrSatellite, "goesr.G17"),
                 ui.CheckBox("G18", toggleShowGoesrSatellite, "goesr.G18"),
             ),
-                ui.List("goesr.dataSets", 6, selectGoesrDataSet),
-          ui.ListControls("goesr.dataSets")
+            ui.List("goesr.dataSets", 6, selectGoesrDataSet),
+            ui.ListControls("goesr.dataSets")
         ),
         ui.Panel("hotspots", true)(
             ui.List("goesr.hotspots", 8, selectGoesrHotspot, null,null, zoomToGoesrHotspot),

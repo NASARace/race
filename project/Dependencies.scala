@@ -46,8 +46,8 @@ object Dependencies {
   val typesafeConfig = "com.typesafe" % "config" % "1.4.2"  // akka still depends on 1.3.3
 
   //--- Scala parser combinators (https://github.com/scala/scala-parser-combinators)
-  //val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.2.0-RC2" // "2.1.1" collides with typesafe:ssl-config-core
-  val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "2.3.0"
+  val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.2.0-RC2" // "2.1.1" collides with typesafe:ssl-config-core
+  //val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "2.3.0"
 
   //--- new scala reflection (TypeTags etc.)
   val scalaReflect =  "org.scala-lang" % "scala-reflect" % CommonRaceSettings.scalaVer
@@ -197,7 +197,8 @@ val kafkaVersion = "3.1.0"
   val jakartaMail = "com.sun.mail" % "jakarta.mail" % "2.0.1"
 
   //--- AWS SDK
-  val awsS3 = "software.amazon.awssdk" % "s3" % "2.19.8"
+  val awsS3 = "software.amazon.awssdk" % "s3" % "2.20.115"
+  //val awsS3 = "software.amazon.awssdk" % "s3" % "2.19.8"
   //val awsS3 = "software.amazon.awssdk" % "s3" % "1.12.376"
   
 
@@ -241,7 +242,7 @@ val kafkaVersion = "3.1.0"
   val raceDependencyOverrides = Seq(
 
     // resolves a conflict on scala-parser-combinators which we get from various Akka dependencies on com.typesafe:ssl-config-core
-    scalaParser
+    //scalaParser
   )
 
   //val sonatypeNexusSnapshots = "Sonatype Nexus Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots" // squants

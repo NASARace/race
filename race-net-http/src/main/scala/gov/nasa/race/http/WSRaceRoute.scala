@@ -29,6 +29,7 @@ import scalatags.Text.all._
 import java.net.InetSocketAddress
 import scala.collection.immutable.Iterable
 import scala.collection.mutable.{Map => MutMap}
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 sealed trait WSContext {
@@ -47,7 +48,7 @@ case class AuthWSContext (sockConn: SocketConnection, sessionToken: String) exte
   */
 trait WSRaceRoute extends RaceRouteInfo with ConfigScriptRoute with CachedFileAssetRoute {
   implicit val materializer: Materializer = HttpServer.materializer
-  implicit val ec = HttpServer.ec // scala.concurrent.ExecutionContext.global
+  implicit val ec: ExecutionContext = HttpServer.ec // scala.concurrent.ExecutionContext.global
 
   override def getHeaderFragments: Seq[Text.TypedTag[String]] = super.getHeaderFragments ++ Seq(
     addJsModule("ws.js")

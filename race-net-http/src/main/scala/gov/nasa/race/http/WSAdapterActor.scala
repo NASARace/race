@@ -31,7 +31,7 @@ import gov.nasa.race.core.BusEvent
 import gov.nasa.race.core.SubscribingRaceActor
 
 import scala.collection.mutable.{Map => MutMap}
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
@@ -96,7 +96,7 @@ trait WSAdapterActor extends FilteringPublisher with SubscribingRaceActor
   case class WsProcessIncomingData(data: Array[Byte], f: (Array[Byte])=>Unit)
 
   implicit val materializer: Materializer = Materializer.matFromSystem(context.system) // ?? do we want a shared materializer
-  private implicit val executionContext = scala.concurrent.ExecutionContext.global
+  private implicit val executionContext: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
   protected val maxIncomingTimeout: FiniteDuration = config.getFiniteDurationOrElse("max-incoming-timeout", 5.seconds)
   private val http = Http(context.system)
 

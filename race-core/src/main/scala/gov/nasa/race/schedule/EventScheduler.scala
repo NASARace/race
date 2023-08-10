@@ -45,10 +45,10 @@ object SchedulerEvent {
   def after(after: Time)(action: => Any) = new RelSchedulerEvent(after,action)
   def at(when: DateTime)(action: => Any) = new AbsSchedulerEvent(when,action)
 
-  implicit val relOrdering = new Ordering[RelSchedulerEvent] {
+  implicit val relOrdering: Ordering[RelSchedulerEvent] = new Ordering[RelSchedulerEvent] {
     def compare (a: RelSchedulerEvent, b: RelSchedulerEvent): Int = b.after.compare(a.after)
   }
-  implicit val absOrdering = new Ordering[AbsSchedulerEvent] {
+  implicit val absOrdering: Ordering[AbsSchedulerEvent] = new Ordering[AbsSchedulerEvent] {
     def compare (a: AbsSchedulerEvent, b: AbsSchedulerEvent): Int = b.when.compare(a.when)
   }
 }
