@@ -19,7 +19,7 @@ package gov.nasa.race.uom
 import gov.nasa.race.MaybeUndefined
 
 object Temperature {
-  final implicit val εTemperature = Kelvin(1e-9)
+  final implicit val εTemperature: Temperature = Kelvin(1e-9)
 
   final val UndefinedTemperature = new Temperature(Double.NaN)
   final val Temperature0 = Kelvin(0.0)

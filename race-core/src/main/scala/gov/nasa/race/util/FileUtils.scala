@@ -392,6 +392,7 @@ object FileUtils {
   class FileFinder (base: Path, matcher: PathMatcher) extends SimpleFileVisitor[Path] {
 
     def this (dir: String, globPattern: String) = this(getPath(dir),getGlobPathMatcher(dir,globPattern))
+    def this (dir: File, globPattern: String) = this(dir.toPath(),getGlobPathMatcher(dir.getPath,globPattern))
 
     var matches = Seq.empty[File]
     Files.walkFileTree(base, this)
@@ -449,6 +450,14 @@ object FileUtils {
 
   def getMatchingFilesIn(dir: String, pm: PathMatcher): Seq[File] = {
     new FileFinder(getPath(dir),pm).matches
+  }
+
+  def getMatchingFilesIn(dir: File, pm: PathMatcher): Seq[File] = {
+    new FileFinder(dir.toPath(),pm).matches
+  }
+
+  def getMatchingFilesIn(dir: File, globPattern: String): Seq[File] = {
+    new FileFinder(dir, globPattern).matches
   }
 
   def isGlobPattern(pattern: String): Boolean = {

@@ -39,7 +39,7 @@ object Speed {
   final val Speed0 = new Speed(0)
   final val UndefinedSpeed = new Speed(Double.NaN)
   @inline def isDefined(x: Speed): Boolean = !x.d.isNaN
-  final implicit val εSpeed = MetersPerSecond(1e-10)
+  final implicit val εSpeed: Speed = MetersPerSecond(1e-10)
 
   def fromVxVy(vx: Speed, vy: Speed) = new Speed(Math.sqrt(squared(vx.d) + squared(vy.d)))
 

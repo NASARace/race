@@ -360,9 +360,12 @@ function updateNow() { // periodic upcoming cleanup (if we didn't get matching h
 function updateSatEntryNext (satId) {
     let se = satEntry(satId);
     if (se) {
-        let nextUp = upcoming.find(e => e.satId == satId);
-        se.next = nextUp.lastDate;
-        ui.updateListItem(satelliteView, se);
+        let tNow = ui.getClockEpochMillis(utcClock);
+        let nextUp = upcoming.find(e => (e.satId == satId) && (e.lastDate > tNow));
+        if (nextUp) {
+            se.next = nextUp.lastDate;
+            ui.updateListItem(satelliteView, se);
+        }
     }
 }
 
@@ -602,6 +605,20 @@ function createPixelAssets(pixels) {
 
     if (geoms.length > 0) {
         // should be a GroundPrimitive but that renders incorrectly on macOS
+        hsFootprintPrimitive = new Cesium.Primitive({
+            geometryInstances: geoms,
+            allowPicking: false,
+            asynchronous: true,
+            releaseGeometryInstances: true,
+            
+            appearance: new Cesium.PerInstanceColorAppearance({
+                faceForward: true,
+                flat: true,
+                translucent: true,
+                //renderState: { depthTest: { enabled: false, } }, // this makes it appear always on top but translucent
+            }),
+        });
+        /* 
         hsFootprintPrimitive = new Cesium.GroundPrimitive({
             geometryInstances: geoms,
             allowPicking: false,
@@ -611,21 +628,8 @@ function createPixelAssets(pixels) {
             classificationType: Cesium.ClassificationType.BOTH,
 
             appearance: new Cesium.PerInstanceColorAppearance()
-           /*
-            appearance: new Cesium.PerInstanceColorAppearance({
-                faceForward: true,
-                flat: true,
-                //translucent: true,
-                //renderState: { depthTest: { enabled: false, } }, // this makes it appear always on top but translucent
-            }),
-            */
-            /*
-            appearance: new Cesium.MaterialAppearance({
-                material : Cesium.Material.fromType('Color'),
-                faceForward : true
-            })
-            */
-        });        
+        });
+        */        
         uiCesium.addPrimitive(hsFootprintPrimitive);
     }
 

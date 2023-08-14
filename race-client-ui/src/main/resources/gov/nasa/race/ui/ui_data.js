@@ -764,7 +764,7 @@ export function sortIn (list, e, compareFunc) {
     return list.length-1;
 }
 
-export function sortInUnique (list, e, compareFunc, replace=false) {
+export function sortInUnique (list, e, compareFunc = defaultCompare, replace = false) {
     for (let i=0; i<list.length; i++) {
         switch (compareFunc(list[i],e)) {
             case -1: continue;
@@ -780,4 +780,10 @@ export function sortInUnique (list, e, compareFunc, replace=false) {
 
     list.push(e);
     return list.length-1;
+}
+
+export function defaultCompare (a,b) {
+    if (a < b) return -1;
+    else if (a > b) return 1;
+    else return 0;
 }

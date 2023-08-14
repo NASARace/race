@@ -168,7 +168,7 @@ abstract class RaceActorSpec (tras: TestRaceActorSystem) extends TestKit(tras.sy
 
   def this() = this(new TestRaceActorSystem("TestRaceActor"))
 
-  implicit val timeout = Timeout(5.seconds)
+  implicit val timeout: Timeout = Timeout(5.seconds)
   def bus = tras.bus
 
   def ras: TestRaceActorSystem = tras

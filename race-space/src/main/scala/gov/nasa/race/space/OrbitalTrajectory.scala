@@ -118,6 +118,7 @@ class OrbitalTrajectory(val length: Int, val tStart: DateTime, val dt: Time) {
     var dl = dist2(i,p) - dist2(i-1,p)
     var dr = dist2(i+1,p) - dist2(i,p)
     var di = 0.0
+    var iLast = i
 
     while (signum(dl) == signum(dr)) {
       if (dr < 0) {  // bisect right
@@ -126,6 +127,8 @@ class OrbitalTrajectory(val length: Int, val tStart: DateTime, val dt: Time) {
         r = i
       }
       i = (l + r)/2
+      if (i == iLast) return i else iLast = i
+
       di = dist2(i,p)
       dl = di - dist2(i-1,p)
       dr = dist2(i+1,p) - di

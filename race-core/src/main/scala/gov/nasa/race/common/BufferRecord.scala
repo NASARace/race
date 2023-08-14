@@ -43,37 +43,37 @@ object BufferRecord {
   trait DoubleConvertible {
     def toDouble: Double
   }
-  implicit def toDouble (o: DoubleConvertible) = o.toDouble
+  implicit def toDouble (o: DoubleConvertible): Double = o.toDouble
 
   trait IntConvertible {
     def toInt: Int
   }
-  implicit def toInt (o: IntConvertible) = o.toInt
+  implicit def toInt (o: IntConvertible): Int = o.toInt
 
   trait LongConvertible {
     def toLong: Long
   }
-  implicit def toLong (o: LongConvertible) = o.toLong
+  implicit def toLong (o: LongConvertible): Long = o.toLong
 
   trait FloatConvertible {
     def toFloat: Float
   }
-  implicit def toFloat (o: FloatConvertible) = o.toFloat
+  implicit def toFloat (o: FloatConvertible): Float = o.toFloat
 
   trait ShortConvertible {
     def toShort: Short
   }
-  implicit def toShort (o: ShortConvertible) = o.toShort
+  implicit def toShort (o: ShortConvertible): Short = o.toShort
 
   trait ByteConvertible {
     def toByte: Byte
   }
-  implicit def toByte (o: ByteConvertible) = o.toByte
+  implicit def toByte (o: ByteConvertible): Byte = o.toByte
 
   trait BooleanConvertible {
     def toBoolean: Boolean
   }
-  implicit def toBoolean (o: BooleanConvertible) = o.toBoolean
+  implicit def toBoolean (o: BooleanConvertible): Boolean = o.toBoolean
 }
 
 /**

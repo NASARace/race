@@ -66,6 +66,7 @@ var layerHierarchyView = undefined;
 
 var mouseMoveHandlers = [];
 var mouseClickHandlers = [];
+var mouseDblClickHandlers = [];
 var terrainChangeHandlers = [];
 
 var homePosition = undefined;
@@ -142,6 +143,7 @@ viewer.camera.moveEnd.addEventListener(updateCamera);
 registerMouseMoveHandler(updateMouseLocation);
 viewer.scene.canvas.addEventListener('mousemove', handleMouseMove);
 viewer.scene.canvas.addEventListener('click', handleMouseClick);
+viewer.scene.canvas.addEventListener('dblclick', handleMouseDblClick);
 
 ws.addWsHandler(handleWsViewMessages);
 
@@ -164,6 +166,7 @@ export function postExec() {
 
     terrainProviderPromise = getTerrainProviderPromise();
     terrainProviderPromise.then( (tp) => { 
+        console.log("topoTerrainProvider set: ", tp);
         topoTerrainProvider = tp;
         console.log("topographic terrain loaded");
     });
@@ -848,12 +851,25 @@ export function releaseMouseClickHandler(handler) {
     if (idx >= 0) mouseClickHandlers.splice(idx,1);
 }
 
+export function registerMouseDblClickHandler(handler) {
+    mouseDblClickHandlers.push(handler);
+}
+
+export function releaseMouseDblClickHandler(handler) {
+    let idx = mouseDblClickHandlers.findIndex(h => h === handler);
+    if (idx >= 0) mouseDblClickHandlers.splice(idx,1);
+}
+
 function handleMouseMove(e) {
     mouseMoveHandlers.forEach( handler=> handler(e));
 }
 
 function handleMouseClick(e) {
     mouseClickHandlers.forEach( handler=> handler(e));
+}
+
+function handleMouseDblClick(e) {
+    mouseDblClickHandlers.forEach( handler=> handler(e));
 }
 
 function getCartographicMousePosition(e) {
@@ -864,6 +880,11 @@ function getCartographicMousePosition(e) {
     } else {
         return undefined;
     }
+}
+
+function getCartesian3MousePosition(e) {
+    var ellipsoid = viewer.scene.globe.ellipsoid;
+    return viewer.camera.pickEllipsoid(new Cesium.Cartesian3(e.clientX, e.clientY), ellipsoid);
 }
 
 var deferredMouseUpdate = undefined;
@@ -938,8 +959,8 @@ export function saveCamera() {
 
     // TODO - this should be triggered by a copy-to-clipboard button
     let spec = `{ lat: ${util.fmax_4.format(lastCamera.lat)}, lon: ${util.fmax_4.format(lastCamera.lon)}, alt: ${Math.round(lastCamera.alt)} }`;
-    navigator.clipboard.writeText(spec);  // this is still experimental in browsers and needs to be enabled explicitly for sec reasons
-    //console.log(spec);
+    //navigator.clipboard.writeText(spec);  // this is still experimental in browsers and needs to be enabled explicitly (for each doc?) for security reasons
+    console.log(spec);
 }
 
 export function zoomTo(cameraPos) {
@@ -1174,6 +1195,77 @@ export function pickSurfaceRectangle (callback) {
     registerMouseClickHandler(onClick);
 }
 
+export function pickSurfacePolyline (pointCallback,polylineCallback) {
+    let points = []; // Cartesian3 positions
+    let polyEntity = undefined;
+
+    function onMouseMove(event) {
+        let lastIdx = points.length-1;
+        if (lastIdx > 0) {
+            let p = getCartesian3MousePosition(event);
+            if (p) {
+                points[lastIdx] = p;
+                requestRender();
+            }
+        }
+    }
+
+    function onClick(event) {
+        if (event.detail == 2) { // double click -> terminate
+            event.preventDefault(); // Cesium likes to zoom in on double clicks
+
+            setDefaultCursor();
+            releaseMouseMoveHandler(onMouseMove);
+            releaseMouseClickHandler(onClick);
+    
+            if (polyEntity) {
+                viewer.entities.remove(polyEntity);
+            }
+    
+            if (points.length > 1) {
+                //let poly = points.map( p => Cesium.Cartographic.fromCartesian(p));
+                let poly = points.map( p=> cartesianToCartographicDegrees(p));
+                polylineCallback(poly);
+            }
+
+        } else if (event.detail == 1) {
+            let p = getCartesian3MousePosition(event);
+            if (p) { 
+                points.push( p);
+                points.push( p); // the moving one
+
+                if (!polyEntity) {
+                    polyEntity = new Cesium.Entity( {
+                        polyline: {
+                            positions: new Cesium.CallbackProperty( () => points, false),
+                            clampToGround: true,
+                            width: 2,
+                            material: Cesium.Color.RED
+                        },
+                        selectable: false
+                    });
+                    viewer.entities.add(polyEntity);
+                    requestRender();
+
+                    registerMouseMoveHandler(onMouseMove);
+                }
+
+                pointCallback( cartesianToCartographicDegrees(p));
+            }
+        }
+    }
+
+    setCursor("crosshair");
+    registerMouseClickHandler(onClick);
+}
+
+export function cartesianToCartographicDegrees (p) {
+    return cartographicToDegrees( Cesium.Cartographic.fromCartesian(p));
+}
+
+export function cartographicToDegrees (p) {
+    return { latitude: Cesium.Math.toDegrees(p.latitude), longitude: Cesium.Math.toDegrees(p.longitude), height: p.height };
+}
 
 export function cartesian3ArrayFromRadiansRect (rect, arr=null) {
     let a = arr ? arr : new Array(5);

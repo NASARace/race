@@ -27,7 +27,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 
 import java.net.InetSocketAddress
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import scala.collection.Seq
 import gov.nasa.race.config.ConfigUtils._
@@ -45,7 +45,7 @@ import gov.nasa.race.ifSome
 trait SSERaceRoute extends RaceRouteInfo {
 
   implicit val materializer: Materializer = HttpServer.materializer
-  implicit val ec = HttpServer.ec // we use the server execution context
+  implicit val ec: ExecutionContext = HttpServer.ec // we use the server execution context
 
   protected def promoteToStream(): Route
 

@@ -23,3 +23,6 @@ tempfile = "3"
 serde = "1.0.167"
 serde_derive = "1.0.167"
 ron = "0.8.0"
+
+# our ODIN crates
+odin_common = { path = "../odin_common" }

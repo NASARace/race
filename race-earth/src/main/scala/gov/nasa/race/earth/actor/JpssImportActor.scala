@@ -57,7 +57,8 @@ class JpssImportActor(val config: Config) extends JpssActor with HttpActor with 
   val tleMaxAge: Time = config.getFiniteDurationOrElse("tle-max-age", 4.hours)
   val requestDelays = nonEmptyArrayOrElse( config.getTimeSeq("request-delay").toArray)( Array( Minutes(5), Hours(2)))
 
-  val url = s"""https://firms.modaps.eosdis.nasa.gov/usfs/api/area/csv/$mapKey/$source/$queryBounds"""
+  val firmsServer = config.getStringOrElse("server", "https://firms.modaps.eosdis.nasa.gov")
+  val url = s"""$firmsServer/usfs/api/area/csv/$mapKey/$source/$queryBounds"""
   val firstUrl = s"$url/${history.toDays}"  // used only in first request to obtain history data
   val updateUrl = s"$url/1" // used for updates (unfortunately we can't specify a history < 1day)
 

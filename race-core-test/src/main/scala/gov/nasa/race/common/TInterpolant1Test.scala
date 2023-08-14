@@ -26,7 +26,7 @@ import gov.nasa.race.common.Nat.N1
 trait TInterpolant1Test {
 
   val ε: Double
-  implicit var checkError = true
+  implicit var checkError: Boolean = true
 
   def testPoint (ts: Array[Long], t: Int)
                 (f: (Long)=>Double)

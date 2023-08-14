@@ -16,31 +16,26 @@
  */
 package gov.nasa.race.cesium
 
-import akka.http.javadsl.model.headers.ContentEncoding
-import akka.http.scaladsl.coding.Coders
-import akka.http.scaladsl.model.headers.HttpEncoding
-import akka.http.scaladsl.model.{ContentType, HttpEntity, HttpHeader, MediaTypes, StatusCodes, Uri}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
-import com.typesafe.config.Config
-import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.model.{StatusCodes, Uri}
 import akka.http.scaladsl.server.Directives._
-import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
-import akka.util.ByteString
+import akka.http.scaladsl.server.Route
+import akka.stream.scaladsl.SourceQueueWithComplete
+import com.typesafe.config.Config
 import gov.nasa.race.cesium.GeoLayer.MODULE_PREFIX
 import gov.nasa.race.common.{JsonProducer, JsonSerializable, JsonWriter}
+import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.config.NoConfig
 import gov.nasa.race.core.ParentActor
-import gov.nasa.race.http.{DocumentRoute, FileServerRoute, ResponseData, WSContext}
+import gov.nasa.race.http.{DocumentRoute, FileServerRoute, WSContext}
 import gov.nasa.race.ifSome
-import gov.nasa.race.ui.{extModule, uiIcon, uiKvTable, uiList, uiPanel, uiTreeList, uiWindow}
+import gov.nasa.race.ui.extModule
 import gov.nasa.race.uom.DateTime
-import gov.nasa.race.util.{FileUtils, NetUtils}
+import gov.nasa.race.util.NetUtils
 import scalatags.Text
 
-import java.io.{File, FileInputStream, InputStream}
+import java.io.File
 import java.net.InetSocketAddress
-import java.util.zip.GZIPInputStream
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -136,7 +131,7 @@ object GeoLayerService {
   val jsModule = "ui_cesium_geolayer.js"
   val icon = "geomarker-icon.svg"
 }
-import GeoLayerService._
+import gov.nasa.race.cesium.GeoLayerService._
 
 /**
  * a route that serves configured GeoJSON content

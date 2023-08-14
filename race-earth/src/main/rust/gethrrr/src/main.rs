@@ -96,7 +96,7 @@ struct Opt {
 
     /// url pattern for directory listing of available forecast files
     #[structopt(long,default_value="https://nomads.ncep.noaa.gov/pub/data/nccf/com/hrrr/prod/hrrr.${yyyyMMdd}/conus/")]
-    hrrr_list_url: String, 
+    hrrr_dir_url: String, 
 
     /// directory to store downloaded HRRR forecast files
     #[structopt(long,default_value="hrrr")]
@@ -163,7 +163,6 @@ struct Opt {
     verbose: bool,
 }
 
-fn config_delay_minutes() -> &'static str { "2" }
 
 lazy_static! {
     #[derive(Debug)]
@@ -196,22 +195,7 @@ fn get_static_query() -> String {
 
 //--- arg utility funcs
 
-/// stringify iterator for Display elements with given delimiter without per-element allocation
-fn mk_string<T: Display> (it: std::slice::Iter<'_,T>, delim: &str) -> String {
-    it.fold(String::new(), |mut acc:String, x:&T| {
-        if !acc.is_empty() {acc.push_str(delim)}
-        write!(acc,"{}", x);
-        acc
-    })
-}
 
-fn parse_string_vec (s: &str, delim: char) -> Vec<String> {
-    s.split(delim).map(|x| x.trim().to_string()).collect()
-}
-
-fn parse_vec<T: FromStr> (s: &str, delim: char) -> Vec<T> where <T as FromStr>::Err: core::fmt::Debug {
-    s.split(delim).map( |x| x.trim().parse::<T>().unwrap()).collect()
-}
 
 //--- time utility funcs
 
@@ -255,14 +239,7 @@ async fn sleep_secs (secs: u32) {
     }
 }
 
-fn elapsed_minutes_since (base: &DateTime<Utc>) -> u32 {
-    let now = chrono::offset::Utc::now();
-    if now > *base {
-        (now - *base).num_minutes() as u32
-    } else {
-        0
-    }
-}
+
 
 async fn wait_for (minutes: u32) {
     if minutes > 0 {
@@ -280,29 +257,6 @@ async fn wait_for_schedule (base: &DateTime<Utc>, scheduled: u32) {
 
 //--- input validation
 
-fn check_output_dir() -> bool {
-    let path = Path::new(&OPT.output_dir);
-
-    if path.is_dir() {
-        let md = fs::metadata(&path).unwrap();
-        if md.permissions().readonly() {
-            error!("output_dir {:?} not writable", &path);
-            false
-        } else {
-            true
-        }
-
-    } else {
-        match fs::create_dir(&path) {
-            Result::Ok(_) =>  
-                true,
-            Err(e) => {
-                error!("failed to create output_dir {:?}: {:?}", &path, e);
-                false
-            }
-        }
-    }
-}
 
 //--- output cleanup
 
@@ -603,7 +557,7 @@ async fn main() -> anyhow::Result<()> {
     if !check_output_dir() {
         Err(anyhow!("can't write output dir, aborting."))
     } else {
-        if let Result::Ok((reg_schedule,ext_schedule)) = get_schedules(OPT.hrrr_list_url.as_str()).await {
+        if let Result::Ok((reg_schedule,ext_schedule)) = get_schedules(OPT.hrrr_dir_url.as_str()).await {
             if !OPT.schedule_only {
                 spawn_downloads(&reg_schedule, &ext_schedule).await;
             }

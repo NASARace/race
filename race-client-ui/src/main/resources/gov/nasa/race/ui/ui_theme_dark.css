@@ -159,6 +159,15 @@
     --slider-width: 12rem;
     --slider-thumb-size: 1.2rem;
     --slider-range-color: rgba(200, 200, 200, 0.6);
+    /* leveled progress bars */
+    --progress-border: none;
+    --progress-padding: 0;
+    --progress-0-background: transparent;
+    --progress-0-border: var(--border-width);
+    --progress-0-padding: 2px;
+    --progress-1-background: rgb(24, 141, 20);
+    --progress-1-border: none;
+    --progress-1-padding: 1px 0px 1px 0px;
     /* tabs */
     --tab-color: var(--darker-color);
     --selected-tab-color: var(--color);

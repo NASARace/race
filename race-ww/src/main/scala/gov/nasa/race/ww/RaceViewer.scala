@@ -19,8 +19,8 @@ package gov.nasa.race.ww
 import java.awt.{Color, Font}
 import java.io.File
 import java.util.concurrent.Semaphore
-
 import akka.actor.Props
+import akka.event.LoggingAdapter
 import com.typesafe.config.Config
 import gov.nasa.race.config.ConfigUtils._
 import gov.nasa.race.core.{RaceActor, error, info}
@@ -55,7 +55,7 @@ import scala.swing.Component
   * Both ctor and methods are supposed to be executed from the UI thread
   */
 class RaceViewer(viewerActor: RaceViewerActor) extends DeferredEyePositionListener {
-  implicit val log = viewerActor.log
+  implicit val log: LoggingAdapter = viewerActor.log
   def initTimedOut = viewerActor.initTimedOut
 
   setWorldWindConfiguration // NOTE - this has to happen before we load any WorldWind classes

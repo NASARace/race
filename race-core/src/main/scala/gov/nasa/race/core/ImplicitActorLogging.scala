@@ -18,11 +18,12 @@
 package gov.nasa.race.core
 
 import akka.actor.{Actor, ActorLogging}
+import akka.event.LoggingAdapter
 
 /**
   * a helper trait to make an actors LoggingAdapter implicit
   */
 trait ImplicitActorLogging extends ActorLogging {
   this: Actor =>
-  implicit lazy val _loggingAdapter = log
+  implicit lazy val _loggingAdapter: LoggingAdapter = log
 }

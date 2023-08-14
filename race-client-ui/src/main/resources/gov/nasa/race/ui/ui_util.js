@@ -237,6 +237,28 @@ export function seconds(n) {
     return n * 1000;
 }
 
+function toZeroPaddedString(num,len=2) {
+    return num.toString().padStart(len,'0');
+}
+
+// YYYY-MM-DD-HHmm (datetime in filesystem compatible encoding)
+export function toYYYYMMDDhhmmZString(timestamp,withSeconds=false) {
+    let date = new Date(timestamp);
+
+    let ts = date.getUTCFullYear().toString();
+    ts += '-';
+    ts += toZeroPaddedString(date.getUTCMonth()+1);
+    ts += '-';
+    ts += toZeroPaddedString(date.getUTCDate());
+    ts += '-';
+    ts += toZeroPaddedString(date.getUTCHours());
+    ts += toZeroPaddedString(date.getUTCMinutes());
+
+    if (withSeconds) ts += toZeroPaddedString(date.getUTCSeconds());
+
+    return ts;
+}
+
 // [h+]:mm:ss
 export function toHMSTimeString(millis) {
     let s = Math.floor(millis / 1000) % 60;
