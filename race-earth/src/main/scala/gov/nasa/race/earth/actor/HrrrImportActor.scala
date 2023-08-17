@@ -126,7 +126,7 @@ class HrrrImportActor (val config: Config) extends HttpActor with PublishingRace
   def setStart(): Unit = {
     // this is only called after latencyTable has been initialized
     var d = DateTime.now
-    curDate = d.toPrecedingHour
+    curDate = d.toPreceedingHour
     if (d.getMinute < latencyTable(0).toMinutes) curDate = curDate - Hours(1)
     curFc = 0 // we always start from forecast step 0
     curTry = 0
