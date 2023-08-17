@@ -138,8 +138,9 @@ class AbiHotspotReader extends GoesrDataReader with LogWriter {
             pix.dqf = dqfGrid.readDataSlice( 0,0, y, x).reduce().getInt(0)
             pix.temp = Kelvin(tempGrid.readDataSlice( 0,0, y, x).reduce().getDouble(0))
             pix.frp  = MegaWatt(powerGrid.readDataSlice( 0,0, y, x).reduce().getDouble(0))
-            //pix.area = SquareMeters(areaGrid.readDataSlice( 0,0, y, x).reduce().getDouble(0)) // FIXME - value does not seem to use scale_factor and add_offset
-            pix.area = SquareKilometers(areaGrid.readDataSlice( 0,0, y, x).reduce().getDouble(0)) // km^2 according to PUG
+            pix.area = SquareMeters(areaGrid.readDataSlice( 0,0, y, x).reduce().getDouble(0)) // FIXME - value does not seem to use scale_factor and add_offset
+            //pix.area = SquareKilometers(areaGrid.readDataSlice( 0,0, y, x).reduce().getDouble(0)) // km^2 according to PUG - but not according to *.nc !
+            //println(s"@@ area: ${pix.area}, ${pix.temp}, ${pix.frp}")
           }
         }
       }

@@ -1,0 +1,19 @@
+[package]
+name = "odin_gdal"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+odin_common = { path = "../odin_common" }
+
+gdal-sys = { version = "0.9.0", features = ["bindgen"] }
+gdal = { version = "0.15.0" }
+lazy_static = "1.4.0"
+libc = "0.2.147"
+geo = "0.26.0"
+anyhow = "1.0.75"
+
+[build-dependencies]
+cc = "1.0"

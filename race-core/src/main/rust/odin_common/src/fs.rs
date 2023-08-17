@@ -136,3 +136,8 @@ pub fn set_filepath_contents_with_backup (dir: &str, filename: &str, backup_ext:
     let mut file = create_file_with_backup(dir,filename,backup_ext)?;
     set_file_contents(&mut file, new_contents)
 }
+
+pub fn get_filename_extension<'a> (filename: &'a str) -> Option<&'a str> {
+    let path = Path::new(filename);
+    path.extension().and_then( |ostr| ostr.to_str())
+}
