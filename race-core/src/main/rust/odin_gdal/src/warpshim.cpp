@@ -1,33 +1,33 @@
 #include <gdal_utils.h>
+#include <gdal_alg.h>
 
 // this is a close copy of the respective function in gdalwarpsimple
 // we could do this in Rust but constant unsafe{} and error translation would make this less readable
 GDALDatasetH GDALWarpCreateOutput( GDALDatasetH hSrcDS,
                                    const char *pszFilename,
                                    const char *pszFormat,
-                                   const char *pszSourceSRS,
-                                   const char *pszTargetSRS, int nOrder,
+                                   char* pszSourceSRS,
+                                   char* pszTargetSRS,
+                                   int nOrder,
                                    char **papszCreateOptions,
-                                   dfMinX: double, dfMaxX: double, dfMinY: double, dfMaxY: double.
-                                   dfXRes: double, dfYRes: double,
-                                   nForcePixels: int, nForceLines: int) {
-    GDALDriverH hDriver;
-    GDALDatasetH hDstDS;
-    void *hTransformArg;
+                                   double dfMinX, double dfMaxX, double dfMinY, double dfMaxY,
+                                   double dfXRes, double dfYRes,
+                                   int nForcePixels, int nForceLines
+                                 ) {
+    GDALDatasetH hDstDS = NULL;
+    void *hTransformArg = NULL;
     double adfDstGeoTransform[6];
     int nPixels = 0, nLines = 0;
-    GDALColorTableH hCT;
 
-    hDriver = GDALGetDriverByName(pszFormat);
+    GDALDriverH hDriver = GDALGetDriverByName(pszFormat);
     if (hDriver == NULL) return NULL;
 
     hTransformArg = GDALCreateGenImgProjTransformer( hSrcDS, pszSourceSRS, NULL, pszTargetSRS, TRUE, 1000.0, nOrder);
-    if (hTransformArg == NULL) return NULL;
+    if (hTransformArg == NULL) goto exit;
 
     // get approximate output definition
-    if (GDALSuggestedWarpOutput(hSrcDS, GDALGenImgProjTransform, hTransformArg,
-                                adfDstGeoTransform, &nPixels, &nLines) != CE_None) return NULL;
-    GDALDestroyGenImgProjTransformer(hTransformArg);
+    if (GDALSuggestedWarpOutput( hSrcDS, GDALGenImgProjTransform, hTransformArg,
+                                 adfDstGeoTransform, &nPixels, &nLines) != CE_None) goto exit;
 
     //--- did user override parameters?
     if (dfXRes != 0.0 && dfYRes != 0.0) { // given pixel resolutions
@@ -83,11 +83,34 @@ GDALDatasetH GDALWarpCreateOutput( GDALDatasetH hSrcDS,
       GDALSetProjection(hDstDS, pszTargetSRS);
       GDALSetGeoTransform(hDstDS, adfDstGeoTransform);
 
-      hCT = GDALGetRasterColorTable(GDALGetRasterBand(hSrcDS, 1));
+      GDALColorTableH hCT = GDALGetRasterColorTable(GDALGetRasterBand(hSrcDS, 1));
       if (hCT != NULL) {
           GDALSetRasterColorTable(GDALGetRasterBand(hDstDS, 1), hCT);
       }
     }
 
+    :exit
+    if (hTransformArg) GDALDestroyGenImgProjTransformer(hTransformArg);
+
     return hDstDS;
+}
+
+void CPLFree (void* p) { // the GDAL CPLFree is just a define and doesn't make it to bindings.rs
+  VSIFree(p);
+}
+
+// another un-exported function from gdalwarpsimple
+// note this does allocate a new string that has to be freed by the caller with CPLFree(pszResult)
+char* SanitizeSRS (const char *pszUserInput) {
+    char *pszResult = NULL;
+    OGRSpatialReferenceH hSRS = OSRNewSpatialReference(NULL);
+
+    CPLErrorReset();
+    if (OSRSetFromUserInput(hSRS, pszUserInput) == OGRERR_NONE) {
+        OSRExportToWkt(hSRS, &pszResult);
+    }
+
+    OSRDestroySpatialReference(hSRS);
+
+    return pszResult;
 }
