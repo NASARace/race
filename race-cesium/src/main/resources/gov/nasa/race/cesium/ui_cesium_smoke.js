@@ -5,8 +5,10 @@ import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
 // smoke entry definition
-const defaultContourRender = config.smokelayer.contourRender;
-console.log(defaultContourRender.fillColors);
+const defaultContourRender = initDefaultColors(config.smokelayer.contourRender);
+var currentContourRender = initDefaultColors(config.smokelayer.contourRender);
+updateColors();
+
 const SmokeLayerType = {
     SMOKE: "smoke",
     CLOUD: "cloud"
@@ -18,8 +20,8 @@ const SHOWING = "●";
 class SmokeCloudEntry {
 
     // factory method
-    static create (smokeLayer) { // js unhappy with smokeLayer - says undefined
-        if (smokeLayer.scType == SmokeLayerType.SMOKE) return new SmokeEntry(smokeLayer); // add parathensis
+    static create (smokeLayer) {
+        if (smokeLayer.scType == SmokeLayerType.SMOKE) return new SmokeEntry(smokeLayer);
         if (smokeLayer.scType == SmokeLayerType.CLOUD) return new CloudEntry(smokeLayer);
     }
 
@@ -31,7 +33,7 @@ class SmokeCloudEntry {
         this.srs = smokeLayer.srs // srs from data
         this.url = smokeLayer.url // where to get data
         this.dataSource = undefined;
-        this.render = {...defaultContourRender};
+        this.render = {...currentContourRender};
     }
 
     setStatus (newStatus) {
@@ -69,16 +71,14 @@ class SmokeCloudEntry {
         let renderOpts = this.getRenderOpts(); //
         let response = await fetch(this.url);
         let data = await response.json();
-
+        console.log(data);
         Cesium.GeoJsonDataSource.load(data, renderOpts).then(  // TODO - does this support streams?
             ds => {
                 this.dataSource = ds;
-                //console.log("@@ before post process")
                 this.postProcessDataSource();
                 uiCesium.addDataSource(ds);
                 uiCesium.requestRender();
-                 //setTimeout( () => uiCesium.requestRender(), 300); // ?? // rerender when changes
-            } // have after any change - colors, new data source, etc
+            }
         );
     }
 
@@ -86,31 +86,26 @@ class SmokeCloudEntry {
         return { // could add a poly line
             stroke: this.render.strokeColor,
             strokeWidth: this.render.strokeWidth,
-            fill: this.render.fillColors[0], // replace with solid CSS color // try remove fill
-            clampToGround: false // may be the issue
+            //fill: this.render.fillColors[0],
+            alpha: this.render.alpha,
+            clampToGround: false
         };
     }
 
     postProcessDataSource() {
         let entities = this.dataSource.entities.values;
         let render = this.render;
-
         for (const e of entities) {
             let props = e.properties;
-            //console.log("@@ post process")
             if (props) {
                 let prob = this.getPropValue(props, "prob");
-                //console.log("@@ prop");
-                //console.log(prob);
                 if (prob!== null) {
-                    //console.log("@@ prob")
-                    let i = this.getPropValue(props, "ID");
-//                    console.log(i, prob);
-//                    console.log("@@ after if")
-                    e.polygon.material = render.fillColors[i];
-//                    console.log(i, prob);
-//                    console.log(e.polygon.material);
-//                    console.log(" @@ post processed the data set");
+                    let i = prob; // prob-1 for binary polygons
+                    //console.log(i, this.render.fillColors[i]);
+                    e.polygon.material = this.render.fillColors[i];
+                    e.polygon.outline = true;
+                    e.polygon.outlineColor = this.render.strokeColor;
+                    e.polygon.outlineWidth = this.render.strokeWidth;
                 }
             }
         }
@@ -124,6 +119,15 @@ class SmokeCloudEntry {
     updateDisplayPanel() {
         console.log("Selected")
         let render = this.render;
+    }
+
+    renderChanged() {
+        this.render = {...currentContourRender};
+        this.getRenderOpts();
+        if (this.dataSource) {
+            this.postProcessDataSource();
+            uiCesium.requestRender();
+        }
     }
 }
 
@@ -152,22 +156,15 @@ var followLatest = config.smokelayer.followLatest;
 
 initWindow();
 
-ui.setCheckBox("smoke.followLatest", followLatest);
-ui.setCheckBox("smoke.showSmoke", selectedType.includes("smoke"));
-ui.setCheckBox("smoke.showCloud", selectedType.includes("cloud"));
-ui.setCheckBox("smoke.G16", selectedSat.includes("G16"));
-ui.setCheckBox("smoke.G17", selectedSat.includes("G17"));
-ui.setCheckBox("smoke.G18", selectedSat.includes("G18"));
+initCheckBoxes();
 
 var entryView = initEntryView();
+
 initContourDisplayControls();
 
-ws.addWsHandler(handleWsSmokeLayerMessages); // filters out other
-//setupEventListeners(); // what is an event listener?
+ws.addWsHandler(handleWsSmokeLayerMessages);
 
 //--- end module init
-// add clear or ui reset, widget for moving through list controls
-
 function initWindow() {
     createIcon();
     createWindow();
@@ -177,6 +174,15 @@ function initWindow() {
 function createIcon() {
     console.log("created smoke icon");
     return ui.Icon("smoke-icon.svg", (e)=> ui.toggleWindow(e,'smoke'));
+}
+
+function initCheckBoxes() {
+    ui.setCheckBox("smoke.followLatest", followLatest);
+    ui.setCheckBox("smoke.showSmoke", selectedType.includes("smoke"));
+    ui.setCheckBox("smoke.showCloud", selectedType.includes("cloud"));
+    ui.setCheckBox("smoke.G16", selectedSat.includes("G16"));
+    ui.setCheckBox("smoke.G17", selectedSat.includes("G17"));
+    ui.setCheckBox("smoke.G18", selectedSat.includes("G18"));
 }
 
 function initEntryView() {
@@ -199,28 +205,35 @@ function createWindow() {
                 ui.CheckBox("show cloud", selectCloudEntries, "smoke.showCloud"),
             ),
             ui.RowContainer()(
-                ui.CheckBox("follow latest", toggleFollowLatest, "smoke.followLatest"),
-                ui.HorizontalSpacer(2),
                 ui.CheckBox("G16", selectSatellite, "smoke.G16"),
                 ui.CheckBox("G17", selectSatellite, "smoke.G17"),
                 ui.CheckBox("G18", selectSatellite, "smoke.G18"),
             ),
+            ui.RowContainer()(
+                ui.CheckBox("follow latest", toggleFollowLatest, "smoke.followLatest"),
+                ui.Button("clear", clearSelections)
+            ),
             ui.List("smokelayer.entries", 6, selectSmokeCloudEntry)
         ),
         ui.Panel("Contour Display")(
+                ui.Button("reset", resetDisplaySelections),
+                ui.Slider("alpha", "smoke.contour.alpha", contourAlphaChanged),
                 ui.Slider("stroke width", "smoke.contour.stroke_width", contourStrokeWidthChanged),
                 ui.ColorField("stroke color", "smoke.contour.stroke_color", true, contourStrokeColorChanged),
                 ui.ColorField("0<p<0.25", "smoke.contour.color0", true, contourFillColorChanged),
                 ui.ColorField("0.25<p<0.5", "smoke.contour.color1", true, contourFillColorChanged),
                 ui.ColorField("0.5<p<0.75", "smoke.contour.color2", true, contourFillColorChanged),
                 ui.ColorField("0.75<p<1", "smoke.contour.color3", true, contourFillColorChanged),
-                ui.ColorField("p=1", "smoke.contour.color4", true, contourFillColorChanged)
+                ui.ColorField("p=1", "smoke.contour.color4", true, contourFillColorChanged),
         ),
     );
  }
 
+function initContourDisplayControls() {
+     let s = ui.getSlider("smoke.contour.alpha");
+     ui.setSliderRange(s, 0, 1.0, 0.1);
+     ui.setSliderValue(s, defaultContourRender.alpha);
 
- function initContourDisplayControls() { // add alpha channel
      var e = undefined;
 
      e = ui.getSlider("smoke.contour.stroke_width");
@@ -229,34 +242,108 @@ function createWindow() {
 
      e = ui.getField("smoke.contour.stroke_color");
      ui.setField(e, defaultContourRender.strokeColor.toCssHexString());
-     console.log("initiated controls");
      for (var i = 0; i<defaultContourRender.fillColors.length; i++) {
          e = ui.getField(`smoke.contour.color${i}`);
-         console.log(e);
-         console.log(i);
          if (e) {
-             ui.setField(e, defaultContourRender.fillColors[i].toCssHexString());
+             ui.setField(e, defaultContourRender.fillColors[i].toCssHexString().slice(0, 7));
          }
      }
- }
+}
 
-//--- contour controls - request redraw after
+//--- contour controls
+function initDefaultColors(renderConfig) {
+    let width = renderConfig.strokeWidth;
+    let strokeColor = renderConfig.strokeColor;
+    let alpha = renderConfig.alpha;
+    let fillColors = [...renderConfig.fillColors];
+    let result = {strokeWidth:width, strokeColor:strokeColor, fillColors: fillColors, alpha:alpha};
+    return result
+}
 
 function contourStrokeWidthChanged(event) {
-
+    let e = ui.getSelectedListItem(entryView);
+    if (e) {
+        let n = ui.getSliderValue(event.target);
+        currentContourRender.strokeWidth = n;
+        e.renderChanged();
+    }
 }
 
 function contourStrokeColorChanged(event) {
-
+    let e = ui.getSelectedListItem(entryView);
+    if (e) {
+        let clrSpec = event.target.value;
+        if (clrSpec) {
+            currentContourRender.strokeColor =  convertColorToHaveAlpha(clrSpec, currentContourRender.alpha);
+            e.renderChanged();
+        }
+    }
 }
 
 function contourFillColorChanged(event) {
+    let e = ui.getSelectedListItem(entryView);
+    if (e) {
+        let clrSpec = event.target.value;
+        let boxSpec = event.target.id;
+        let i =  parseInt(event.target.id.slice(-1));
+        if (clrSpec) {
+            currentContourRender.fillColors[i] = convertColorToHaveAlpha(clrSpec, currentContourRender.alpha);
+            e.renderChanged();
+        }
+    }
+    updateColors();
+    uiCesium.requestRender();
+}
+
+function convertColorToHaveAlpha(color, alpha){
+    return Cesium.Color.fromAlpha(Cesium.Color.fromCssColorString(color.slice(0,7)), alpha);
+}
+
+function convertColorToStripAlpha(color) {
+    return color.toCssHexString().slice(0,7)
+}
+
+// interactions - behavior for clicking boxes and filtering entries
+
+function updateColors(){
+    for (var i = 0; i<currentContourRender.fillColors.length; i++) {
+        let color = currentContourRender.fillColors[i]; // get color
+        let colorNoAlpha = convertColorToStripAlpha(color); // strip current alpha
+        currentContourRender.fillColors[i] =  convertColorToHaveAlpha(colorNoAlpha, currentContourRender.alpha); //add color with new alpha
+    }
+}
+
+function contourAlphaChanged(event) {
+    let v = ui.getSliderValue(event.target);
+    currentContourRender.alpha = v;
+    // update colors with new alpha
+    updateColors();
+    let e = ui.getSelectedListItem(entryView);
+    if (e) {
+        e.renderChanged();
+    }
+}
+
+function resetDisplaySelections(event) {
+    currentContourRender = initDefaultColors(config.smokelayer.contourRender);
+    updateColors();
+    initContourDisplayControls();
+    selectedEntry = ui.getSelectedListItem(entryView);
+    if (selectedEntry) {
+        selectedEntry.renderChanged();
+    }
 
 }
 
-// look into distance display conditions, display according zoom
-
-// interactions - behavior for clicking boxes and filtering entries
+function clearSelections(event){
+    // clear viewed data
+    selectedEntry = ui.getSelectedListItem(entryView);
+    if (selectedEntry) selectedEntry.SetVisible(false);
+    // clear all checkboxes
+    followLatest = false;
+    updateEntryView();
+    initCheckBoxes();
+}
 
 function toggleFollowLatest(event) {
     followLatest = ui.isCheckBoxSelected(event.target);
@@ -311,6 +398,16 @@ function selectSmokeEntries(event) {
     updateEntryView();
 }
 
+function updateEntryView() {
+    displayEntries = util.filterMapValues(smokeCloudEntries, se=> isSelected(se));
+    displayEntries.sort(SmokeCloudEntry.compareFiltered);
+    ui.setListItems(entryView, displayEntries);
+}
+
+function isSelected (se) {
+    return (selectedType.includes(se.type) && selectedSat.includes(se.satellite));
+}
+
 // websocket messages
 
 function handleWsSmokeLayerMessages(msgType, msg) {
@@ -332,12 +429,3 @@ function handleSmokeLayerMessage(smokeLayer) {
     }
 }
 
-function updateEntryView() {
-    displayEntries = util.filterMapValues(smokeCloudEntries, se=> isSelected(se));
-    displayEntries.sort(SmokeCloudEntry.compareFiltered);
-    ui.setListItems(entryView, displayEntries);
-}
-
-function isSelected (se) {
-    return (selectedType.includes(se.type) && selectedSat.includes(se.satellite));
-}
