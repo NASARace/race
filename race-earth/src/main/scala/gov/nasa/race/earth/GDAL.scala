@@ -97,48 +97,6 @@ trait GdalFileCreatorCommand extends GdalCommand[File] {
   }
 }
 
-
-class Gdal2Tiles (val prog: File, val inFile: File, val outputPath: File, driverPath: File,
-                  srsName: String = "EPSG:4326", webviewer: String = "none",
-                  tileSize: Int = 256,  profile: String = "mercator", resampling: String = "average",
-                  zoom: Option[Int] = None, resume: Boolean = false, noDataValue: Option[Double] = None,
-                  tmsCompatible: Boolean = false, verbose: Boolean = true, kml: Boolean = false,
-                  googleKey: Option[String] = None, bingKey: Option[String] = None, nbProcesses: Int = 1
-                 ) extends ExternalProc[File] {
-
-  if (!prog.isFile) throw new RuntimeException(s"executable not found: $prog")
-  if (!driverPath.isFile) throw new RuntimeException(s"gdal2tiles driver not found: $driverPath")
-  if (!inFile.isFile) throw new RuntimeException(s"input file not found: $inFile")
-  if (!FileUtils.ensureWritableDir(outputPath).isDefined) throw new RuntimeException(s"cannot create gdal tiles output dir $outputPath")
-
-  protected override def buildCommand: StringBuilder = {
-    super.buildCommand
-       //.append(s" $driverPath")
-       .append(s" --s_srs=$srsName")  // ?
-       .append(s" --webviewer=$webviewer")
-       .append(s" --tile_size=$tileSize")
-       .append(s" --profile=$profile")
-       .append(s" --resampling=$resampling")
-       .append(s" --zoom=$zoom")
-       .append(s" --resume=$resume")
-       .append(s" --srcnodata=$noDataValue")
-       .append(s" --tmscompatible=$tmsCompatible")
-       .append(s" --verbose=$verbose")
-       .append(s" --kml=$kml")
-       .append(s" --googlekey=$googleKey")
-       .append(s" --bingkey=$bingKey")
-       .append(s" --nbprocesses=$nbProcesses")
-       .append(s" $inFile")
-       .append(s" $outputPath")
-  }
-
-  override def getSuccessValue: File = {
-    if (!outputPath.isDirectory) throw new RuntimeException(s"output file not found: $outputPath")
-    outputPath
-  }
-
-}
-
 class GdalInfo (val prog: File, val inFile: File) extends ExternalProc[File]  {
   if (!prog.isFile) throw new RuntimeException(s"executable not found: $prog")
   if (!inFile.isFile) throw new RuntimeException(s"input file not found: $inFile")
@@ -326,4 +284,59 @@ class GdalContour (val prog: File) extends GdalFileCreatorCommand {
   def setAttrMaxName (name: String): this.type = addArg(s"-amax $name")
   def setPolygon(): this.type = addArg("-p")
   def setExponent(base: Int): this.type = addArg( s"-e $base")
+}
+
+class GdalPolygonize (val prog: File, val pythonExe: Option[File]) extends GdalFileCreatorCommand {
+  var outField: Option[String] = None
+  var outLayer: Option[String] = None
+  //var band: Option[Int] = None
+  def setBand(bandNo:Int) : this.type = addArg( s"-b $bandNo")
+  def beQuiet(): this.type = addArg( "-q")
+  def setConnectedness(): this.type = addArg("-8")
+  def setPolygonOptions(key: String, value: String): this.type = addArg( s"-o $key=$value")
+  def setOverwrite(): this.type = addArg("-overwrite")
+  def setOutputLayer(layer: String) = {
+    outLayer = Some(layer)
+    this
+  }//needs to go after outfile
+  def setOutputField(field: String)  = {
+    outField = Some(field)
+    this
+  }//needs to go after outfile
+  override def buildCommand: StringBuilder = {
+    args.foldRight(new StringBuilder(pythonExe.get.getPath + " " + prog.getPath))( (a,sb) => sb.append(' ').append(a))
+      .append(s" ${inFile.get.getPath}")
+      .append(s" ${outFile.get.getPath}")
+      .append(s" ${outLayer.get}")
+      .append(s" ${outField.get}")
+  }
+}
+
+
+class Gdal2Tiles ( val prog: File, val pythonExe: Option[File] ) extends GdalFileCreatorCommand {
+
+  def setSourceSrs (srsName: String): this.type = addArg( s"-s_srs $srsName")
+  def setWebViewer (webViewer: String): this.type = addArg( s"-w $webViewer")
+  def setTileSize (tileSize: Int): this.type = addArg(s"--tilesize=$tileSize")
+  def setProfile (profile: String): this.type = addArg( s"-p $profile")
+  def setResamplingMethod (method: String): this.type = addArg( s"-r $method")
+  def setXyzTiles (): this.type = addArg( "-xyz")
+  def setTmsCompatible (): this.type = addArg( "-b")
+  def setZoom (zoom: String): this.type = addArg(s"-z $zoom")
+  def setNoDataValue(value: String): this.type = addArg( s"-a $value")
+  def useMpi (): this.type = addArg( "--mpi")
+  def setNumberOfProcesses (num: Int): this.type = addArg( s"--processes=$num")
+  def excludeTransparentTiles(): this.type = addArg( "--x")
+
+  override def getSuccessValue: File = {
+    if (!outFile.get.isDirectory) throw new RuntimeException(s"output file not found: ${outFile.get}")
+    outFile.get
+  }
+
+  override def buildCommand: StringBuilder = {
+    args.foldRight(new StringBuilder(pythonExe.get.getPath + " " + prog.getPath))( (a,sb) => sb.append(' ').append(a))
+      .append(s" ${inFile.get.getPath}")
+      .append(s" ${outFile.get.getPath}")
+  }
+
 }
