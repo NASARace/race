@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022, United States Government, as represented by the
+ * Administrator of the National Aeronautics and Space Administration.
+ * All rights reserved.
+ *
+ * The RACE - Runtime for Airspace Concept Evaluation platform is licensed
+ * under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package gov.nasa.race.cesium
 
 import akka.actor.Actor.Receive
@@ -25,13 +41,14 @@ import scala.collection.mutable
 class DefaultContourRenderingS (conf: Config) {
   val strokeWidth = conf.getDoubleOrElse("stroke-width", 1.5)
   val strokeColor = conf.getStringOrElse( "stroke-color", "grey")
-  val fillColors = conf.getNonEmptyStringsOrElse( "fill-color", Array("#ffffff", "#bfbfbf", "#808080", "#404040", "#000000"))//"e6e6e6", "808080", "404040"))//"#f0000010", "#f0000040", "#f0000080", "#f00000c0", "#f00000f0")) //update colors
+  val fillColors = conf.getNonEmptyStringsOrElse( "fill-color", Array("#00000080", "#40404080", "#80808080", "#bfbfbf80", "#ffffff80"))//"e6e6e6", "808080", "404040"))//"#f0000010", "#f0000040", "#f0000080", "#f00000c0", "#f00000f0")) //update colors
+  val alpha = conf.getDoubleOrElse("alpha", 0.5)
 
   def jsFillColors: String = {
     StringUtils.mkString( fillColors, "[",",","]")( clr=> s"Cesium.Color.fromCssColorString('$clr')")
   }
 
-  def toJsObject = s"""{ strokeWidth: $strokeWidth, strokeColor: Cesium.Color.fromCssColorString('$strokeColor'), fillColors:$jsFillColors }"""
+  def toJsObject = s"""{ strokeWidth: $strokeWidth, strokeColor: Cesium.Color.fromCssColorString('$strokeColor'), fillColors:$jsFillColors, alpha:$alpha }"""
 }
 
 object SmokeLayerService {
