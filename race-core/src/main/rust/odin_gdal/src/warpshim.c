@@ -1,5 +1,29 @@
 #include <gdal_utils.h>
 #include <gdal_alg.h>
+#include <ogr_api.h>
+#include <ogr_srs_api.h>
+
+#include <stdio.h> // for debugging
+
+void CPLFree (void* p) { // the GDAL CPLFree is just a define and doesn't make it to bindings.rs
+  VSIFree(p);
+}
+
+// another un-exported function from gdalwarpsimple
+// note this does allocate a new string that has to be freed by the caller with CPLFree(pszResult)
+char* SanitizeSRS (const char *pszUserInput) {
+    char *pszResult = NULL;
+    OGRSpatialReferenceH hSRS = OSRNewSpatialReference(NULL);
+
+    CPLErrorReset();
+    if (OSRSetFromUserInput(hSRS, pszUserInput) == OGRERR_NONE) {
+        OSRExportToWkt(hSRS, &pszResult);
+    }
+
+    OSRDestroySpatialReference(hSRS);
+
+    return pszResult;
+}
 
 // this is a close copy of the respective function in gdalwarpsimple
 // we could do this in Rust but constant unsafe{} and error translation would make this less readable
@@ -89,28 +113,8 @@ GDALDatasetH GDALWarpCreateOutput( GDALDatasetH hSrcDS,
       }
     }
 
-    :exit
+    exit:
     if (hTransformArg) GDALDestroyGenImgProjTransformer(hTransformArg);
 
     return hDstDS;
-}
-
-void CPLFree (void* p) { // the GDAL CPLFree is just a define and doesn't make it to bindings.rs
-  VSIFree(p);
-}
-
-// another un-exported function from gdalwarpsimple
-// note this does allocate a new string that has to be freed by the caller with CPLFree(pszResult)
-char* SanitizeSRS (const char *pszUserInput) {
-    char *pszResult = NULL;
-    OGRSpatialReferenceH hSRS = OSRNewSpatialReference(NULL);
-
-    CPLErrorReset();
-    if (OSRSetFromUserInput(hSRS, pszUserInput) == OGRERR_NONE) {
-        OSRExportToWkt(hSRS, &pszResult);
-    }
-
-    OSRDestroySpatialReference(hSRS);
-
-    return pszResult;
 }

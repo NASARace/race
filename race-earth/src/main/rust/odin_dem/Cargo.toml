@@ -16,9 +16,12 @@ path = "src/bin/odin_dem.rs"
 odin_common = { path = "../odin_common" }
 odin_gdal = { path = "../odin_gdal" }
 
-gdal-sys = { version = "0.9.0", features = ["bindgen"] }
-gdal = { version = "0.15.0" }
-geo = { version = "0.26.0", features = ["proj", "serde"] }
 lazy_static = "1.4.0"
+structopt = "0.3.26"
+tokio = { version = "1", features = ["full"] }
+warp = "0.3"
+serde = "1.0"
+serde_derive = "1.0"
+
 
 

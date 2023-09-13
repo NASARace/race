@@ -17,7 +17,7 @@ use anyhow::{anyhow,Result};
 use crate::{ok_non_null, ok_mut_non_null, ok_not_zero};
 
 
-// what we get from warpshim.cpp
+// what we get from warpshim.c
 extern "C" {
     fn CPLFree (p: *mut c_void);
     fn SanitizeSRS (p: *const c_char) -> *const c_char;
@@ -140,6 +140,8 @@ impl <'a> SimpleWarpBuilder<'a> {
         let src_wkt = CString::new(src_srs.to_wkt()?)?;
         let tgt_srs = if let Some(srs_ref) = self.tgt_srs { srs_ref } else { src_srs };
         let tgt_wkt = CString::new(tgt_srs.to_wkt()?)?;
+        println!("@@ wkt: {}",tgt_wkt.to_str()?);
+
         let tgt_format = if let Some(format) = &self.tgt_format { format.as_ptr() } else { null() };
         let c_create_options = if let Some(sl) = self.create_options { sl.as_ptr() } else { null_mut() };
 

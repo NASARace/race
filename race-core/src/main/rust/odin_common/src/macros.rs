@@ -107,3 +107,21 @@ macro_rules! io_error {
     }
 }
 pub use io_error;
+
+#[macro_export]
+macro_rules! max {
+    ($x:expr) => ( $x );
+    ($x:expr, $($xs:expr),+) => {
+        $x.max( max!( $($xs),+))
+    };
+}
+pub use max;
+
+#[macro_export]
+macro_rules! min {
+    ($x:expr) => ( $x );
+    ($x:expr, $($xs:expr),+) => {
+        $x.min( min!( $($xs),+))
+    };
+}
+pub use min;
