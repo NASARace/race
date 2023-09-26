@@ -44,7 +44,6 @@ trait JpssActor extends PublishingRaceActor with ContinuousTimeRaceActor {
 
     def parse (data: Array[Byte]): Seq[ViirsHotspot] = {
       val hotspots = ArrayBuffer.empty[ViirsHotspot]
-
       if (initialize(data)) {
         skipToNextRecord() // first line is header
         while (hasMoreData) {

@@ -210,7 +210,8 @@ trait ViirsHotspotParser extends Utf8CsvPullParser {
     if (confidence < 0) return Failure("unknown confidence")
 
     val pos = GeoPosition(lat,lon)
-    SuccessValue( new ViirsHotspot(satId, date,pos,src,brightness,brightness1,frp,scan,track,sensor,confidence,version,isDay))
+    val hs =  new ViirsHotspot(satId, date,pos,src,brightness,brightness1,frp,scan,track,sensor,confidence,version,isDay)
+    SuccessValue(hs)
   }
 
   def getSatId(src: String): Int = {

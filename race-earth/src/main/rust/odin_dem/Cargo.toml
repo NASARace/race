@@ -19,10 +19,14 @@ odin_gdal = { path = "../odin_gdal" }
 lazy_static = "1.4.0"
 structopt = "0.3.26"
 tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "*", features = ["full"] }
 tower-http = { version = "0.4", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+http = "*"
 axum = "0.6"
 serde = "1.0"
 serde_derive = "1.0"
-anyhow = "1.0"
+thiserror = "1.0"
+gdal-sys = { version = "0.9", features = ["bindgen"] }
+gdal = { version = "0.16" }

@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+pub mod errors;
 pub mod warp;
 
 #[macro_use]

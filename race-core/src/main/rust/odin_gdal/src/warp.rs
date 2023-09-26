@@ -13,9 +13,11 @@ use gdal_sys::{GDALDatasetH,OGRSpatialReferenceH,
                GDALClose, GDALFlushCache,
 };
 use libc::{c_void,c_char,c_int, c_double};
-use anyhow::{anyhow,Result};
+use odin_common::geo::BoundingBox;
 use crate::{ok_non_null, ok_mut_non_null, ok_not_zero};
+use crate::errors::OdinGdalError;
 
+type Result<T> = std::result::Result<T, OdinGdalError>;
 
 // what we get from warpshim.c
 extern "C" {
@@ -59,9 +61,9 @@ pub struct SimpleWarpBuilder <'a> {
 }
 
 impl <'a> SimpleWarpBuilder<'a> {
-    pub fn new <P: AsRef<Path>>(src_ds: &'a Dataset, tgt: P) -> Result<SimpleWarpBuilder<'a>,Box<dyn Error>> {
+    pub fn new <P: AsRef<Path>>(src_ds: &'a Dataset, tgt: P) -> Result<SimpleWarpBuilder<'a>> {
         let path = tgt.as_ref();
-        let tgt_str = path.to_str().ok_or(anyhow!("{:?} not a valid filename", tgt.as_ref()))?;
+        let tgt_str = path.to_str().ok_or(OdinGdalError::InvalidFileName(path.display().to_string()))?;
         let tgt_filename = CString::new(tgt_str)?;
 
         Ok(SimpleWarpBuilder {
@@ -86,6 +88,14 @@ impl <'a> SimpleWarpBuilder<'a> {
         self.max_x = max_x;
         self.min_y = min_y;
         self.max_y = max_y;
+        self
+    }
+
+    pub fn set_tgt_extent_from_bbox (&mut self, bbox: &BoundingBox<f64>) ->  &mut SimpleWarpBuilder<'a> {
+        self.min_x = bbox.west;
+        self.max_x = bbox.east;
+        self.min_y = bbox.south;
+        self.max_y = bbox.north;
         self
     }
 
@@ -134,19 +144,18 @@ impl <'a> SimpleWarpBuilder<'a> {
     pub fn exec(&self) -> Result<Dataset> {
         // get source SRS ref (either set or from src_ds)
         let src_ds_srs = if let Ok(srs) = self.src_ds.spatial_ref() { srs } else {
-            self.src_ds.gcp_spatial_ref().ok_or(anyhow!("no spatial reference for source"))?
+            self.src_ds.gcp_spatial_ref().ok_or(OdinGdalError::NoSpatialReferenceSystem)?
         };
         let src_srs = if let Some(srs_ref) = self.src_srs { srs_ref } else { &src_ds_srs };
         let src_wkt = CString::new(src_srs.to_wkt()?)?;
         let tgt_srs = if let Some(srs_ref) = self.tgt_srs { srs_ref } else { src_srs };
         let tgt_wkt = CString::new(tgt_srs.to_wkt()?)?;
-        println!("@@ wkt: {}",tgt_wkt.to_str()?);
 
         let tgt_format = if let Some(format) = &self.tgt_format { format.as_ptr() } else { null() };
         let c_create_options = if let Some(sl) = self.create_options { sl.as_ptr() } else { null_mut() };
 
         // check if output file exists and if so delete it
-        let path = Path::new(self.tgt_filename.to_str()?);
+        let path = Path::new(self.tgt_filename.to_str().unwrap()); // already checked during new()
         if path.is_file() { fs::remove_file(path)? }
 
         unsafe {
@@ -162,7 +171,7 @@ impl <'a> SimpleWarpBuilder<'a> {
                         self.res_x, self.res_y,
                         self.force_n_pixels, self.force_n_lines);
             if c_tgt_ds == null_mut() {
-                return Err(anyhow!("GDALWarpCreateOutput failed"))
+                return Err(OdinGdalError::GdalFunctionFailed("GDALWarpCreateOutput"))
             }
 
             let c_gen_transformer_arg= gdal_sys::GDALCreateGenImgProjTransformer(
@@ -173,7 +182,7 @@ impl <'a> SimpleWarpBuilder<'a> {
                         1, 1000.0, self.n_order);
             if c_gen_transformer_arg == null_mut() {
                 gdal_sys::GDALClose(c_tgt_ds);
-                return Err(anyhow!("GDALCreateGenImgProjTransformer failed"))
+                return Err(OdinGdalError::GdalFunctionFailed("GDALCreateGenImgProjTransformer"))
             }
 
             let mut c_transformer_arg = c_gen_transformer_arg;
@@ -188,7 +197,7 @@ impl <'a> SimpleWarpBuilder<'a> {
                 if c_approx_transformer_arg == null_mut() {
                     gdal_sys::GDALDestroyGenImgProjTransformer(c_gen_transformer_arg);
                     gdal_sys::GDALClose(c_tgt_ds);
-                    return Err(anyhow!("GDALCreateApproxTransformer failed"))
+                    return Err(OdinGdalError::GdalFunctionFailed("GDALCreateApproxTransformer"))
                 }
 
                 c_transformer_arg = c_approx_transformer_arg;
@@ -216,7 +225,7 @@ impl <'a> SimpleWarpBuilder<'a> {
                 Ok(Dataset::from_c_dataset(c_tgt_ds))
             } else {
                 gdal_sys::GDALClose(c_tgt_ds);
-                Err(anyhow!("GDALSimpleImageWarp failed"))
+                Err(OdinGdalError::GdalFunctionFailed("GDALSimpleImageWarp"))
             }
         }
     }
