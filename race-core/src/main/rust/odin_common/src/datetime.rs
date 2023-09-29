@@ -34,7 +34,8 @@ pub fn naive_utc_date_to_utc_datetime (nd: NaiveDate) -> DateTime<Utc> {
     let nt = NaiveTime::from_hms_opt(0, 0, 0).unwrap(); // 00:00:00 can't fail
     let ndt = NaiveDateTime::new(nd,nt);
 
-    DateTime::from_utc(ndt, Utc)
+    //DateTime::from_utc(ndt, Utc)
+    DateTime::from_naive_utc_and_offset(ndt,Utc)
 }
 
 pub fn naive_local_date_to_utc_datetime (nd: NaiveDate) -> Option<DateTime<Utc>> {

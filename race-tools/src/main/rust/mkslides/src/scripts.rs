@@ -1,3 +1,9 @@
+
+pub fn get_odin_slides_js() -> String {
+    ODIN_SLIDES_JS.to_string()
+}
+
+const ODIN_SLIDES_JS: &'static str = r#"
 var slides = document.getElementsByClassName("slide");
 var curIdx = 0;
 
@@ -13,14 +19,63 @@ var t = 0;
 var timed = false
 var slideshow = false
 
+var navView = undefined;
+var navSelection = 0;
+
 const webRunBasePort = 4000;
 
 var slideCounter = document.getElementById('counter');
+
 showCounter();
 setRunHandlers();
 setSrvText();
 setSlideSelectors();
+createNavView();
 
+function createNavView() {
+  let v = document.createElement("DIV");
+  v.classList.add("nav_view");
+
+  let list = document.createElement("OL");
+  v.appendChild(list);
+
+  let li = createNavItem(document.title);
+  list.appendChild(li);
+
+  for (let e of document.getElementsByTagName("H2")) {
+    li = createNavItem( e.textContent);
+    list.appendChild(li);
+  }
+
+  document.body.appendChild(v);
+  navView = v;
+}
+
+function createNavItem (txt) {
+    let li = document.createElement("LI");
+    li.classList.add("nav_item");
+    li.textContent = txt;
+    li.addEventListener("click", gotoNavItem);
+    return li;
+}
+
+function showNavView() {
+  navView.classList.add("show");
+}
+
+function hideNavView() {
+  navView.classList.remove("show");
+}
+
+function gotoNavItem (event) {
+  let e = event.target.previousSibling;
+  let idx = 0;
+  while (e) {
+    idx++;
+    e = e.previousSibling;
+  }
+  slides[idx].scrollIntoView();
+}
 
 function setRunHandlers() {
   for (let elem of document.getElementsByClassName("run")) {
@@ -159,32 +214,62 @@ function showCounter() {
 }
 
 function scrollToSlide (idx) {
-  if (idx >=0 && idx < slides.length){
-    if (idx == 0) {
-      window.scrollTo(0,0);
-    } else {
-      slides[idx].scrollIntoView({behavior: "smooth", block: "start", inline: "nearest"});
-    }
+  if (idx < 0) idx = 0;
+  if (idx >= slides.length) idx = slides.length-1;
 
-    curIdx = idx;
-    showCounter();
+  if (idx == 0) {
+    window.scrollTo(0,0);
+  } else {
+    slides[idx].scrollIntoView({behavior: "smooth", block: "start", inline: "nearest"});
   }
+
+  curIdx = idx;
+  showCounter();
 }
+
+var navMode = false;
+var gotoMode = false;
+var gotoIdx = 0;
 
 document.addEventListener("keydown", e => {
   var kc = e.keyCode;
 
   if (kc == 13 || kc == 32 || kc == 34){  // Enter: next slide, Shift+Enter: prev slide
-    scrollToSlide( e.shiftKey ? curIdx-1 : curIdx+1);
+    if (navMode && kc == 13) {
+        navMode = false;
+        hideNavView();
+    } else {
+        if (gotoMode) {
+            gotoMode = false;
+            scrollToSlide( gotoIdx-1);
+        } else {
+            scrollToSlide( e.shiftKey ? curIdx-1 : curIdx+1);
+        }
+    }
     e.preventDefault();
   }
-  else if (kc == 33) {
+  else if (kc == 40 || kc == 34) { // down, pgDown
+    scrollToSlide( curIdx + 1);
+    e.preventDefault();
+  }
+  else if (kc == 33 || kc == 38) { // up, pgUp
     scrollToSlide( curIdx - 1);
     e.preventDefault();
   }
-  else if (kc == 34) {
-    scrollToSlide( curIdx + 1);
+  else if (kc == 36) { // home
+    scrollToSlide(0);
     e.preventDefault();
+  }
+  else if (kc == 36) { // end
+    scrollToSlide(slides.length);
+    e.preventDefault();
+  }
+  else if (kc == 27) {
+    gotoMode = false;
+    if (navMode) {
+      hideNavView();
+      navMode = false;
+    }
   }
   else if (kc == 70) { // 'f' toggle full screen
     toggleFullScreen();
@@ -195,22 +280,27 @@ document.addEventListener("keydown", e => {
   else if (kc == 83) { // 's' toggles show
     toggleSlideshow();
   }
-  else if (kc >=48 && kc <= 57){ // jump to slide 0..9
-    var idx = kc - 48;
-    if (e.ctrlKey){
-      if (idx == 0) {
-        scrollToSlide(1);
-        return;
-      }
-      firstDigit = idx;
-    } else {
-      if (idx > 0) idx -= 1;
-      if (firstDigit) {
-        idx += firstDigit * 10;
-        firstDigit = undefined;
-      }
+  else if (kc == 71) { // 'g' goto slide
+    gotoMode = true;
+    gotoIdx = 0;
+  }
+  else if (kc == 78) { // 'n' toggle nav mode
+    gotoMode = false;
 
-      scrollToSlide(idx);
+    navMode = !navMode;
+    if (navMode) {
+        showNavView();
+    } else {
+        hideNavView();
+    }
+  }
+  else if (kc >=48 && kc <= 57){ // 0..9 set gotoIdx
+    var n = kc - 48;
+    if (gotoMode) {
+        gotoIdx *= 10;
+        gotoIdx += n;
     }
   }
 });
+"#;
+
