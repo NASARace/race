@@ -5,169 +5,212 @@ import * as ui from "./ui.js";
 import * as uiCesium from "./ui_cesium.js";
 
 // smoke entry definition
-const defaultContourRender = initDefaultColors(config.smokelayer.contourRender);
-var currentContourRender = initDefaultColors(config.smokelayer.contourRender);
-updateColors();
+const defaultContourRender = initDefaultColors(config.smokelayer.contourRender); // creates a constant of the render - used for reseting display
+var currentContourRender = initDefaultColors(config.smokelayer.contourRender); // creates a variable of the render - used for changing display
 
-const SmokeLayerType = {
+const SmokeLayerType = { // values for smoke and cloud to be used throughout
     SMOKE: "smoke",
     CLOUD: "cloud"
 }
-
+// status signal
 const LOADED = "○";
 const SHOWING = "●";
 
-class SmokeCloudEntry {
-
-    // factory method
+// Entry class - each entry represents a satellite image and has a smoke and cloud sub entry
+class Entry {
     static create (smokeLayer) {
-        if (smokeLayer.scType == SmokeLayerType.SMOKE) return new SmokeEntry(smokeLayer);
-        if (smokeLayer.scType == SmokeLayerType.CLOUD) return new CloudEntry(smokeLayer);
+        return new Entry(smokeLayer);
+    }
+    static compareFiltered (a,b) { // used to make the entry list stay in order
+            switch (util.compare(a.date,b.date)) {
+                case -1: return 1;
+                case 0: return util.compare(a.satellite, b.satellite);
+                case 1: return -1;
+            }
     }
 
     constructor(smokeLayer) {
+        this.id = smokeLayer.uniqueId // gets unique id for storing entries
+        this.date = smokeLayer.date; // date and time from data
+        this.satellite = smokeLayer.satellite; // satellite from data
+        this.srs = smokeLayer.srs; // srs from data
+        this.smokeEntry = SmokeCloudEntry.create(smokeLayer, SmokeLayerType.SMOKE) // creates smoke entry
+        this.cloudEntry = SmokeCloudEntry.create(smokeLayer, SmokeLayerType.CLOUD) // creates cloud entry
+    }
+
+    clear() { // clears both layers for an entry
+        this.smokeEntry.SetVisible(false);
+        this.cloudEntry.SetVisible(false);
+        uiCesium.requestRender();
+
+    }
+
+    renderChanged () { // updates render for both layers of an entry
+        this.smokeEntry.renderChanged();
+        this.cloudEntry.renderChanged();
+    }
+
+}
+
+// SmokeCloudEntry class - parent class for stored smoke and cloud layers
+class SmokeCloudEntry {
+    // factory method - creates each specific layer type
+    static create (smokeLayer, type) {
+        if (type == SmokeLayerType.SMOKE) return new SmokeEntry(smokeLayer);
+        if (type == SmokeLayerType.CLOUD) return new CloudEntry(smokeLayer);
+    }
+
+    constructor(smokeLayer, type) {
         // come from server message
-        this.date = smokeLayer.date // date and time from data
-        this.type = smokeLayer.scType // smoke or cloud
-        this.satellite = smokeLayer.satellite // satellite from data
-        this.srs = smokeLayer.srs // srs from data
-        this.url = smokeLayer.url // where to get data
-        this.dataSource = undefined;
-        this.render = {...currentContourRender};
+        this.date = smokeLayer.date; // date and time from data
+        this.satellite = smokeLayer.satellite; // satellite from data
+        this.srs = smokeLayer.srs; // srs from data
+        this.url = undefined; // where to get data
+        this.dataSource = undefined; // where the ceisum dataset is stored
+        this.render = {...currentContourRender}; // current rendering conditions on the layer
+        this.show = false; // default not showing
     }
 
-    setStatus (newStatus) {
+    setStatus (newStatus) { // changes status from loaded to showing
         this.status = newStatus;
-        // update view
     }
 
-    replaceWith (other) {
-        console.log("not yet.");
-    }
-
-    SetVisible (showIt) { // needs to fetch the contours
-        if (showIt != this.show) {
-            this.show = showIt;
+    SetVisible (showIt) { // function to set layers visible
+        if (showIt != this.show) { // runs block if change in showing
+            this.show = showIt; // updates member variable to new showing condition
             if (showIt) {
-                if (!this.dataSource) {
+                if (!this.dataSource) { // loads data source if it has not been loaded yet
                     this.loadContoursFromUrl(); // this is async, it will set vectorPrimitives when done
-                } else {
+                } else { // uses preloaded data source
                     this.dataSource.show = true;
-                    uiCesium.requestRender();
+                    uiCesium.requestRender(); // updates render
                 }
                 this.setStatus( SHOWING);
-
-            } else {
-                if (this.dataSource) {
-                    this.dataSource.show = false;
-                    uiCesium.requestRender();
-                    this.setStatus( LOADED);
-                }
+            }
+        }
+        if (showIt == false) {
+            if (this.dataSource) { // hides data source
+                this.dataSource.show = false;
+                uiCesium.requestRender();
+                this.setStatus( LOADED);
             }
         }
     }
 
     async loadContoursFromUrl() { // handles new data source
-        let renderOpts = this.getRenderOpts(); //
-        let response = await fetch(this.url);
+        let renderOpts = this.getRenderOpts(); // get rendering options
+        //console.log("@@DEBUG ", this.url);
+        let response = await fetch(this.url); // pulls data from the server hosting it - see route definition in service
         let data = await response.json();
-        console.log(data);
-        Cesium.GeoJsonDataSource.load(data, renderOpts).then(  // TODO - does this support streams?
+        Cesium.GeoJsonDataSource.load(data, renderOpts).then(  // loads data into a cesium data source object
             ds => {
+                //console.log("@@DEBUG got data", this.url);
                 this.dataSource = ds;
-                this.postProcessDataSource();
-                uiCesium.addDataSource(ds);
-                uiCesium.requestRender();
+                this.postProcessDataSource(); // updates fill colors
+                uiCesium.addDataSource(ds); // adds data source to cesium
+                uiCesium.requestRender(); // updates the render
             }
         );
     }
 
-    getRenderOpts() {
-        return { // could add a poly line
+    getRenderOpts() { // provides default render options
+        return {
             stroke: this.render.strokeColor,
             strokeWidth: this.render.strokeWidth,
-            //fill: this.render.fillColors[0],
             alpha: this.render.alpha,
             clampToGround: false
         };
     }
 
-    postProcessDataSource() {
+    postProcessDataSource() { // post processes the entities or polygons in the data source
         let entities = this.dataSource.entities.values;
         let render = this.render;
-        for (const e of entities) {
-            let props = e.properties;
-            if (props) {
-                let prob = this.getPropValue(props, "prob");
-                if (prob!== null) {
-                    let i = prob; // prob-1 for binary polygons
-                    //console.log(i, this.render.fillColors[i]);
-                    e.polygon.material = this.render.fillColors[i];
-                    e.polygon.outline = true;
-                    e.polygon.outlineColor = this.render.strokeColor;
-                    e.polygon.outlineWidth = this.render.strokeWidth;
-                }
+        for (const e of entities) { // update each entities color to match smoke/cloud colors
+            if (this.type == SmokeLayerType.SMOKE) {
+                e.polygon.material = this.render.smokeColor;
             }
+            if (this.type == SmokeLayerType.CLOUD) {
+                e.polygon.material = this.render.cloudColor;
+            }
+            e.polygon.outline = true;
+            e.polygon.outlineColor = this.render.strokeColor;
+            e.polygon.outlineWidth = this.render.strokeWidth;
         }
     }
 
-    getPropValue(props,key) {
-        let p = props[key];
-        return p ? p._value : undefined;
-    }
-
-    updateDisplayPanel() {
-        console.log("Selected")
-        let render = this.render;
-    }
-
-    renderChanged() {
-        this.render = {...currentContourRender};
+    renderChanged() { // updates render parameters according to user input
+        this.render = {...currentContourRender}; // updates render parameters
         this.getRenderOpts();
         if (this.dataSource) {
-            this.postProcessDataSource();
-            uiCesium.requestRender();
+            this.postProcessDataSource(); // updates data fill
+            uiCesium.requestRender(); // requests new render
         }
     }
 }
 
-class SmokeEntry extends SmokeCloudEntry {
+class SmokeEntry extends SmokeCloudEntry { // child class for smoke entry
     constructor (smokeLayer) {
-        super(smokeLayer)
-        this.smokeFile = smokeLayer.smokeFile
+        super(smokeLayer);
+        this.smokeFile = smokeLayer.smokeFile;
+        this.url = smokeLayer.smokeUrl;
+        this.type =  SmokeLayerType.SMOKE; // smoke or cloud
     }
 }
 
-class CloudEntry extends SmokeCloudEntry {
+class CloudEntry extends SmokeCloudEntry { // child class for cloud entry
     constructor (smokeLayer) {
-        super(smokeLayer)
-        this.cloudFile = smokeLayer.cloudFile
+        super(smokeLayer);
+        this.cloudFile = smokeLayer.cloudFile;
+        this.url = smokeLayer.cloudUrl;
+        this.type =  SmokeLayerType.CLOUD; // smoke or cloud
     }
 }
 
 // initialization
 
-const smokeCloudEntries = new Map(); // unique-key -> SmokeCloudEntries
-var displayEntries = [];
-var selectedEntry = undefined;
-var selectedType = ["smoke", "cloud"];
-var selectedSat = ["G16", "G17", "G18"];
-var followLatest = config.smokelayer.followLatest;
+const smokeCloudEntries = new Map(); // unique-key -> Entries; stores Entry objects
 
+var displayEntries = []; // instantiates variable used for temp entry storage
+var selectedEntry = undefined; // instantiates variable used for temp entry selection
+var selectedType = ["smoke", "cloud"]; // instantiates list of selected layers
+var selectedSat = ["G16", "G18"]; // instantiates list of selected satellites
+var followLatest = config.smokelayer.followLatest; // instantiates followlatest boolean
+
+var smokeSelection = { // object for storing entry selections in selection panel
+    show: true,
+    type: SmokeLayerType.SMOKE,
+    sat: undefined,
+    date: undefined,
+};
+
+var cloudSelection = { // object for storing entry selections in selection panel
+    show: true,
+    type: SmokeLayerType.CLOUD,
+    sat: undefined,
+    date: undefined,
+};
+
+const selectionEntries = new Map([ // unique-key -> selections; stores selection objects
+    [SmokeLayerType.SMOKE, smokeSelection],
+    [SmokeLayerType.CLOUD, cloudSelection]
+]);
+
+// UI initialization
 initWindow();
 
 initCheckBoxes();
 
-var entryView = initEntryView();
+var entryView = initEntryView(); // variable storing Entries - modify this to add or remove entries
+var selectionView = initSelectionView(); // variable storing selections - modify this to change selections
 
-initContourDisplayControls();
-
-ws.addWsHandler(handleWsSmokeLayerMessages);
+ws.addWsHandler(handleWsSmokeLayerMessages); // adds handler to websocket
 
 //--- end module init
+
 function initWindow() {
     createIcon();
     createWindow();
+    initContourDisplayControls();
     console.log("ui_cesium_smokelayer initialized");
 }
 
@@ -176,87 +219,94 @@ function createIcon() {
     return ui.Icon("smoke-icon.svg", (e)=> ui.toggleWindow(e,'smoke'));
 }
 
-function initCheckBoxes() {
+function initCheckBoxes() { // init checkboxes to their default values
     ui.setCheckBox("smoke.followLatest", followLatest);
-    ui.setCheckBox("smoke.showSmoke", selectedType.includes("smoke"));
-    ui.setCheckBox("smoke.showCloud", selectedType.includes("cloud"));
     ui.setCheckBox("smoke.G16", selectedSat.includes("G16"));
     ui.setCheckBox("smoke.G17", selectedSat.includes("G17"));
     ui.setCheckBox("smoke.G18", selectedSat.includes("G18"));
 }
 
-function initEntryView() {
-    let view = ui.getList("smokelayer.entries");
+function initEntryView() { // creates entry view list object
+    let view = ui.getList("smokelayer.entries"); // sets identifier
     if (view) {
         ui.setListItemDisplayColumns(view, ["header"], [
-            { name: "type", tip: "type of entry", width: "5rem", attrs: [], map: e => e.type },
-            { name: "sat", tip: "name of satellite", width: "3rem", attrs: [], map: e => e.satellite },
-            { name: "date", width: "8rem", attrs: ["fixed", "alignRight"], map: e => util.toLocalMDHMString(e.date)},
+            { name: "sat", tip: "name of satellite", width: "5.5rem", attrs: [], map: e => e.satellite },
+            { name: "date", width: "11rem", attrs: ["fixed", "alignLeft"], map: e => util.toLocalMDHMString(e.date)},
         ]);
     }
     return view;
 }
 
-function createWindow() {
+function initSelectionView() { // creates selection view list object
+    let view = ui.getList("smokelayer.selection"); // sets identifies
+    if (view) {
+        ui.setListItemDisplayColumns(view, ["header"], [
+            { name: "show", tip: "toggle visibility", width: "2.5rem", attrs: [], map: e => ui.createCheckBox(e.show, toggleShowSource) },
+            { name: "type", tip: "type of entry", width: "4rem", attrs: [], map: e => e.type },
+            { name: "sat", tip: "name of satellite", width: "3rem", attrs: [], map: e => e.sat },
+            { name: "date", width: "7rem", attrs: ["fixed", "alignLeft"], map: e => util.toLocalMDHMString(e.date)},
+        ]);
+    }
+    return view;
+}
+
+function createWindow() { // creates window
     return ui.Window("Smoke and Cloud Layers", "smoke", "smoke-icon.svg")(
-        ui.Panel("Data Selection", true)(
+        ui.Panel("Data Selection", true)( // data selection panel
             ui.RowContainer()(
-                ui.CheckBox("show smoke", selectSmokeEntries, "smoke.showSmoke"), // label, function on click, value to follow
-                ui.CheckBox("show cloud", selectCloudEntries, "smoke.showCloud"),
-            ),
-            ui.RowContainer()(
-                ui.CheckBox("G16", selectSatellite, "smoke.G16"),
+                ui.CheckBox("G16", selectSatellite, "smoke.G16"), // name, action on click, tracking id
                 ui.CheckBox("G17", selectSatellite, "smoke.G17"),
                 ui.CheckBox("G18", selectSatellite, "smoke.G18"),
             ),
             ui.RowContainer()(
-                ui.CheckBox("follow latest", toggleFollowLatest, "smoke.followLatest"),
-                ui.Button("clear", clearSelections)
+                ui.CheckBox("follow latest", toggleFollowLatest, "smoke.followLatest"), // name, action on click, tracking id
+                ui.Button("clear", clearSelections) // name, action on click
             ),
-            ui.List("smokelayer.entries", 6, selectSmokeCloudEntry)
+            ui.List("smokelayer.selection", 3) // tracking id, number of visible rows
         ),
-        ui.Panel("Contour Display")(
-                ui.Button("reset", resetDisplaySelections),
-                ui.Slider("alpha", "smoke.contour.alpha", contourAlphaChanged),
-                ui.Slider("stroke width", "smoke.contour.stroke_width", contourStrokeWidthChanged),
-                ui.ColorField("stroke color", "smoke.contour.stroke_color", true, contourStrokeColorChanged),
-                ui.ColorField("0<p<0.25", "smoke.contour.color0", true, contourFillColorChanged),
-                ui.ColorField("0.25<p<0.5", "smoke.contour.color1", true, contourFillColorChanged),
-                ui.ColorField("0.5<p<0.75", "smoke.contour.color2", true, contourFillColorChanged),
-                ui.ColorField("0.75<p<1", "smoke.contour.color3", true, contourFillColorChanged),
-                ui.ColorField("p=1", "smoke.contour.color4", true, contourFillColorChanged),
+        ui.Panel("Data Entries", true)( // data entry panel
+            ui.List("smokelayer.entries", 6, selectSmokeCloudEntry), // tracking id, number of visible rows, action on click
+            ui.ListControls("smokelayer.entries")
+        ),
+        ui.Panel("Contour Display")( // contour display panel
+            ui.Button("reset", resetDisplaySelections),
+            ui.Slider("alpha", "smoke.contour.alpha", contourAlphaChanged),
+            ui.Slider("stroke width", "smoke.contour.stroke_width", contourStrokeWidthChanged),
+            ui.ColorField("stroke color", "smoke.contour.stroke_color", true, contourStrokeColorChanged), // label, id, is input, action on click
+            ui.ColorField("smoke color", "smoke.contour.smoke_color", true, contourFillColorChanged),
+            ui.ColorField("cloud color", "smoke.contour.cloud_color", true, contourFillColorChanged),
         ),
     );
  }
 
 function initContourDisplayControls() {
-     let s = ui.getSlider("smoke.contour.alpha");
-     ui.setSliderRange(s, 0, 1.0, 0.1);
-     ui.setSliderValue(s, defaultContourRender.alpha);
 
-     var e = undefined;
+    let e = ui.getSlider("smoke.contour.alpha"); // get slider from id
+    ui.setSliderRange(e, 0, 1.0, 0.1); //  set range
+    ui.setSliderValue(e, defaultContourRender.alpha); // set value
 
-     e = ui.getSlider("smoke.contour.stroke_width");
-     ui.setSliderRange(e, 0, 3, 0.5);
-     ui.setSliderValue(e, defaultContourRender.strokeWidth);
+    let s = ui.getSlider("smoke.contour.stroke_width");
+    ui.setSliderRange(s, 0, 3, 0.5);
+    ui.setSliderValue(s, defaultContourRender.strokeWidth);
 
-     e = ui.getField("smoke.contour.stroke_color");
-     ui.setField(e, defaultContourRender.strokeColor.toCssHexString());
-     for (var i = 0; i<defaultContourRender.fillColors.length; i++) {
-         e = ui.getField(`smoke.contour.color${i}`);
-         if (e) {
-             ui.setField(e, defaultContourRender.fillColors[i].toCssHexString().slice(0, 7));
-         }
-     }
+    let sc = ui.getField("smoke.contour.stroke_color"); // get color field from id
+    ui.setField(sc, convertColorToStripAlpha(defaultContourRender.strokeColor)); // set color field value
+
+    let colorSmoke = ui.getField("smoke.contour.smoke_color");
+    ui.setField(colorSmoke, convertColorToStripAlpha(defaultContourRender.smokeColor));
+
+    let colorCloud = ui.getField("smoke.contour.cloud_color");
+    ui.setField(colorCloud, convertColorToStripAlpha(defaultContourRender.cloudColor));
 }
 
 //--- contour controls
-function initDefaultColors(renderConfig) {
+function initDefaultColors(renderConfig) { // resets colors to default according to a config
     let width = renderConfig.strokeWidth;
-    let strokeColor = renderConfig.strokeColor;
     let alpha = renderConfig.alpha;
-    let fillColors = [...renderConfig.fillColors];
-    let result = {strokeWidth:width, strokeColor:strokeColor, fillColors: fillColors, alpha:alpha};
+    let strokeColor = convertColorToHaveAlpha(convertColorToStripAlpha(renderConfig.strokeColor), alpha);
+    let smokeColor = convertColorToHaveAlpha(convertColorToStripAlpha(renderConfig.smokeColor), alpha);
+    let cloudColor = convertColorToHaveAlpha(convertColorToStripAlpha(renderConfig.cloudColor), alpha);
+    let result = {strokeWidth:width, strokeColor:strokeColor, cloudColor:cloudColor, smokeColor:smokeColor, alpha:alpha};//fillColors: fillColors, alpha:alpha};
     return result
 }
 
@@ -285,9 +335,13 @@ function contourFillColorChanged(event) {
     if (e) {
         let clrSpec = event.target.value;
         let boxSpec = event.target.id;
-        let i =  parseInt(event.target.id.slice(-1));
-        if (clrSpec) {
-            currentContourRender.fillColors[i] = convertColorToHaveAlpha(clrSpec, currentContourRender.alpha);
+        if (clrSpec) { // changes render color according to the fill box changed
+            if (boxSpec == "smoke.contour.smoke_color") {
+                currentContourRender.smokeColor = convertColorToHaveAlpha(clrSpec, currentContourRender.alpha);
+            }
+            if (boxSpec == "smoke.contour.cloud_color") {
+                 currentContourRender.cloudColor = convertColorToHaveAlpha(clrSpec, currentContourRender.alpha);
+            }
             e.renderChanged();
         }
     }
@@ -303,14 +357,13 @@ function convertColorToStripAlpha(color) {
     return color.toCssHexString().slice(0,7)
 }
 
-// interactions - behavior for clicking boxes and filtering entries
-
-function updateColors(){
-    for (var i = 0; i<currentContourRender.fillColors.length; i++) {
-        let color = currentContourRender.fillColors[i]; // get color
-        let colorNoAlpha = convertColorToStripAlpha(color); // strip current alpha
-        currentContourRender.fillColors[i] =  convertColorToHaveAlpha(colorNoAlpha, currentContourRender.alpha); //add color with new alpha
-    }
+function updateColors(){ // updates color from user input
+    let sColor = currentContourRender.smokeColor; // get color
+    let sColorNoAlpha = convertColorToStripAlpha(sColor); // strip current alpha
+    currentContourRender.smokeColor =  convertColorToHaveAlpha(sColorNoAlpha, currentContourRender.alpha);
+    let cColor = currentContourRender.cloudColor; // get color
+    let cColorNoAlpha = convertColorToStripAlpha(cColor); // strip current alpha
+    currentContourRender.cloudColor =  convertColorToHaveAlpha(cColorNoAlpha, currentContourRender.alpha);
 }
 
 function contourAlphaChanged(event) {
@@ -324,7 +377,7 @@ function contourAlphaChanged(event) {
     }
 }
 
-function resetDisplaySelections(event) {
+function resetDisplaySelections(event) { // resets display settings to default
     currentContourRender = initDefaultColors(config.smokelayer.contourRender);
     updateColors();
     initContourDisplayControls();
@@ -335,10 +388,13 @@ function resetDisplaySelections(event) {
 
 }
 
+// interactions - behavior for clicking boxes and filtering entries
 function clearSelections(event){
     // clear viewed data
     selectedEntry = ui.getSelectedListItem(entryView);
-    if (selectedEntry) selectedEntry.SetVisible(false);
+    if (selectedEntry) selectedEntry.clear();
+    clearEntries();
+    clearSelectionView();
     // clear all checkboxes
     followLatest = false;
     updateEntryView();
@@ -347,17 +403,63 @@ function clearSelections(event){
 
 function toggleFollowLatest(event) {
     followLatest = ui.isCheckBoxSelected(event.target);
-    if (followLatest && ui.getSelectedListItemIndex(entryView) != 0) {
+    if ((followLatest==true) && (ui.getSelectedListItemIndex(entryView) != 0)) {
         ui.selectFirstListItem(entryView);
     }
 }
 
-function selectSmokeCloudEntry(event) { // does this need update display panel and set visible?
+function toggleShowSource(event) { // from data selection checkboxes
+    let cb = ui.getCheckBox(event.target)
+    let cbName = ui.getListItemOfElement(cb).type;
+    if (cbName == SmokeLayerType.CLOUD) selectCloudEntries(event); // updates according to the checkbox
+    if (cbName == SmokeLayerType.SMOKE) selectSmokeEntries(event); // updates according to the checkbox
+    let e = ui.getSelectedListItem(entryView);
+    if (e) { // sets selected layers visible and unselected to not visible
+        if (selectedType.includes(SmokeLayerType.SMOKE)) selectedEntry.smokeEntry.SetVisible(true);
+        else selectedEntry.smokeEntry.SetVisible(false);
+        if (selectedType.includes(SmokeLayerType.CLOUD)) selectedEntry.cloudEntry.SetVisible(true);
+        else selectedEntry.cloudEntry.SetVisible(false);
+
+    }
+}
+function selectSmokeCloudEntry(event) { // selects entry from the data entry list
     selectedEntry = ui.getSelectedListItem(entryView);
-    if (selectedEntry) selectedEntry.SetVisible(true);//.updateDisplayPanel(); // probably not needed for this case
+    if (selectedEntry) {
+        if (selectedType.includes(SmokeLayerType.SMOKE)) selectedEntry.smokeEntry.SetVisible(true);
+        if (selectedType.includes(SmokeLayerType.CLOUD)) selectedEntry.cloudEntry.SetVisible(true);
+        updateSelectionView(selectedEntry);
+    }
+    else {
+        clearEntries(); // ensure all entries are cleared if nothing is selected
+    }
 }
 
-function selectCloudEntries(event) {
+
+function updateSelectionView(selectedEntry) { // updates selections to match the selected entry
+    let sat = selectedEntry.satellite;
+    let date = selectedEntry.date;
+    selectionEntries.get("smoke").sat = sat;
+    selectionEntries.get("smoke").date = date;
+    selectionEntries.get("cloud").sat = sat;
+    selectionEntries.get("cloud").date = date;
+    displayEntries = util.filterMapValues(selectionEntries, se=> isSelectedEntry(selectedEntry, se));
+    ui.setListItems(selectionView, displayEntries);
+}
+
+function clearSelectionView() { // clears selections
+    selectionEntries.get("smoke").sat = undefined;
+    selectionEntries.get("smoke").date = undefined;
+    selectionEntries.get("cloud").sat = undefined;
+    selectionEntries.get("cloud").date = undefined;
+    ui.setListItems(selectionView, selectionEntries);
+
+}
+
+function isSelectedEntry(selectedEntry, selectionEntry) { // checks if the selection matches the selected entry
+    return ((selectedEntry.date == selectionEntry.date) && (selectedEntry.satellite = selectionEntry.sat));
+}
+
+function selectCloudEntries(event) { // selects cloud layers by updating selected type variable
     if (ui.isCheckBoxSelected(event.target)){
         if (!selectedType.includes("cloud")) selectedType.push("cloud");
     }
@@ -367,25 +469,34 @@ function selectCloudEntries(event) {
             selectedType.splice(index, 1);
         }
     }
-    updateEntryView();
 }
 
-function selectSatellite(event) {
+function selectSatellite(event) { // selects visible satellites to filter entry list
     let cb = ui.getCheckBox(event.target);
     let satName = ui.getCheckBoxLabel(cb)
     if (ui.isCheckBoxSelected(event.target)){
         if (!selectedSat.includes(satName)) selectedSat.push(satName);
     }
     else {
+        // update satellite list
         var index = selectedSat.indexOf(satName);
         if (index > -1) {
             selectedSat.splice(index, 1);
         }
+        // clear all entries visible from that sat
+    }
+    let e = ui.getSelectedListItem(entryView);
+    if (e) {
+        if (!selectedSat.includes(e.satellite)) {
+            e.clear();
+            clearSelectionView();
+        }
     }
     updateEntryView();
+    if (followLatest == true) ui.selectFirstListItem(entryView);
 }
 
-function selectSmokeEntries(event) {
+function selectSmokeEntries(event) { // selects smoke layers by updating selected type variable
     if (ui.isCheckBoxSelected(event.target)){
             if (!selectedType.includes("smoke")) selectedType.push("smoke");
         }
@@ -395,22 +506,21 @@ function selectSmokeEntries(event) {
             selectedType.splice(index, 1);
         }
     }
-    updateEntryView();
 }
 
-function updateEntryView() {
+function updateEntryView() { // updates entry view
     displayEntries = util.filterMapValues(smokeCloudEntries, se=> isSelected(se));
-    displayEntries.sort(SmokeCloudEntry.compareFiltered);
+    displayEntries.sort(Entry.compareFiltered); // need to fix sorting
     ui.setListItems(entryView, displayEntries);
 }
 
-function isSelected (se) {
-    return (selectedType.includes(se.type) && selectedSat.includes(se.satellite));
+function isSelected (se) { // checks if entries are selected
+    return selectedSat.includes(se.satellite)
 }
 
 // websocket messages
 
-function handleWsSmokeLayerMessages(msgType, msg) {
+function handleWsSmokeLayerMessages(msgType, msg) { // handles new data from the websocket
     switch (msgType) {
         case "smokeLayer":
             handleSmokeLayerMessage(msg.smokeLayer);
@@ -420,12 +530,21 @@ function handleWsSmokeLayerMessages(msgType, msg) {
         }
 }
 
-function handleSmokeLayerMessage(smokeLayer) {
-    let se = SmokeCloudEntry.create(smokeLayer);
-    smokeCloudEntries.set(smokeLayer.url, se);
-    if (isSelected(se)) updateEntryView();
-    if (followLatest) {
-            ui.selectFirstListItem(entryView)
+function clearEntries() {
+    smokeCloudEntries.forEach((value, key) => {
+        value.clear();
+        value.smokeEntry.SetVisible(false);//;clear();
+        value.cloudEntry.SetVisible(false);
+    });
+}
+
+function handleSmokeLayerMessage(smokeLayer) { // handles new data from the websocket
+    let se = Entry.create(smokeLayer); // creates entry
+    smokeCloudEntries.set(smokeLayer.id, se); // saves entry
+    if (isSelected(se)) updateEntryView(); // updates entry view
+    if (followLatest == true) {
+        clearEntries(); // clears all visible entries
+        ui.selectFirstListItem(entryView); // selects entry - need to deselect current entry
     }
 }
 
