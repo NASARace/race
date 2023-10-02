@@ -18,19 +18,16 @@
 package gov.nasa.race.earth.actor
 
 import akka.actor.ActorRef
-import akka.http.scaladsl.model.ContentTypes.`application/json`
-import akka.http.scaladsl.model.MediaTypes.`image/tiff`
 import akka.http.scaladsl.model.{HttpEntity, HttpMethods, MediaTypes}
 import com.typesafe.config.Config
 import gov.nasa.race
 import gov.nasa.race.ResultValue
 import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.config.ConfigUtils.ConfigWrapper
-import gov.nasa.race.common.{ExternalProc, JsonWriter, StringJsonPullParser}
+import gov.nasa.race.common.{ExternalProc, StringJsonPullParser}
 import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.util.FileUtils
 import gov.nasa.race.earth.{Gdal2Tiles, GdalContour, GdalPolygonize, GdalWarp, SmokeAvailable}
-import gov.nasa.race.http.{FileRequestFailed, FileRetrieved, HttpActor}
+import gov.nasa.race.http.{FileRetrieved, HttpActor}
 import gov.nasa.race.uom.DateTime
 
 import java.io.File
@@ -42,16 +39,22 @@ import scala.language.postfixOps
 import scala.sys.process.Process
 import scala.util.{Failure, Success}
 
+
 trait  SmokeSegmentationActor extends PublishingRaceActor with SubscribingRaceActor{
   // unsure what might go here - may omit
 }
+
+/**
+  * a import actor class which performs image segmentation to get smoke and cloud geojsons
+  * @param config
+  */
 
 class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentationActor with HttpActor{
   case class ProcessDataSet (date: DateTime, files: Seq[File])
 
   val apiPort: String = config.getString("api-port")
 
-  val dataDir: File = new File(config.getString("data-dir"), "tifs")//.flatMap(FileUtils.ensureDir) // if not set data will not be stored in files
+  val dataDir: File = new File(config.getString("data-dir"), "tifs")
   val dataDirContours: File = new File(config.getString("data-dir"), "contours")
   val pythonPath: File = new File(config.getString("python-exe"))
   val apiPath: File = new File(System.getProperty("user.dir"), config.getString("api-exe"))
@@ -67,21 +70,43 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
   //val gdalContour:File = new File(config.getStringOrElse("gdal-contour", getExecutableFile("gdal-contour-prog", "gdal_contour").getPath))
   val contourCmd = new GdalContour(gdalContour)
   val polygonCmd = new GdalPolygonize(gdalPolygonize, Some(gdalPolygonizeEnv))
+  val gdalWarp: File = new File(config.getString("gdal-warp"))
+  val warpCmd = new GdalWarp(gdalWarp)
 
   override def onStartRaceActor(originator: ActorRef): Boolean = {
     super.onStartRaceActor(originator)
   }
 
   override def onTerminateRaceActor(originator: ActorRef): Boolean = {
-    runningProc.destroy()
+    val stopFuture = stopAPI()
+    Await.result(stopFuture, 5.seconds)
+    stopFuture.onComplete {
+      case Success(v) => info ("smoke api status confirmed")
+      case Failure(x) => warning(s"smoke api status could not be confirmed $x")
+    }
+    //runningProc.destroy()
     super.onTerminateRaceActor(originator)
+  }
+
+  def stopAPI(): Future[Unit] = {
+    Future {
+      httpRequestStrict(apiPort.replace("/predict", "/stop_server"), HttpMethods.GET) {
+        case Success(strictEntity) =>
+          info("finished stopping smoke api server")
+          apiAvailable = false
+        case Failure(x) =>
+          warning(s"failed to stop smoke api server $x")
+          apiAvailable = false
+
+      }
+    }
   }
 
   def startAPI: Process = {
     val runningProc = apiProcess.customExec()
     Thread.sleep(6000) // bad practice - need to remove?
     val serviceFuture = IsServiceAvailable()
-    Await.result(serviceFuture, 3.seconds)
+    Await.result(serviceFuture,  Duration.Inf)
     serviceFuture.onComplete {
       case Success(v) => info ("smoke api status confirmed")
       case Failure(x) => warning(s"smoke api status could not be confirmed $x")
@@ -105,9 +130,10 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
   def handleSmokeMessage: Receive = {
     case BusEvent(imageChannel, msg:FileRetrieved, _) => // need to account for replay
       makeRequest(msg) // Bus event should trigger request by message from goes true color import actor
-    case pds: ProcessDataSet => handleProcessDataSet(pds) // completed segmentation event should trigger processing the data for visualization - currently undefined
+    case pds: ProcessDataSet => handleProcessDataSet(pds) // completed segmentation event should trigger processing the data for visualization
   }
-  override def handleMessage = handleSmokeMessage orElse super.handleMessage
+
+  override def handleMessage: PartialFunction[Any, Unit] = handleSmokeMessage orElse super.handleMessage
 
   def makeRequest(importedImage: FileRetrieved): Unit = {
     val serviceFuture = IsServiceAvailable()
@@ -120,25 +146,43 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
       val tiffBytes: Array[Byte] = FileUtils.fileContentsAsBytes(importedImage.req.file).get
       val reqEntity = HttpEntity(MediaTypes.`image/tiff`, tiffBytes) // image/tiff
       val outputFile: File = new File(dataDir.getPath, importedImage.req.file.getName.replace(".tif", "_segmented.tif"))
-      httpRequestFile(apiPort, outputFile, HttpMethods.POST, entity = reqEntity).onComplete {
+      httpRequestFileWithTimeout(apiPort, outputFile, 240.seconds, HttpMethods.POST, entity = reqEntity).onComplete {
         case Success(f) =>
           info(s"download complete: $f")
-          // send message with file retrieval to process data set
-          val contourFuture: Future[Any] = createSmokeCloudContours(f, importedImage.date)//createSmokeCloudContours(f, importedImage.date)
-          contourFuture.onComplete{
-            case Success(c) =>
-              println(c)
-              val contourFiles: Seq[File] = Seq(getOutputFile(importedImage.date, "smoke", parseSatelliteName(f).get), getOutputFile(importedImage.date, "cloud", parseSatelliteName(f).get))
-              info(s"created contour files: $contourFiles")
-              self ! ProcessDataSet(importedImage.date, contourFiles)// process data set by sending two smoke available messages - one with cloud one with smoke data
-            case Failure(x) =>
-              warning(s"failed to create smoke and cloud contour files: $x")
-              println(s"failed to create smoke and cloud contour files: $x")
+          // warp to reduce resolution
+          val warpFuture: Future[ResultValue[File]] = reduceResolution(f)
+          warpFuture.onComplete{
+            case Success(file) =>
+              {
+                val contourFuture: Future[Any] = createSmokeCloudContours(file.get, importedImage.date)
+                contourFuture.onComplete{ // once contours are completed
+                  case Success(c) =>
+                    val contourFiles: Seq[File] = Seq(getOutputFile(importedImage.date, "smoke", parseSatelliteName(f).get), getOutputFile(importedImage.date, "cloud", parseSatelliteName(f).get))
+                    info(s"created contour files: $contourFiles")
+                    self ! ProcessDataSet(importedImage.date, contourFiles)// process data set by sending two smoke available messages - one with cloud one with smoke data
+                  case Failure(x) =>
+                    warning(s"failed to create smoke and cloud contour files: $x")
+                    println(s"failed to create smoke and cloud contour files: $x")
+                }
+              }
+            case Failure (x) =>
+              warning ("resolution reduction failed")
           }
         case Failure(x) =>
           warning(s"download failed: $x")
       }
     }
+  }
+
+  def reduceResolution(segmentedFile:File): Future[ResultValue[File]] = {
+    val res = warpCmd.reset()
+      .setInFile(segmentedFile)
+      .setOutFile(new File(segmentedFile.getPath.replace(".tif", "_reduced.tif")))
+      .setTargetSize("1100", "466")
+      .setResamplingMethod("near")
+      .setOverwrite()
+      .exec()
+    res
   }
 
   def createSmokeCloudContours(segmentedFile:File, date:DateTime): Future[Any] = {
@@ -189,15 +233,12 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
   }
 
   def handleProcessDataSet(pds: ProcessDataSet): Unit = {
-    info("in handle process data set") // Undefined now - will need to process for visualization needs
-    //smoke - parsing output file which does not contain the satellite name - add to name
-    publish(SmokeAvailable(parseSatelliteName(pds.files(0)).get, pds.files(0), "smoke", "epsg:4326", pds.date))
-    //add satellite parser from file download
-    publish(SmokeAvailable(parseSatelliteName(pds.files(1)).get, pds.files(1), "cloud", "epsg:4326", pds.date))
+    // publishes data to bus
+    publish(SmokeAvailable(parseSatelliteName(pds.files(0)).get, pds.files(0), pds.files(1), "epsg:4326", pds.date))
   }
 
   def parseSatelliteName(file: File): Option[String] = {
-    val satellitePattern1 = raw"GOES(\d{2})".r // raw".*_c(\d{4})(\d{3})(\d{2})(\d{2})(\d{2})(\d)\.tif".r
+    val satellitePattern1 = raw"GOES(\d{2})".r
     val p1 = satellitePattern1.unanchored
     val satellitePattern2 = raw"G(\d{2})".r
     val p2 = satellitePattern2.unanchored
@@ -214,6 +255,10 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
   }
 }
 
+/**
+  * import actor for creating imagery tile outputs
+  * @param config
+  */
 class SmokeSegmentationImageryActor(val config: Config) extends SmokeSegmentationActor with HttpActor {
   case class ProcessDataSet(date: DateTime, files: Seq[File])
 
@@ -248,9 +293,9 @@ class SmokeSegmentationImageryActor(val config: Config) extends SmokeSegmentatio
 
   def startAPI: Process = {
     val runningProc = apiProcess.customExec()
-    Thread.sleep(6000) // bad practice - need to remove?
+    Thread.sleep(5000) // bad practice - need to remove?
     val serviceFuture = IsServiceAvailable()
-    Await.result(serviceFuture, 3.seconds)
+    Await.result(serviceFuture, 5.seconds)
     serviceFuture.onComplete {
       case Success(v) => info("smoke api status confirmed")
       case Failure(x) => warning(s"smoke api status could not be confirmed $x")
@@ -296,14 +341,13 @@ class SmokeSegmentationImageryActor(val config: Config) extends SmokeSegmentatio
           info(s"download complete: $s")
           val f: Future[(ResultValue[File], ResultValue[File])] = createSmokeCloudTifs(outputFile, importedImage.date)
           Await.result(f, Duration.Inf) // not in actor thread, add comment to enter and exit thread, could use messages
-          f.onComplete {
+          f.onComplete { // future to warp the tif into correct projection
             case Success(v) =>
-              println("warped")
               info("finished warping individual smoke and cloud tifs")
               val outputFiles: Seq[File] = Seq(getOutputFile(importedImage.date, "smoke", parseSatelliteName(outputFile).get), getOutputFile(importedImage.date, "cloud", parseSatelliteName(outputFile).get))
               val f2: Future[(Any, Any)] = storeData(importedImage.date, outputFiles)
               Await.result(f2, Duration.Inf) // not in actor thread, add comment to enter and exit thread, could use messages
-              f2.onComplete {
+              f2.onComplete { // future to store tiles
                 case Success(v2) =>
                   info("finished storing smoke and cloud tiles")
                   self ! ProcessDataSet(importedImage.date, outputFiles) // move back into actor thread to avoid sync, ! sends the message
@@ -390,15 +434,13 @@ class SmokeSegmentationImageryActor(val config: Config) extends SmokeSegmentatio
   }
 
   def handleProcessDataSet(pds: ProcessDataSet): Unit = {
-    info("in handle process data set") // Undefined now - will need to process for visualization needs
+    info("in handle process data set")
     //smoke - parsing output file which does not contain the satellite name - add to name
-    publish(SmokeAvailable(parseSatelliteName(pds.files(0)).get, pds.files(0), "smoke", "epsg:4326", pds.date))
-    //add satellite parser from file download
-    publish(SmokeAvailable(parseSatelliteName(pds.files(1)).get, pds.files(1), "cloud", "epsg:4326", pds.date))
+    publish(SmokeAvailable(parseSatelliteName(pds.files(0)).get, pds.files(0), pds.files(1), "EPSG:3857", pds.date))
   }
 
   def parseSatelliteName(file: File): Option[String] = {
-    val satellitePattern1 = raw"GOES(\d{2})".r // raw".*_c(\d{4})(\d{3})(\d{2})(\d{2})(\d{2})(\d)\.tif".r
+    val satellitePattern1 = raw"GOES(\d{2})".r
     val p1 = satellitePattern1.unanchored
     val satellitePattern2 = raw"G(\d{2})".r
     val p2 = satellitePattern2.unanchored
