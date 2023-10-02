@@ -104,7 +104,7 @@ class GdalInfo (val prog: File, val inFile: File) extends ExternalProc[File]  {
   protected override def buildCommand: StringBuilder = super.buildCommand.append(s" $inFile")
 
   override def getSuccessValue: File = {
-    if (!inFile.isFile) throw new RuntimeException(s"output file not found: $inFile")
+    if (!inFile.isFile) throw new RuntimeException(s"input file not found: $inFile")
     inFile
   }
 
