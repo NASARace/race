@@ -10,10 +10,40 @@ import random
 import math
 import os
 from tensorflow.python.ops.numpy_ops import np_config
+import time
+import pandas as pd
 
 np_config.enable_numpy_behavior()
 gdal.SetConfigOption("GTIFF_SRS_SOURCE", "GEOKEYS")
 
+def parse_log(log_file):
+    data = {"date":[],
+        "time":[],
+        "level":[],
+        "module":[],
+        "function":[],
+        "message":[],
+        "timing type":[],
+        "timing":[]}
+    for line in open(log_file):
+        data["date"].append(line.split(" ")[0])
+        data["time"].append(line.split(" ")[1] + " "+ line.split(" ")[2])
+        data["level"].append(line.split(" ")[3])
+        data["module"].append(line.split(" ")[4])
+        data["function"].append(line.split(" ")[5])
+        msg = " ".join(line.split(" ")[5:]).strip("\n")
+        data["message"].append(msg)
+        if ": " in msg:
+            time_type = msg.split(": ")[0]
+            time = msg.split(": ")[-1]
+        else:
+            time_type = None
+            time = None
+        data["timing type"].append(time_type)
+        data["timing"].append(time)
+    
+    return pd.DataFrame(data)
+    
 def convert_mask_to_colors(mask):
     mapping = {0: 0, 1: 127.5, 2: 225}
     k = np.array(list(mapping.keys()))
@@ -64,19 +94,34 @@ def convert_tif_to_mask(dataset):
     b1 = band1.ReadAsArray()
     return b1
 
+@tf.function
+def process_data(originals, target_shape=(512, 512)):
+    #print(type(originals[0]))
+    #inputs = tf.image.resize(originals, target_shape)
+    inputs = [ tf.image.resize(originals[ind], target_shape) for ind in range(len(originals))]
+    return inputs
+
 class DataLoader:
     def __init__(self, originals, target_shape=(512, 512)):
-        self.originals = originals
+        data_loader_start = time.time()
+        self.originals = tf.Variable(originals)
         self.AUTOTUNE = tf.data.experimental.AUTOTUNE
-        self.target_shape = target_shape
+        self.target_shape = tf.Variable(target_shape)
+        print(time.time()-data_loader_start)
         
-    @tf.function
+    @tf.function(reduce_retracing=True)
     def data_processor(self):
-        inputs = [ cv2.resize(self.originals[ind], self.target_shape) for ind in range(len(self.originals))]
+        inputs = [ tf.image.resize(self.originals[ind], self.target_shape) for ind in range(len(self.originals))]
         return inputs
 
 def initiate_model(model_path):
-    return keras.models.load_model(model_path)
+    model = keras.models.load_model(model_path, compile=False)
+    model.compile(loss="sparse_categorical_crossentropy", 
+                  optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), 
+                  metrics=["accuracy", 
+                           tf.keras.metrics.MeanIoU(num_classes=3, sparse_y_true=True, sparse_y_pred=False)]
+            )
+    return model
 
 def get_segmented_tif(original_tif, mask, output_path):
     driver = gdal.GetDriverByName("GTiff")
@@ -97,7 +142,7 @@ def get_segmeneted_mutiband_tif(original_tif, mask, output_path):
     driver = gdal.GetDriverByName("GTiff")
     mask = mask.reshape(mask.shape[:2])
     [rows, cols] = mask.shape
-    output_tif= driver.Create(output_path, cols, rows, 2, gdal.GDT_Byte)
+    output_tif= driver.Create(output_path, cols, rows, 3, gdal.GDT_Byte)
     output_tif.SetGeoTransform(original_tif.GetGeoTransform())##sets same geotransform as input
     output_tif.SetProjection(original_tif.GetProjection())##sets same projection as input
     new_metadata = {'0': 'no smoke no clouds', '1': 'smoke', '2': 'cloud'}
@@ -107,10 +152,10 @@ def get_segmeneted_mutiband_tif(original_tif, mask, output_path):
     smoke_mask[np.where(mask==1)] = 1
     cloud_mask = np.zeros(mask.shape)
     cloud_mask[np.where(mask==2)] = 2
-    output_tif.GetRasterBand(1).WriteArray(smoke_mask)
-    output_tif.GetRasterBand(1).SetNoDataValue(0)
-    output_tif.GetRasterBand(2).WriteArray(cloud_mask)
+    output_tif.GetRasterBand(2).WriteArray(smoke_mask)
     output_tif.GetRasterBand(2).SetNoDataValue(0)
+    output_tif.GetRasterBand(3).WriteArray(cloud_mask)
+    output_tif.GetRasterBand(3).SetNoDataValue(0)
     output_tif.FlushCache() ##saves to disk
     return output_tif
 
@@ -122,13 +167,27 @@ def get_probability_tif(original_tif, probabilities, output_path):
     output_tif.SetProjection(original_tif.GetProjection())##sets same projection as input
     new_metadata = {"1": "no smoke no clouds", "2": "smoke", "3": "cloud"}
     #new_metadata.update(original_tif.GetMetadata())
+    vfunc = np.vectorize(convert_prob_to_interval)
     output_tif.SetMetadata(new_metadata)##sets same metadata as input and adds key for interpreting segmetation mask
-    output_tif.GetRasterBand(1).WriteArray(probabilities[:, :, 0])
-    output_tif.GetRasterBand(2).WriteArray(probabilities[:, :, 1])
-    output_tif.GetRasterBand(3).WriteArray(probabilities[:, :, 2])
+    output_tif.GetRasterBand(1).WriteArray(vfunc(probabilities[:, :, 0]))
+    output_tif.GetRasterBand(2).WriteArray(vfunc(probabilities[:, :, 1]))
+    output_tif.GetRasterBand(3).WriteArray(vfunc(probabilities[:, :, 2]))
     output_tif.FlushCache() ##saves to disk
     return output_tif
 
+def convert_prob_to_interval(prob):
+    p = round(prob, 3)
+    if p < 0.25:
+        i = 1
+    elif 0.25 <= p and p < 0.5:
+        i = 2
+    elif 0.5 <= p and p < 0.75:
+        i = 3
+    elif 0.75 <= p and p < 1:
+        i = 4
+    elif p == 1:
+        i = 5
+    return i
 
 def smoke_segmentation_raw(tif_dataset, segmentation_model, target_shape, output_path, tile=True, overlap=0):
     #convert to image
@@ -142,7 +201,10 @@ def smoke_segmentation_raw(tif_dataset, segmentation_model, target_shape, output
         original_shape = images.shape[1:3]
     #format images
     input_dataset = DataLoader(images, target_shape)
-    inputs = input_dataset.data_processor()
+    #print(type(images[0]))
+    inputs = process_data(input_dataset.originals, input_dataset.target_shape)#
+    #inputs = input_dataset.data_processor()
+    #inputs = tf. convert_to_tensor(images)
     inputs_tf = tf.data.Dataset.from_tensor_slices((inputs))
     inputs_tf = inputs_tf.batch(32)
     #run segmentation 
@@ -153,9 +215,9 @@ def smoke_segmentation_raw(tif_dataset, segmentation_model, target_shape, output
         pred_reshaped = pred[0]
     pred_mask = create_mask(pred_reshaped)
     #plot_output([image], [pred_mask], create_mask_=False)
-    output_tif = get_probability_tif(tif_dataset, pred_reshaped, output_path)
-    #output_tif = get_segmeneted_mutiband_tif(tif_dataset, pred_mask, output_path)
-    return output_tif, [output_path]
+    #output_tif = get_probability_tif(tif_dataset, pred_reshaped, output_path)
+    output_tif = get_segmeneted_mutiband_tif(tif_dataset, pred_mask, output_path)
+    return output_tif
 
 def smoke_segmentation(tif_dataset, segmentation_model, target_shape, output_path, tile=True, plot=False, separate_layers=False, overlap=0):
     #convert to image
@@ -245,6 +307,7 @@ def reconstruct_image(tiled_array, tiled_shape, padding_tuple, target, overlap):
     return full_image
 
 def split(img, target_shape, overlap):
+    split_start = time.time()
     sh = list(img.shape)
     sh[0], sh[1] = sh[0] + (overlap[0] * 2), sh[1] + (overlap[1] * 2)
     splitted = []
