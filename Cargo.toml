@@ -1,0 +1,19 @@
+[workspace]
+
+resolver = "2"
+
+members = [
+  "race-core/src/main/rust/odin_common",
+  "race-core/src/main/rust/odin_gdal",
+  "race-earth/src/main/rust/odin_dem",
+
+  "race-earth/src/main/rust/gethrrr",
+  "race-earth/src/main/rust/gpshub",
+
+  "race-tools/src/main/rust/opendata_splitter",
+  "race-tools/src/main/rust/mkslides",
+  "race-tools/src/main/rust/servedoc",
+  "race-earth/src/main/rust/wnrun",
+  "race-tools/src/main/rust/webrun"
+]
+

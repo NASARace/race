@@ -3,6 +3,9 @@
 pub mod errors;
 pub mod warp;
 
+use gdal;
+use gdal_sys;
+
 #[macro_use]
 extern crate lazy_static;
 

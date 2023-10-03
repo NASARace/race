@@ -501,7 +501,12 @@ trait RaceActor extends Actor with ImplicitActorLogging with NamedConfigurable w
     }
   }
 
-  def getExecutableFile(key: String, fileName: String): File = getOptionalExecutableFile(key,fileName).get
+  def getExecutableFile(key: String, fileName: String): File = {
+    getOptionalExecutableFile(key,fileName) match {
+      case Some(file) => file
+      case None => throw new RuntimeException(s"executable $fileName not found (check '$key' config)")
+    }
+  }
 }
 
 

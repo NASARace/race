@@ -13,20 +13,21 @@ path = "src/bin/odin_dem.rs"
 [dependencies]
 
 # our ODIN crates
-odin_common = { path = "../odin_common" }
-odin_gdal = { path = "../odin_gdal" }
+odin_common = { path = "../../../../../race-core/src/main/rust/odin_common" }
+odin_gdal = { path = "../../../../../race-core/src/main/rust/odin_gdal" }
 
-lazy_static = "1.4.0"
-structopt = "0.3.26"
-tokio = { version = "1", features = ["full"] }
+lazy_static = "*"
+structopt = "*"
+tokio = { version = "*", features = ["full"] }
 tokio-util = { version = "*", features = ["full"] }
-tower-http = { version = "0.4", features = ["full"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tower-http = { version = "*", features = ["full"] }
+tracing = "*"
+tracing-subscriber = { version = "*", features = ["env-filter"] }
 http = "*"
-axum = "0.6"
-serde = "1.0"
-serde_derive = "1.0"
-thiserror = "1.0"
-gdal-sys = { version = "0.9", features = ["bindgen"] }
-gdal = { version = "0.16" }
+axum = "*"
+serde = "*"
+serde_derive = "*"
+thiserror = "*"
+gdal = "*"
+gdal-sys = "*"
+
