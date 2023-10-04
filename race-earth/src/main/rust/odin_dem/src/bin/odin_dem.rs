@@ -1,4 +1,5 @@
 #![allow(unused)]
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -26,7 +27,6 @@ use odin_common::geo::BoundingBox;
 
 use odin_common::strings::deserialize_arr4;
 use odin_dem::*;
-
 
 #[derive(StructOpt)]
 struct CliOpts {
