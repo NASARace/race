@@ -7,12 +7,14 @@ members = [
   "race-core/src/main/rust/odin_gdal",
   "race-earth/src/main/rust/odin_dem",
   "race-earth/src/main/rust/odin_hrrr",
+  "race-earth/src/main/rust/odin_windninja",
+
   "race-earth/src/main/rust/gpshub",
 
   "race-tools/src/main/rust/opendata_splitter",
   "race-tools/src/main/rust/mkslides",
   "race-tools/src/main/rust/servedoc",
-  "race-earth/src/main/rust/odin_windninja",
+
   "race-tools/src/main/rust/webrun"
 ]
 

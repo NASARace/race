@@ -16,7 +16,7 @@ path = "src/bin/utm_bbox.rs"
 [dependencies]
 odin_common = { path = "../odin_common" }
 
-gdal-sys = { version = "*" }
+gdal-sys = { version = "*", features = ["bindgen"]}
 gdal = { version = "*" }
 lazy_static = "*"
 libc = "*"

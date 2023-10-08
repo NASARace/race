@@ -11,9 +11,10 @@ fn main() {
 
     let mut build = cc::Build::new();
     build.file("src/warpshim.c");
+    build.flag("-O3");
 
     if check_gdal_header(&mut build) {
-        build .compile("warpshim")
+        build.compile("warpshim")
     } else {
         println!("cargo:warning=no CPATH environment variable set - don't know where to find gdal headers. abort");
         panic!("no C_FLAGS environment variable set - don't know where to find gdal headers. abort");

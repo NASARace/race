@@ -18,9 +18,11 @@ use gdal::spatial_ref::{CoordTransform, SpatialRef};
 use gdal_sys::{CPLErrorReset, OGRErr, OSRExportToWkt, OSRNewSpatialReference, OSRSetFromUserInput, CPLErr};
 use geo::{Rect};
 use anyhow::{anyhow,Result,Error};
+use gdal::cpl::CslStringList;
 
 use odin_common::fs::*;
 use odin_common::macros::if_let;
+use crate::errors::OdinGdalError;
 
 lazy_static! {
     // note that we can't automatically populate this by iterating over DriverManager since some
@@ -66,28 +68,40 @@ pub fn pc_char_to_string (pc_char: *const c_char) -> String {
     String::from_utf8_lossy(cstr.to_bytes()).to_string()
 }
 
-pub fn ok_true (cond: bool, err_msg: &'static str) -> Result<()> {
-    if cond { Ok(()) } else { Err( anyhow!("{}",err_msg)) }
+pub fn ok_true <F> (cond: bool, err: F) -> Result<(),OdinGdalError> where F: FnOnce()->String {
+    if cond { Ok(()) } else { Err( OdinGdalError::MiscError(err())) }
 }
 
-pub fn ok_not_zero (res: c_int, err_msg: &'static str) -> Result<()> {
-    if res != 0 { Ok(()) } else { Err( anyhow!("{}",err_msg)) }
+pub fn ok_not_zero <F> (res: c_int, err: F) -> Result<(),OdinGdalError> where F: FnOnce()->String {
+    if res != 0 { Ok(()) } else {  Err( OdinGdalError::MiscError(err())) }
 }
 
-pub fn ok_non_null <R,T: ToString> (ptr: *const R, method_name: &'static str, msg: T) -> Result<*const R,GdalError> {
-    if ptr != null() { return Ok(ptr) } else { Err(GdalError::NullPointer{ method_name, msg: msg.to_string() }) }
+pub fn ok_non_null <R,F> (ptr: *const R, err: F) -> Result<*const R,OdinGdalError>  where F: FnOnce()->String {
+    if ptr != null() { return Ok(ptr) } else {  Err(OdinGdalError::MiscError(err())) }
 }
 
-pub fn ok_mut_non_null <R,T: ToString> (ptr: *mut R, method_name: &'static str, msg: T) -> Result<*mut R,GdalError> {
-    if ptr != null_mut() { return Ok(ptr) } else { Err(GdalError::NullPointer{ method_name, msg: msg.to_string() }) }
+pub fn ok_mut_non_null <R,F> (ptr: *mut R, err: F) -> Result<*mut R,OdinGdalError>  where F: FnOnce()->String {
+    if ptr != null_mut() { return Ok(ptr) }  else {  Err(OdinGdalError::MiscError(err())) }
 }
 
-pub fn ok_ce_none (res: CPLErr::Type) -> Result<(),GdalError> {
-    if res == CPLErr::CE_None { return Ok(()) } else { Err(last_cpl_err(res))}
+pub fn ok_ce_none (res: CPLErr::Type) -> Result<(),OdinGdalError> {
+    if res == CPLErr::CE_None { return Ok(()) } else { Err(OdinGdalError::Error(last_cpl_err(res))) }
 }
 
 pub fn gdal_badarg(details: String) -> GdalError {
     GdalError::BadArgument(details)
+}
+
+pub fn to_csl_string_list (strings: &Vec<String>) -> Result<Option<CslStringList>> {
+    if ! strings.is_empty() { // don't allocate if there is nothing to convert
+        let mut co_list =  CslStringList::new();
+        for s in strings {
+            co_list.add_string(s.as_str())?;
+        }
+        Ok(Some(co_list))
+    } else {
+        Ok(None)
+    }
 }
 
 #[macro_export]

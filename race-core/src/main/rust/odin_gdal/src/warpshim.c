@@ -2,12 +2,11 @@
 #include <gdal_alg.h>
 #include <ogr_api.h>
 #include <ogr_srs_api.h>
+#include <gdalwarper.h>
+#include <cpl_conv.h>
+#include <cpl_error.h>
 
 #include <stdio.h> // for debugging
-
-void CPLFree (void* p) { // the GDAL CPLFree is just a define and doesn't make it to bindings.rs
-  VSIFree(p);
-}
 
 // another un-exported function from gdalwarpsimple
 // note this does allocate a new string that has to be freed by the caller with CPLFree(pszResult)
@@ -32,7 +31,6 @@ GDALDatasetH GDALWarpCreateOutput( GDALDatasetH hSrcDS,
                                    const char *pszFormat,
                                    char* pszSourceSRS,
                                    char* pszTargetSRS,
-                                   int nOrder,
                                    char **papszCreateOptions,
                                    double dfMinX, double dfMaxX, double dfMinY, double dfMaxY,
                                    double dfXRes, double dfYRes,
@@ -46,7 +44,7 @@ GDALDatasetH GDALWarpCreateOutput( GDALDatasetH hSrcDS,
     GDALDriverH hDriver = GDALGetDriverByName(pszFormat);
     if (hDriver == NULL) return NULL;
 
-    hTransformArg = GDALCreateGenImgProjTransformer( hSrcDS, pszSourceSRS, NULL, pszTargetSRS, TRUE, 1000.0, nOrder);
+    hTransformArg = GDALCreateGenImgProjTransformer( hSrcDS, pszSourceSRS, NULL, pszTargetSRS, FALSE, 0.0, 0);
     if (hTransformArg == NULL) goto exit;
 
     // get approximate output definition
@@ -100,16 +98,26 @@ GDALDatasetH GDALWarpCreateOutput( GDALDatasetH hSrcDS,
         adfDstGeoTransform[3] = dfMaxY;
     }
 
+    int nBands = GDALGetRasterCount(hSrcDS);
     hDstDS = GDALCreate(hDriver, pszFilename, nPixels, nLines,
-                        GDALGetRasterCount(hSrcDS), GDALGetRasterDataType(GDALGetRasterBand(hSrcDS, 1)), papszCreateOptions);
+                        nBands, GDALGetRasterDataType(GDALGetRasterBand(hSrcDS, 1)), papszCreateOptions);
 
     if (hDstDS != NULL) {
       GDALSetProjection(hDstDS, pszTargetSRS);
       GDALSetGeoTransform(hDstDS, adfDstGeoTransform);
 
-      GDALColorTableH hCT = GDALGetRasterColorTable(GDALGetRasterBand(hSrcDS, 1));
-      if (hCT != NULL) {
-          GDALSetRasterColorTable(GDALGetRasterBand(hDstDS, 1), hCT);
+      // preserve no-data values
+      for (int i=1; i<=nBands; i++) { // it's 1-based
+         GDALRasterBandH hSrcBand = GDALGetRasterBand(hSrcDS, i);
+         double nv = GDALGetRasterNoDataValue( hSrcBand, NULL);
+
+         GDALRasterBandH hDstBand = GDALGetRasterBand( hDstDS, i);
+         GDALSetRasterNoDataValue(hDstBand, nv);
+
+         GDALColorTableH hCT = GDALGetRasterColorTable(hSrcBand);
+         if (hCT != NULL) {
+           GDALSetRasterColorTable(hDstBand, hCT);
+         }
       }
     }
 
@@ -117,4 +125,57 @@ GDALDatasetH GDALWarpCreateOutput( GDALDatasetH hSrcDS,
     if (hTransformArg) GDALDestroyGenImgProjTransformer(hTransformArg);
 
     return hDstDS;
+}
+
+CPLErr ChunkAndWarp ( GDALDatasetH hSrcDS, GDALDatasetH hDstDS, double dfMaxError) {
+    GDALWarpOptions *psWarpOptions = GDALCreateWarpOptions();
+    psWarpOptions->hSrcDS = hSrcDS;
+    psWarpOptions->hDstDS = hDstDS;
+
+    psWarpOptions->nBandCount = GDALGetRasterCount(hSrcDS);
+    int* srcBands = (int *) CPLMalloc(sizeof(int) * psWarpOptions->nBandCount );
+    int* dstBands = (int *) CPLMalloc(sizeof(int) * psWarpOptions->nBandCount );
+    for (int i=0; i<psWarpOptions->nBandCount; i++) {
+        srcBands[i] = i+1;
+        dstBands[i] = i+1;
+    }
+    psWarpOptions->panSrcBands = srcBands;
+    psWarpOptions->panDstBands = dstBands;
+
+    psWarpOptions->pfnProgress = GDALDummyProgress;
+    //psWarpOptions->dfWarpMemoryLimit = 256.0 * 1024 * 1024; // should be based on available memory (default 64k)
+
+    void* pGenImgTransformerArg =  GDALCreateGenImgProjTransformer( hSrcDS,
+                                                             GDALGetProjectionRef(hSrcDS),
+                                                             hDstDS,
+                                                             GDALGetProjectionRef(hDstDS),
+                                                             FALSE, 0.0, 0 );
+    void* pTransformerArg = pGenImgTransformerArg;
+    GDALTransformerFunc pfnTransformer = GDALGenImgProjTransform;
+
+    void* pApproxTransformerArg = NULL;
+    if (dfMaxError > 0.0) {
+        pApproxTransformerArg = GDALCreateApproxTransformer( GDALGenImgProjTransform, pTransformerArg, dfMaxError);
+        pTransformerArg = pApproxTransformerArg;
+        pfnTransformer = GDALApproxTransform;
+    }
+
+    psWarpOptions->pTransformerArg = pTransformerArg;
+    psWarpOptions->pfnTransformer = pfnTransformer;
+
+    CPLErr res = CE_Failure;
+    GDALWarpOperationH pWarpOp = GDALCreateWarpOperation(psWarpOptions);
+    if (pWarpOp) {
+        res = GDALChunkAndWarpImage( pWarpOp, 0,0, GDALGetRasterXSize(hDstDS), GDALGetRasterYSize(hDstDS));
+        GDALDestroyWarpOperation(pWarpOp); // also destroys psWarpOptions
+
+    } else {
+        GDALDestroyWarpOptions( psWarpOptions );
+    }
+
+    // those have to be released explicitly
+    GDALDestroyGenImgProjTransformer( pGenImgTransformerArg);
+    if (pApproxTransformerArg) GDALDestroyApproxTransformer(pApproxTransformerArg);
+
+    return res;
 }

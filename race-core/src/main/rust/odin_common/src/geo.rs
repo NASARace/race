@@ -3,8 +3,8 @@
 use num::{traits,zero};
 
 // convoluted way around unstable trait alias
-pub trait Num: traits::NumOps + traits::Zero + Copy {}
-impl <T: traits::NumOps + traits::Zero + Copy> Num for T {}
+pub trait Num: traits::NumOps + traits::Zero + Copy + Send {}
+impl <T: traits::NumOps + traits::Zero + Copy + Send> Num for T {}
 
 #[repr(C)]
 #[derive(Debug)]
