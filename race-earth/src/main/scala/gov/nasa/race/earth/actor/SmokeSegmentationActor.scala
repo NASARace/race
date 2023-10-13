@@ -50,9 +50,9 @@ trait  SmokeSegmentationActor extends PublishingRaceActor with SubscribingRaceAc
   */
 
 class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentationActor with HttpActor{
-  case class ProcessDataSet (date: DateTime, files: Seq[File])
-  case class WarpDataset ()
-  case class ContourDataset ()
+  case class ContourDataSet (files: Seq[File], date: DateTime)
+  case class SegmentDataset (file: File, date:DateTime)
+  case class WarpDataset (file: File, date:DateTime)
 
   val apiPort: String = config.getString("api-port")
 
@@ -127,7 +127,12 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
   def handleSmokeMessage: Receive = {
     case BusEvent(imageChannel, msg:FileRetrieved, _) => // need to account for replay
       makeRequest(msg) // Bus event should trigger request by message from goes true color import actor
-    case pds: ProcessDataSet => handleProcessDataSet(pds) // completed segmentation event should trigger processing the data for visualization
+    case cds: ContourDataSet =>
+      publishContours(cds) // completed segmentation event should trigger processing the data for visualization
+    case sds: SegmentDataset =>
+      reduceResolution(sds) // segmented images are reduced in resolution for preparation for contour creation
+    case wds: WarpDataset =>
+      createSmokeCloudContours(wds) // creates contours
   }
 
   override def handleMessage: PartialFunction[Any, Unit] = handleSmokeMessage orElse super.handleMessage
@@ -146,49 +151,43 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
       httpRequestFileWithTimeout(apiPort, outputFile, 240.seconds, HttpMethods.POST, entity = reqEntity).onComplete {
         case Success(f) =>
           info(s"download complete: $f")
-          // warp to reduce resolution
-          val warpFuture: Future[ResultValue[File]] = reduceResolution(f)
-          warpFuture.onComplete{
-            case Success(file) =>
-              {
-                val contourFuture: Future[ResultValue[File]] = createSmokeCloudContours(file.get, importedImage.date)
-                contourFuture.onComplete{ // once contours are completed
-                  case Success(c) =>
-                    val contourFiles: Seq[File] = Seq(getOutputFile(importedImage.date, "smoke", parseSatelliteName(c.get).get), getOutputFile(importedImage.date, "cloud", parseSatelliteName(c.get).get))
-                    info(s"created contour files: $contourFiles")
-                    self ! ProcessDataSet(importedImage.date, contourFiles)// process data set by sending two smoke available messages - one with cloud one with smoke data
-                  case Failure(x) =>
-                    warning(s"failed to create smoke and cloud contour files: $x")
-                    println(s"failed to create smoke and cloud contour files: $x")
-                }
-              }
-            case Failure (x) =>
-              warning ("resolution reduction failed")
-          }
+          self ! SegmentDataset(f, importedImage.date)
         case Failure(x) =>
           warning(s"download failed: $x")
       }
     }
   }
 
-  def reduceResolution(segmentedFile:File): Future[ResultValue[File]] = {
+  def reduceResolution(segmentedData:SegmentDataset): Unit = {
     val warpCmd = new GdalWarp(gdalWarp)
     val res = warpCmd.reset()
-      .setInFile(segmentedFile)
-      .setOutFile(new File(segmentedFile.getPath.replace(".tif", "_reduced.tif"))) // this is overwritten if reset called before exec
+      .setInFile(segmentedData.file)
+      .setOutFile(new File(segmentedData.file.getPath.replace(".tif", "_reduced.tif"))) // this is overwritten if reset called before exec
       .setTargetSize("1100", "466")
       .setResamplingMethod("near")
       .setOverwrite()
       .exec()
-    res
+    res.onComplete {
+      case Success(file) =>
+        self ! WarpDataset(file.get, segmentedData.date)
+      case Failure(x) =>
+        warning("resolution reduction failed")
+    }
   }
 
-  def createSmokeCloudContours(segmentedFile:File, date:DateTime): Future[ResultValue[File]] = {
+  def createSmokeCloudContours(warpDataset: WarpDataset): Unit = {
     val result = for {
-      r1 <- createContourFile(segmentedFile, getOutputFile(date, "smoke", parseSatelliteName(segmentedFile).get), 2, 1)
-      r2 <- createContourFile(segmentedFile, getOutputFile(date, "cloud", parseSatelliteName(segmentedFile).get), 3, 1)
+      r1 <- createContourFile(warpDataset.file, getOutputFile(warpDataset.date, "smoke", parseSatelliteName(warpDataset.file).get), 2, 1)
+      r2 <- createContourFile(warpDataset.file, getOutputFile(warpDataset.date, "cloud", parseSatelliteName(warpDataset.file).get), 3, 1)
     } yield (r2)
-    result
+    result.onComplete{ // once contours are completed
+      case Success(c) =>
+        val contourFiles: Seq[File] = Seq(getOutputFile(warpDataset.date, "smoke", parseSatelliteName(c.get).get), getOutputFile(warpDataset.date, "cloud", parseSatelliteName(c.get).get))
+        info(s"created contour files: $contourFiles")
+        self ! ContourDataSet(contourFiles,warpDataset.date)// process data set by sending two smoke available messages - one with cloud one with smoke data
+      case Failure(x) =>
+        warning(s"failed to create smoke and cloud contour files: $x")
+    }
   }
 
   def getOutputFile(date: DateTime, scType: String, satellite: String): File = {
@@ -209,9 +208,9 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
     res
   }
 
-  def handleProcessDataSet(pds: ProcessDataSet): Unit = {
+  def publishContours(cds: ContourDataSet): Unit = {
     // publishes data to bus
-    publish(SmokeAvailable(parseSatelliteName(pds.files(0)).get, pds.files(0), pds.files(1), "epsg:4326", pds.date))
+    publish(SmokeAvailable(parseSatelliteName(cds.files(0)).get, cds.files(0), cds.files(1), "epsg:4326", cds.date))
   }
 
   def parseSatelliteName(file: File): Option[String] = {
