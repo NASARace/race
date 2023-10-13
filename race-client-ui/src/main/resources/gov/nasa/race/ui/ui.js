@@ -1834,7 +1834,7 @@ export function KvTable(eid, maxRows, maxWidthInRem, minWidthInRem) {
     let e = _createElement("DIV", "ui_kvtable");
 
     if (eid) e.setAttribute("id", eid);
-    e.setAttribute("data-rows", maxRows.toString);
+    e.setAttribute("data-rows", maxRows.toString());
     setWidthStyle(e, maxWidthInRem,minWidthInRem);
 
     return e;

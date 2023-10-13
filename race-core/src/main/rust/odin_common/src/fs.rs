@@ -24,6 +24,8 @@ use std::path::{Path,PathBuf};
 
 use crate::macros::{io_error};
 
+type Result<T> = std::result::Result<T,std::io::Error>;
+
 /// check if dir pathname exists and is writable, try to create dir otherwise
 pub fn ensure_writable_dir (dir: &str) -> io::Result<()> {
     let path = Path::new(dir);
@@ -41,14 +43,14 @@ pub fn ensure_writable_dir (dir: &str) -> io::Result<()> {
     }
 }
 
-pub fn filepath (dir: &str, filename: &str) -> io::Result<PathBuf> {
+pub fn filepath (dir: &str, filename: &str) -> Result<PathBuf> {
     let mut pb = PathBuf::new();
     pb.push(dir);
     pb.push(filename);
     Ok(pb)
 }
 
-pub fn readable_file (dir: &str, filename: &str) -> io::Result<File> {
+pub fn readable_file (dir: &str, filename: &str) -> Result<File> {
     let p = filepath(dir,filename)?;
     if p.is_file() {
         File::open(p)
@@ -57,23 +59,23 @@ pub fn readable_file (dir: &str, filename: &str) -> io::Result<File> {
     }
 }
 
-pub fn writable_empty_file (dir: &str, filename: &str) -> io::Result<File> {
+pub fn writable_empty_file (dir: &str, filename: &str) -> Result<File> {
     File::create(filepath(dir,filename)?)
 }
 
-pub fn file_contents_as_string (file: &mut fs::File) -> io::Result<String> {
+pub fn file_contents_as_string (file: &mut fs::File) -> Result<String> {
     let len = file.metadata()?.len();
     let mut contents = String::with_capacity(len as usize);
     file.read_to_string(&mut contents)?;
     Ok(contents)
 }
 
-pub fn filepath_contents_as_string (dir: &str, filename: &str) -> io::Result<String> {
+pub fn filepath_contents_as_string (dir: &str, filename: &str) -> Result<String> {
     let mut file = readable_file(dir,filename)?;
     file_contents_as_string( &mut file)
 }
 
-pub fn file_length(file: &File) -> Result<u64,io::Error> {
+pub fn file_length(file: &File) -> Result<u64> {
     file.metadata().and_then( |md| {
         if md.is_file() {
             Ok(md.len())
@@ -83,12 +85,8 @@ pub fn file_length(file: &File) -> Result<u64,io::Error> {
     })
 }
 
-pub fn existing_non_empty_file (dir: &str, filename: &str) -> io::Result<fs::File> {
-    let mut pb = PathBuf::new();
-    pb.push(dir);
-    pb.push(filename);
-
-    match File::open(pb) {
+pub fn existing_non_empty_file_from_path <P: AsRef<Path>> (path: P)-> Result<File> {
+    match File::open(path) {
         Ok(file) => {
             let md = file.metadata()?;
             if md.is_file() {
@@ -105,7 +103,15 @@ pub fn existing_non_empty_file (dir: &str, filename: &str) -> io::Result<fs::Fil
     }
 }
 
-pub fn create_file_with_backup (dir: &str, filename: &str, ext: &str) -> io::Result<File> {
+pub fn existing_non_empty_file (dir: &str, filename: &str) -> Result<fs::File> {
+    let mut pb = PathBuf::new();
+    pb.push(dir);
+    pb.push(filename);
+
+    existing_non_empty_file_from_path(&pb)
+}
+
+pub fn create_file_with_backup (dir: &str, filename: &str, ext: &str) -> Result<File> {
     let mut pb = PathBuf::new();
     pb.push(dir);
     pb.push(filename);
@@ -123,16 +129,29 @@ pub fn create_file_with_backup (dir: &str, filename: &str, ext: &str) -> io::Res
     File::create(p)
 }
 
-pub fn set_filepath_contents (dir: &str, filename: &str, new_contents: &[u8]) -> io::Result<()> {
+pub fn set_filepath_contents (dir: &str, filename: &str, new_contents: &[u8]) -> Result<()> {
     let mut file = writable_empty_file(dir,filename)?;
     set_file_contents(&mut file, new_contents)
 }
 
-pub fn set_file_contents(file: &mut File, new_contents: &[u8]) -> io::Result<()> {
+pub fn set_file_contents(file: &mut File, new_contents: &[u8]) -> Result<()> {
     file.write_all(new_contents)
 }
 
-pub fn set_filepath_contents_with_backup (dir: &str, filename: &str, backup_ext: &str, new_contents: &[u8]) -> io::Result<()> {
+pub fn set_filepath_contents_with_backup (dir: &str, filename: &str, backup_ext: &str, new_contents: &[u8]) -> Result<()> {
     let mut file = create_file_with_backup(dir,filename,backup_ext)?;
     set_file_contents(&mut file, new_contents)
+}
+
+pub fn get_filename_extension<'a> (filename: &'a str) -> Option<&'a str> {
+    let path = Path::new(filename);
+    path.extension().and_then( |ostr| ostr.to_str())
+}
+
+pub fn ensure_dir <P: AsRef<Path>> (p: P) -> Result<()> {
+    if !p.as_ref().is_dir() {
+        std::fs::create_dir(p)
+    } else {
+        Ok(())
+    }
 }

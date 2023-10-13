@@ -19,6 +19,8 @@ use std::fmt;
 use std::fmt::{Display,Write};
 use std::str::FromStr;
 
+use serde::{Deserialize,Deserializer};
+
 /// stringify iterator for Display elements with given delimiter without per-element allocation
 pub fn mk_string<T: Display> (it: std::slice::Iter<'_,T>, delim: &str) -> Result<String,fmt::Error> {
     let mut s = String::new();
@@ -86,6 +88,61 @@ pub fn parse_string_vec (s: &str, delim: char) -> Vec<String> {
 }
 
 /// generic function to turn a str with char separated values into a Vec<T> where T: FromStr
-pub fn parse_vec<T: FromStr> (s: &str, delim: char) -> Vec<T> where <T as FromStr>::Err: core::fmt::Debug {
-    s.split(delim).map( |x| x.trim().parse::<T>().unwrap()).collect()
+/// note the conversion from &str to T is fallible, hence we need to return a Result
+pub fn parse_vec<T: FromStr> (s: &str, delim: char) -> Result<Vec<T>,<T as FromStr>::Err>
+    where <T as FromStr>::Err: core::fmt::Debug {
+    s.split(delim)
+        .map(|x| x.parse::<T>())
+        .collect::<Result<Vec<T>,<T as FromStr>::Err>>()
+}
+
+
+/// convert str of delim separated values into a Box<[T]> with given length N. Fail if length does not match exactly
+/// (note that Into<[T;N]> would adapt size)
+pub fn parse_array<T: FromStr, const N: usize> (s: &str, delim: char) -> Result<[T;N],String>
+    where <T as FromStr>::Err: core::fmt::Debug {
+    parse_vec(s,delim)
+        .map_err(|e| format!("{:?}", e))
+        .and_then(|v| {
+            let len = v.len();
+            v.try_into()
+                .map_err(|_e|
+                    format!("wrong number of elements in '{}', expecting {} found {}", s, N, len)
+                )
+        })
+}
+
+//--- utilize above parsers for serde deserialization (to be used in #[serde(deserialize_with=".."] field macros
+
+pub fn deserialize_vec <'a,T,D>(deserializer: D) -> Result<Vec<T>,D::Error>
+    where T: FromStr,
+          <T as FromStr>::Err: core::fmt::Debug,
+          D: Deserializer<'a> {
+    String::deserialize(deserializer).and_then( |string| {
+        parse_vec::<T>(string.as_str(),',')
+            .map_err( |e| serde::de::Error::custom(format!("{:?}",e)))
+    })
+}
+
+// unfortunately we can't pass the array dimension as type parameter
+pub fn deserialize_arr2 <'a,T,D>(deserializer: D) -> Result<[T;2],D::Error>
+    where T: FromStr, <T as FromStr>::Err: core::fmt::Debug, D: Deserializer<'a> {
+    de_arr::<'a,T,2,D>(deserializer)
+}
+pub fn deserialize_arr3 <'a,T,D>(deserializer: D) -> Result<[T;3],D::Error>
+    where T: FromStr, <T as FromStr>::Err: core::fmt::Debug, D: Deserializer<'a> {
+    de_arr::<'a,T,3,D>(deserializer)
+}
+pub fn deserialize_arr4 <'a,T,D>(deserializer: D) -> Result<[T;4],D::Error>
+    where T: FromStr, <T as FromStr>::Err: core::fmt::Debug, D: Deserializer<'a> {
+    de_arr::<'a,T,4,D>(deserializer)
+}
+
+fn de_arr <'a,T,const N: usize,D>(deserializer: D) -> Result<[T;N],D::Error>
+    where T: FromStr, <T as FromStr>::Err: core::fmt::Debug, D: Deserializer<'a> {
+
+    String::deserialize(deserializer).and_then( |string| {
+        parse_array::<T,N>(string.as_str(),',')
+            .map_err( |e| serde::de::Error::custom(format!("{:?}",e)))
+    })
 }

@@ -43,12 +43,13 @@ trait ExternalFunction[T] {
 
 object ExternalProc {
 
-  private var systemPaths: List[Array[String]] = List.empty // OS environment or JVM property
+  private var systemPaths: List[Array[String]] = getSystemPaths
 
-  def addSystemPaths(): Unit = {
-    addSystemPathSpec(System.getenv("PATH"))  // OS environment var
-    addSystemPathSpec(System.getProperty("race.path")) // Java property
-    // shall we add user.dir here?
+  def getSystemPaths: List[Array[String]] = {
+    var list = List.empty[Array[String]]
+    list = addPathSpec(System.getenv("PATH"),list)
+    list = addPathSpec(System.getProperty("race.path"),list)
+    list
   }
 
   def addPathSpec(pathSpec: String, paths: List[Array[String]]): List[Array[String]] = {
@@ -56,10 +57,6 @@ object ExternalProc {
       val elems = FileUtils.getDirElements(pathSpec).map(_.getPath)
       if (elems.nonEmpty) elems :: paths else paths
     } else paths
-  }
-
-  def addSystemPathSpec(pathSpec: String): Unit = {
-    systemPaths = addPathSpec(pathSpec, systemPaths)
   }
 
   def findInPaths(fileName: String, paths: List[Array[String]]): Option[File] = {

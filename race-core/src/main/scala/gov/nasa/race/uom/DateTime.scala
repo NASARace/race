@@ -545,7 +545,8 @@ class DateTime protected[uom](val millis: Long) extends AnyVal
 
   def toPrecedingSecond: DateTime = new DateTime( (millis /     1000) *     1000 )
   def toPrecedingMinute: DateTime = new DateTime( (millis /    60000) *    60000 )
-  def toPrecedingHour: DateTime   = new DateTime( (millis /  3600000) *  3600000 )
+  def toBeginOfHour: DateTime     = new DateTime( (millis /  3600000) *  3600000 )
+  def toPreceedingHour: DateTime  =  new DateTime( (millis /  3600000) *  3600000 - 3600000)
   def toBeginOfDay: DateTime      = new DateTime( (millis / 86400000) * 86400000 )
   def toPreviousDay: DateTime     = new DateTime (millis - 86400000)
 

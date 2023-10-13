@@ -1,3 +1,4 @@
+#![allow(unused)]
 /*
  * Copyright (c) 2023, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
@@ -17,7 +18,7 @@
 
 /// server to run WindNinja 
 /// test manually with 
-///   curl -X POST -H "Content-Type: application/json" http://localhost:8080/wnrun --data-binary "@race-earth/src/main/rust/wnrun/resources/test/wn_args.json"
+///   curl -X POST -H "Content-Type: application/json" http://localhost:8080/wnrun --data-binary "@race-earth/src/main/rust/odin_windninja/resources/test/wn_args.json"
 
 mod fetchdem;
 
@@ -52,7 +53,7 @@ use chrono::{
      #[structopt(short,long)]
      verbose: bool,
  
-     #[structopt(long,default_value="wnrun")]
+     #[structopt(long,default_value="odin_windninja")]
      end_point: String, // URL name
 
      #[structopt(long,default_value="dem")]

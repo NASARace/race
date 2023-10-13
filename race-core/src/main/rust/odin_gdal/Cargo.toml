@@ -1,0 +1,30 @@
+[package]
+name = "odin_gdal"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "simplewarp"
+path = "src/bin/simplewarp.rs"
+
+[[bin]]
+name = "utm_bbox"
+path = "src/bin/utm_bbox.rs"
+
+[dependencies]
+odin_common = { path = "../odin_common" }
+
+gdal-sys = { version = "*" }
+gdal = { version = "*" }
+lazy_static = "*"
+libc = "*"
+geo = "*"
+anyhow = "*"
+thiserror = "*"
+structopt = "*"
+
+[build-dependencies]
+cc = "*"
+

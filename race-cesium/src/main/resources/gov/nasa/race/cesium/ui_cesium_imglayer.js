@@ -225,15 +225,16 @@ function selectImgCmapEntry(event) {
 
 var mouseX;
 var mouseY;
-let pixBuf = new Uint8Array(3);
+let pixBuf = new Uint8Array(4);
 
 // watch out - this runs in the render loop so avoid length computation
 const probeColor = function(scene,time) {
     let canvas = scene.canvas;
     let gl = canvas.getContext('webgl2');
 
-    gl.readPixels( mouseX, gl.drawingBufferHeight - mouseY, 1, 1, gl.RGB, gl.UNSIGNED_BYTE, pixBuf);
+    gl.readPixels( mouseX, gl.drawingBufferHeight - mouseY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixBuf);
 
+    
     let r = pixBuf[0];
     let g = pixBuf[1];
     let b = pixBuf[2];

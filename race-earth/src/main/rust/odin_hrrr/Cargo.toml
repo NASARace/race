@@ -1,0 +1,28 @@
+[package]
+name = "gethrrr"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lazy_static = "*"
+futures = "*"
+tokio = { version = "*", features = ["full"] }
+http = "*"
+reqwest = { version = "*", features = ["json"] }
+bytes = "*"
+structopt = "*"
+chrono = { version = "*", features = ["serde"] }
+regex = "*"
+thiserror = "*"
+anyhow = "*"
+log = "*"
+env_logger = "*"
+tempfile = "*"
+serde = "*"
+serde_derive = "*"
+ron = "*"
+
+# our ODIN crates
+odin_common = { path = "../../../../../race-core/src/main/rust/odin_common" }

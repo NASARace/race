@@ -432,9 +432,9 @@ function toggleShowPosition(event) {
 }
 
 function addPoint() {
-    let latDeg = Number.parseFloat(ui.getFieldValue("view.latitude"));
-    let lonDeg = Number.parseFloat(ui.getFieldValue("view.longitude"));
-    let altM = Number.parseFloat(ui.getFieldValue("view.altitude"));
+    let latDeg = Number.parseFloat(ui.getFieldValue("view.camera.latitude"));
+    let lonDeg = Number.parseFloat(ui.getFieldValue("view.camera.longitude"));
+    let altM = Number.parseFloat(ui.getFieldValue("view.camera.altitude"));
 
     if (isNaN(latDeg) || isNaN(lonDeg) || isNaN(altM)){
         alert("please enter valid latitude, longitude and altitude");
@@ -462,10 +462,10 @@ function pickPoint() {
                 if (cp) {
                     let latDeg = util.toDegrees(cp.latitude);
                     let lonDeg = util.toDegrees(cp.longitude);
-                    let altM = ui.getFieldValue("view.altitude");
+                    let altM = ui.getFieldValue("view.camera.altitude");
                     
-                    ui.setField("view.latitude", latDeg);
-                    ui.setField("view.longitude", lonDeg);
+                    ui.setField("view.pointer.latitude", latDeg);
+                    ui.setField("view.pointer.longitude", lonDeg);
                     
                     let pt = new Position(name, latDeg, lonDeg, altM);
                     positions = util.copyArrayIfSame( selectedPositionSet.positions, positions);

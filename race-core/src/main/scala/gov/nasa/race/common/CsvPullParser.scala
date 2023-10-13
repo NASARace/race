@@ -212,6 +212,12 @@ trait CsvPullParser {
     val i1 = Math.min( idx+n, limit)
     new String(data,idx,i1-idx)
   }
+
+  def dumpData(i:Int,len:Int): String = {
+    val b = new Array[Byte](len)
+    System.arraycopy(data,i,b,0,len)
+    b.mkString("[",",","]")
+  }
 }
 
 

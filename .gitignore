@@ -22,7 +22,6 @@ doc/reports/
 .fslckout
 .cache-main
 .cache-tests
-bin/
 conf
 *.crypt
 .bloop

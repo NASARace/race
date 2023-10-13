@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
- /// gethrrr - program to coninuously retrieve filtered HRRR weather reports from NOAA servers
+ /// odin_hrrr - program to coninuously retrieve filtered HRRR weather reports from NOAA servers
  /// 
  /// 1. Forecast Coverage
  /// HRRR reports are generated each hour for a range of fixed forecast hours (each forecast hour represented by a separate file). We call
@@ -49,7 +49,7 @@
  /// 
  /// 3. Initialization
  /// Depending on the query (size of area and number of fields) forecast files can be large (>1G) and we want to minimize bandwidth and
- /// requests. While gethrrr is assumed to be long running (keeping only a limited history of past forecast files) it should upon start
+ /// requests. While odin_hrrr is assumed to be long running (keeping only a limited history of past forecast files) it should upon start
  /// try to download the largest available forecast span in the shortest amount of time (minimal overlap between current and previous
  /// cycles):
  /// 
@@ -81,6 +81,11 @@ use tempfile;
 use tokio::time::{Duration,Sleep};
 use anyhow::{anyhow,Context,Result,Ok};
 use log::{debug, info, warn, error, log_enabled, Level};
+use odin_common::{
+    datetime::{elapsed_minutes_since},
+    strings::{mk_string}
+};
+use odin_common::fs::ensure_writable_dir;
 
 #[macro_use]
 extern crate lazy_static;
@@ -163,6 +168,7 @@ struct Opt {
     verbose: bool,
 }
 
+fn config_delay_minutes() -> &'static str { "2" }
 
 lazy_static! {
     #[derive(Debug)]
@@ -241,17 +247,19 @@ async fn sleep_secs (secs: u32) {
 
 
 
-async fn wait_for (minutes: u32) {
+async fn wait_for (minutes: i64) {
     if minutes > 0 {
         info!("sleeping for {} min..", minutes);
-        sleep_secs( minutes * 60).await;
+        sleep_secs( minutes as u32 * 60).await;
     }
 }
 
 async fn wait_for_schedule (base: &DateTime<Utc>, scheduled: u32) {
     let elapsed = elapsed_minutes_since(base);
-    if elapsed < scheduled {
-        wait_for(scheduled - elapsed).await;
+    let sched_min = scheduled as i64;
+
+    if elapsed > 0 && elapsed < sched_min {
+        wait_for(sched_min - elapsed).await;
     }
 }
 
@@ -388,8 +396,8 @@ fn parse_schedules (txt: &String) -> Result<(Vec<u32>,Vec<u32>)> {
             for i in 0..avg_ext_schedule.len() { avg_ext_schedule[i] += OPT.delay_minutes; }
         }
 
-        info!("regular schedule (steps in minutes):  {}", mk_string(avg_reg_schedule.iter(),","));
-        info!("extended schedule (steps in minutes): {}", mk_string(avg_ext_schedule.iter(),","));
+        info!("regular schedule (steps in minutes):  {}", mk_string(avg_reg_schedule.iter(),",")?);
+        info!("extended schedule (steps in minutes): {}", mk_string(avg_ext_schedule.iter(),",")?);
 
         Ok( (avg_reg_schedule,avg_ext_schedule) )
     }
@@ -554,7 +562,7 @@ async fn main() -> anyhow::Result<()> {
     let loglevel = if OPT.verbose {"info"} else {"warning"};
     env_logger::init_from_env( env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, loglevel));
 
-    if !check_output_dir() {
+    if ensure_writable_dir(&OPT.output_dir).is_err() {
         Err(anyhow!("can't write output dir, aborting."))
     } else {
         if let Result::Ok((reg_schedule,ext_schedule)) = get_schedules(OPT.hrrr_dir_url.as_str()).await {

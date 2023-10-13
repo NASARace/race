@@ -32,7 +32,7 @@ object UTFx {
 
     @inline def isEnd: Boolean = state == 0xffffffff00000000L
 
-    @inline def nextByteIndex: Int = (state >> 40).toInt
+    @inline def nextByteIndex: Int = (state >> 40 & 0xffffff).toInt // shift 5 bytes, 3byte value
 
     @inline def remainingChars: Int = (state >> 32 & 0xffL).toInt
 
@@ -51,6 +51,7 @@ object UTFx {
     def next (bs: Array[Byte], maxIndex: Int): UTF8Decoder = {
       if ((state & 0x200000000L) == 0) {
         val i = nextByteIndex
+        if (i < 0) throw new RuntimeException(s"ARGHH: ${state.toHexString}, $i")
         if (i >= maxIndex) new UTF8Decoder(0xffffffff00000000L) else initUTF8Decoder(bs, i)
       } else {
         new UTF8Decoder((state ^ 0x300000000L ))

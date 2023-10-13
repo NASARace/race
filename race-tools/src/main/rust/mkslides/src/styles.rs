@@ -1,11 +1,34 @@
-/**
- * CSS for RACE slides
- */
+use crate::ARGS;
 
+pub fn get_odin_style_css() -> String {
+    ODIN_STYLE_CSS.to_string()
+}
+
+pub fn style_vars () -> String {
+    let mut style_vars = String::with_capacity(256);
+
+    style_vars.push_str(":root {");
+    style_vars.push_str(&format!("  --font-family: {};\n", &ARGS.basic_font_family));
+    style_vars.push_str(&format!("  --font-size: {};\n", &ARGS.basic_font_size));
+
+    style_vars.push_str(&format!("  --h1-factor: {}%;\n", &ARGS.h1_factor));
+    style_vars.push_str(&format!("  --h2-factor: {}%;\n", &ARGS.h2_factor));
+    style_vars.push_str(&format!("  --item-factor: {}%;\n", &ARGS.li_factor));
+
+    style_vars.push_str(&format!("  --header-margin: {};\n", &ARGS.header_margin));
+    style_vars.push_str(&format!("  --list-margin: {};\n", &ARGS.list_margin));
+    style_vars.push_str(&format!("  --item-margin: {};\n", &ARGS.item_margin));
+
+    style_vars.push_str( "}");
+
+    style_vars
+}
+
+const ODIN_STYLE_CSS: &'static str = r#"
 body {
     margin: 0 10px 0 10px;
-    font-size: 3.2vh;
-    font-family: Arial, sans-serif;
+    font-size: var(--font-size);
+    font-family: var(--font-family);
 }
 
 /*---------------------------- print support -----------------------------*/
@@ -21,18 +44,16 @@ body {
 @media screen {
   div.slide {
       display: block;
-      /* height: 97vh; */
-      /* padding: 10px; */
       height: 100vh;
       padding: 0 10px 0 10px;
-      /* border: 1px solid black; */
+      overflow: hidden;
   }
 }
 
 .title h1 {
-    /* margin-top: 20vh; */
+    margin-top: 10vh;
     margin-bottom: 1em;
-    font-size: 150%;
+    font-size: var(--h1-factor);
 }
 
 .title {
@@ -41,13 +62,13 @@ body {
 
 .slide h2,h3 {
     text-align: center;
-    font-size: 110%;
-    /* padding: 4px 10px 4px 10px; */
+    font-size: var(--h2-factor);
     margin: 0;
+    padding: var(--header-margin);
     border-bottom: 2px solid LightGray;
 }
 
-p.author {
+p.author, address {
     display: block;
     font-size: 80%;
     font-family: Courier;
@@ -114,11 +135,11 @@ div.spacer {
 
 .slide ul ul {
     list-style-type: circle;
-    margin-top: -0.7em;
+    margin: var(--list-margin);
 }
 
 .slide li {
-    margin-bottom: 0.3em;
+    margin: var(--item-margin);
 }
 
 ul.nav-list {
@@ -176,11 +197,39 @@ a.srv {
     color: gray;
 }
 
+div.nav_view {
+    display: none;
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    border: 1px solid rgb(110,110,110);
+    box-shadow: 5px 5px 8px rgb(136, 136, 136);
+    background: rgb(42, 42, 64);
+    padding: 5px;
+}
+
+div.nav_view.show {
+   display: block;
+   z-index: 50;
+}
+
+div.nav_view ol {
+   margin: 0;
+}
+
+li.nav_item {
+    font-size: 12pt;
+    margin: 3pt;
+    color: rgb(200, 200, 200);
+}
+
+li.nav_item:hover {
+    background: rgb(64, 64, 200);
+}
 
 /*---------------------------- content image classes -----------------------------*/
 
 /* left and right have to be wrapped into a div */
-
 
 img.left {
     /*float: left;*/
@@ -332,7 +381,6 @@ img.back {
    z-index: -1;
 }
 
-
 img.up50 {
   position: relative;
   top: -50pt;
@@ -353,3 +401,4 @@ img.up150 {
   position: relative;
   top: -150pt;
 }
+"#;
