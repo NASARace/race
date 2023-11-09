@@ -1,6 +1,11 @@
 use std::ffi::CStr;
 use std::ptr::null;
 use thiserror::Error;
+use crate::pc_char_to_string;
+use gdal::errors::GdalError;
+use gdal_sys::{CPLErr::CE_None, CPLErr};
+
+pub type Result<T> = std::result::Result<T, OdinGdalError>;
 
 #[derive(Error,Debug)]
 pub enum OdinGdalError {
@@ -36,7 +41,7 @@ pub fn reset_last_gdal_error() {
     }
 }
 
-pub fn last_gdal_err() -> Option<String> {
+pub fn last_gdal_err_description() -> Option<String> {
     unsafe {
         let err = gdal_sys::CPLGetLastErrorType();
         if err != gdal_sys::CPLErr::CE_None {
@@ -57,8 +62,27 @@ pub fn last_gdal_err() -> Option<String> {
     }
 }
 
+pub fn gdal_error(e: GdalError) -> OdinGdalError {
+    OdinGdalError::Error(e)
+}
+
+pub fn map_gdal_error <T> (res: std::result::Result<T,GdalError>) -> Result<T> {
+    res.map_err(|e| OdinGdalError::Error(e))
+}
+
 pub fn last_gdal_error() -> OdinGdalError {
-    OdinGdalError::LastGdalError(last_gdal_err().unwrap_or_else(|| "none".to_string()))
+    OdinGdalError::LastGdalError(last_gdal_err_description().unwrap_or_else(|| "none".to_string()))
+}
+
+pub fn last_cpl_err(cpl_err_class: CPLErr::Type) -> GdalError {
+    let last_err_no = unsafe { gdal_sys::CPLGetLastErrorNo() };
+    let last_err_msg = pc_char_to_string(unsafe { gdal_sys::CPLGetLastErrorMsg() });
+    unsafe { gdal_sys::CPLErrorReset() };
+    GdalError::CplError {
+        class: cpl_err_class,
+        number: last_err_no,
+        msg: last_err_msg,
+    }
 }
 
 pub fn misc_error(s: String) -> OdinGdalError {

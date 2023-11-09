@@ -6,11 +6,7 @@ use structopt::StructOpt;
 use std::path::Path;
 use gdal::Dataset;
 use gdal::spatial_ref::SpatialRef;
-use odin_gdal::{
-    warp::SimpleWarpBuilder,
-    get_driver_name_from_filename,
-    to_csl_string_list,
-};
+use odin_gdal::{warp::SimpleWarpBuilder, get_driver_name_from_filename, to_csl_string_list};
 use anyhow::{Result};
 
 
@@ -54,8 +50,8 @@ fn main () -> Result<()> {
     let tgt_path = Path::new(ARGS.tgt_filename.as_str());
 
     let tgt_srs_opt: Option<SpatialRef> = if let Some(srs_def) = &ARGS.t_srs {
-        //Some(SpatialRef::from_definition(srs_def.as_str())?)
-        Some(SpatialRef::from_proj4(srs_def.as_str())?)
+        Some(SpatialRef::from_definition(srs_def.as_str())?)
+        //Some(SpatialRef::from_proj4(srs_def.as_str())?)
     } else { None };
 
     let co_list_opt = to_csl_string_list(&ARGS.co)?;
@@ -86,7 +82,7 @@ fn main () -> Result<()> {
 
     warper.set_tgt_format(tgt_format)?;
 
-    warper._exec()?;
+    warper.exec()?;
 
     // note that Dataset has a Drop impl so we don't need to close here - we would get a segfault from GDAL if we do
 

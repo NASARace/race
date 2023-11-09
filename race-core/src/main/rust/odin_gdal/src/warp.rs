@@ -9,28 +9,8 @@ use gdal::spatial_ref::SpatialRef;
 use gdal_sys::{GDALDatasetH, GDALProgressFunc, GDALWarpOptions, CPLErr::CE_None, CPLErr};
 use libc::{c_void,c_char,c_int, c_double};
 use odin_common::geo::BoundingBox;
-use crate::{ok_non_null, ok_mut_non_null, ok_not_zero, ok_ce_none, last_cpl_err};
-use crate::errors::{last_gdal_error, misc_error, OdinGdalError, reset_last_gdal_error};
-
-type Result<T> = std::result::Result<T, OdinGdalError>;
-
-// what we get from warpshim.c
-extern "C" {
-    fn SanitizeSRS (p: *const c_char) -> *const c_char;
-    fn GDALWarpCreateOutput(
-        hSrcDS: GDALDatasetH ,
-        pszFilename: *const c_char,
-        pszFormat: *const c_char,
-        pszSourceSRS:  *const c_char,
-        pszTargetSRS:  *const c_char,
-        papszCreateOptions: *mut *mut c_char,
-        dfMinX: c_double, dfMaxX: c_double, dfMinY: c_double, dfMaxY: c_double,
-        dfXRes: c_double, dfYRes: c_double,
-        nForcePixels: c_int, nForceLines: c_int,
-    ) -> GDALDatasetH;
-
-    fn ChunkAndWarp (hSrcDS: GDALDatasetH, hDstDS: GDALDatasetH, dfMaxError: c_double) -> gdal_sys::CPLErr::Type;
-}
+use crate::{ok_non_null, ok_mut_non_null, ok_not_zero, ok_ce_none};
+use crate::errors::{Result,last_gdal_error, misc_error, OdinGdalError, reset_last_gdal_error};
 
 pub struct SimpleWarpBuilder <'a> {
     src_ds: &'a Dataset,
@@ -137,49 +117,9 @@ impl <'a> SimpleWarpBuilder<'a> {
         self
     }
 
-    pub fn exec(&self) -> Result<Dataset> {
-        let src_ds_srs = self.src_ds.spatial_ref().ok().or_else(|| self.src_ds.gcp_spatial_ref());
-        let src_srs = self.src_srs.or_else(|| src_ds_srs.as_ref()).ok_or(OdinGdalError::NoSpatialReferenceSystem)?;
-
-        let src_wkt = CString::new(src_srs.to_wkt()?)?;
-        let tgt_srs = if let Some(srs_ref) = self.tgt_srs { srs_ref } else { src_srs };
-        let tgt_wkt = CString::new(tgt_srs.to_wkt()?)?;
-
-        let tgt_format = if let Some(format) = &self.tgt_format { format.as_ptr() } else { null() };
-        let c_create_options = if let Some(sl) = self.create_options { sl.as_ptr() } else { null_mut() };
-
-        // check if output file exists and if so delete it
-        let path = Path::new(self.tgt_filename.to_str().unwrap()); // already checked during new()
-        if path.is_file() { fs::remove_file(path)? }
-
-        unsafe {
-            let c_tgt_ds: GDALDatasetH = GDALWarpCreateOutput(
-                self.src_ds.c_dataset(),
-                self.tgt_filename.as_ptr(),
-                tgt_format,
-                src_wkt.as_ptr(),
-                tgt_wkt.as_ptr(),
-                c_create_options,
-                self.min_x, self.max_x, self.min_y, self.max_y,
-                self.res_x, self.res_y,
-                self.force_n_pixels, self.force_n_lines);
-            if c_tgt_ds == null_mut() {
-                return Err(last_gdal_error());
-            }
-
-            if ChunkAndWarp(self.src_ds.c_dataset(), c_tgt_ds, self.max_error) == CE_None {
-                gdal_sys::GDALFlushCache(c_tgt_ds);
-                Ok(Dataset::from_c_dataset(c_tgt_ds))
-            } else {
-                gdal_sys::GDALClose(c_tgt_ds);
-                Err(OdinGdalError::GdalFunctionFailed("GDALChunkAndWarpImage"))
-            }
-        }
-    }
-
     // version without C shim functions
 
-    pub fn _exec(&self) -> Result<Dataset> {
+    pub fn exec(&self) -> Result<Dataset> {
         let tgt_ds = self.create_tgt_ds()?;
         self.chunk_and_warp(&tgt_ds).map(|_| tgt_ds)
     }
