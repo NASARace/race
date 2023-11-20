@@ -6,14 +6,12 @@ use structopt::StructOpt;
 use std::path::Path;
 use gdal::Dataset;
 use gdal::spatial_ref::SpatialRef;
-use gdal::cpl::CslStringList;
-use odin_gdal::warp::SimpleWarpBuilder;
-use odin_gdal::get_driver_name_from_filename;
+use odin_gdal::{warp::SimpleWarpBuilder, get_driver_name_from_filename, to_csl_string_list};
 use anyhow::{Result};
 
 
 /// structopt command line arguments
-#[derive(StructOpt)]
+#[derive(StructOpt,Debug)]
 struct CliOpts {
     /// target extent <xmin ymin xmax ymax>
     #[structopt(long,allow_hyphen_values=true,number_of_values=4)]
@@ -23,12 +21,17 @@ struct CliOpts {
     #[structopt(long)]
     t_srs: Option<String>,
 
+    /// optional target format (default is GTiff)
     #[structopt(long)]
     tgt_format: Option<String>,
 
-    /// target create options
-    #[structopt(long)]
+    /// optional target create options
+    #[structopt(long, number_of_values=1)]
     co: Vec<String>,
+
+    /// optional max output error threshold (default 0.0)
+    #[structopt(long)]
+    err_threshold: Option<f64>,
 
     /// input filename
     src_filename: String,
@@ -38,7 +41,6 @@ struct CliOpts {
 }
 
 lazy_static! {
-    #[derive(Debug)]
     static ref ARGS: CliOpts = CliOpts::from_args();
 }
 
@@ -48,17 +50,11 @@ fn main () -> Result<()> {
     let tgt_path = Path::new(ARGS.tgt_filename.as_str());
 
     let tgt_srs_opt: Option<SpatialRef> = if let Some(srs_def) = &ARGS.t_srs {
-        //Some(SpatialRef::from_definition(srs_def.as_str())?)
-        Some(SpatialRef::from_proj4(srs_def.as_str())?)
+        Some(SpatialRef::from_definition(srs_def.as_str())?)
+        //Some(SpatialRef::from_proj4(srs_def.as_str())?)
     } else { None };
 
-    let co_list_opt: Option<CslStringList> = if ! ARGS.co.is_empty() {
-        let mut co_list =  CslStringList::new();
-        for s in &ARGS.co {
-            co_list.add_string(s.as_str())?;
-        }
-        Some(co_list)
-    } else { None };
+    let co_list_opt = to_csl_string_list(&ARGS.co)?;
 
     let tgt_format: &str = if let Some(ref fmt) = ARGS.tgt_format {
         fmt.as_str()
@@ -79,6 +75,9 @@ fn main () -> Result<()> {
     }
     if let Some (ref co_list) = co_list_opt {
         warper.set_create_options(co_list);
+    }
+    if let Some(max_error) = ARGS.err_threshold {
+        warper.set_max_error(max_error);
     }
 
     warper.set_tgt_format(tgt_format)?;

@@ -13,10 +13,14 @@ path = "src/bin/simplewarp.rs"
 name = "utm_bbox"
 path = "src/bin/utm_bbox.rs"
 
+[[bin]]
+name = "translate_bbox"
+path = "src/bin/translate_bbox.rs"
+
 [dependencies]
 odin_common = { path = "../odin_common" }
 
-gdal-sys = { version = "*" }
+gdal-sys = { version = "*", features = ["bindgen"]}
 gdal = { version = "*" }
 lazy_static = "*"
 libc = "*"
@@ -24,7 +28,4 @@ geo = "*"
 anyhow = "*"
 thiserror = "*"
 structopt = "*"
-
-[build-dependencies]
-cc = "*"
 

@@ -30,21 +30,29 @@ pub enum DemImgType {
 }
 
 impl DemImgType {
-    fn file_extension(&self) -> &'static str {
+    pub fn for_ext (file_ext: &str) -> Option<DemImgType> {
+        match file_ext {
+            "tif" => Some(DemImgType::TIF),
+            "png" => Some(DemImgType::PNG),
+            _ => None
+        }
+    }
+
+    pub fn file_extension(&self) -> &'static str {
         match *self {
             DemImgType::PNG => "png",
             DemImgType::TIF => "tif",
         }
     }
 
-    fn gdal_driver_name(&self) -> &'static str {
+    pub fn gdal_driver_name(&self) -> &'static str {
         match *self {
             DemImgType::PNG => "PNG",
             DemImgType::TIF => "GTiff",
         }
     }
 
-    fn content_type(&self) -> &'static str {
+    pub fn content_type(&self) -> &'static str {
         match *self {
             DemImgType::PNG => "image/png",
             DemImgType::TIF => "image/tiff",
@@ -58,7 +66,7 @@ pub enum DemSRS {
 }
 
 impl DemSRS {
-    fn from_epsg (epsg: u32) -> Result<DemSRS> {
+    pub fn from_epsg (epsg: u32) -> Result<DemSRS> {
         if epsg == 4326 {
             Ok(DemSRS::GEO)
         } else if (epsg >= 32601 && epsg <= 32660) || (epsg >= 32701 && epsg <= 32760) {
@@ -68,14 +76,14 @@ impl DemSRS {
         }
     }
 
-    fn epsg(&self) -> u32 {
+    pub fn epsg(&self) -> u32 {
         match *self {
             DemSRS::GEO => 4326,
             DemSRS::UTM{epsg} => epsg,
         }
     }
 
-    fn bbox_precision(&self) -> usize {
+    pub fn bbox_precision(&self) -> usize {
         match *self {
             DemSRS::GEO => 4,
             DemSRS::UTM{..} => 0,
@@ -127,7 +135,9 @@ async fn create_response (file: File, img_type: DemImgType) -> impl IntoResponse
 
 //--- main lib entry
 
-pub fn get_dem (bbox: &BoundingBox<f64>, srs: DemSRS, img_type: DemImgType, cache_dir: &str, vrt_file: &str) -> Result<File> {
+/// for a given bounding box 'bbox' look for a matching file in 'cache_dir'.
+/// If none found yet create a file with the given 'img_type' from the virtual GDAL tileset specified by 'vrt_file'
+pub fn get_dem (bbox: &BoundingBox<f64>, srs: DemSRS, img_type: DemImgType, cache_dir: &str, vrt_file: &str) -> Result<(String,File)> {
     fs::ensure_dir(cache_dir)?;
 
     let fname = get_filename(bbox, srs.bbox_precision(), img_type.file_extension());
@@ -136,9 +146,11 @@ pub fn get_dem (bbox: &BoundingBox<f64>, srs: DemSRS, img_type: DemImgType, cach
     let vrt_path = Path::new(vrt_file);
     vrt_path.try_exists()?;
 
-    if !file_path.exists() {
+    let res = if !file_path.exists() {
         create_file(bbox,srs,img_type,&file_path, &vrt_path)
     } else {
-        Ok(File::open(file_path)?)
-    }
+        Ok(File::open(&file_path)?)
+    };
+
+    res.map( |f| (fs::path_to_lossy_string(&file_path),f) )
 }

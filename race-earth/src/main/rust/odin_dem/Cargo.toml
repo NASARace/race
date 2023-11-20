@@ -9,6 +9,9 @@ edition = "2021"
 name = "odin_dem"
 path = "src/bin/odin_dem.rs"
 
+[[bin]]
+name = "getdem"
+path = "src/bin/getdem.rs"
 
 [dependencies]
 

@@ -50,6 +50,10 @@ pub fn filepath (dir: &str, filename: &str) -> Result<PathBuf> {
     Ok(pb)
 }
 
+pub fn path_to_lossy_string (p: &dyn AsRef<Path>) -> String {
+    p.as_ref().to_string_lossy().as_ref().to_string()
+}
+
 pub fn readable_file (dir: &str, filename: &str) -> Result<File> {
     let p = filepath(dir,filename)?;
     if p.is_file() {
