@@ -81,11 +81,11 @@ impl ops::Mul<f64> for Angle {
     }
 }
 
-impl ops::Div<f64> for LonAngle {
+impl ops::Div<f64> for Angle {
     type Output = Self;
 
-    fn div (self,rhs:f64) -> LonAngle {
-        LonAngle(canonicalize_360(self.0 / rhs))
+    fn div (self,rhs:f64) -> Angle {
+        Angle(canonicalize_360(self.0 / rhs))
     }
 }
 
@@ -169,11 +169,11 @@ impl ops::Mul<f64> for LatAngle {
     }
 }
 
-impl ops::Div<f64> for LonAngle {
+impl ops::Div<f64> for LatAngle {
     type Output = Self;
 
-    fn div (self,rhs:f64) -> LonAngle {
-        LonAngle(canonicalize_90(self.0 / rhs))
+    fn div (self,rhs:f64) -> LatAngle {
+        LatAngle(canonicalize_90(self.0 / rhs))
     }
 }
 

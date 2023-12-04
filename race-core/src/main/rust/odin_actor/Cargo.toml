@@ -1,0 +1,38 @@
+cargo-features = ["edition2024"]
+
+[package]
+name = "odin_actor"
+version = "0.3.0"
+edition = "2024"
+
+[build]
+rustflags = ["--cfg", "tokio_unstable"]
+
+# no nested workspaces
+# [workspace]
+# members = [".", "odin_actor_proc_macros"]
+
+[dependencies]
+#tokio = { version = "*", features = ["full", "tracing"], optional = true }
+#kanal = { version = "0.1.0-pre8", features = ["async"], optional = true }
+
+tokio = { version = "*", features = ["full", "tracing"] }
+kanal = { version = "0.1.0-pre8", features = ["async"] }
+
+thiserror = "*"
+anyhow = "*"
+ron = "*"
+serde = { version = "*", features = ["derive"] }
+parse_duration = "*"
+
+odin_actor_proc_macros = { version="*", path="../odin_actor_proc_macros" }
+odin_config = { version = "*", path="../odin_config" }
+
+[features]
+# default = ["tokio_kanal"]
+# full = ["tokio_channel","tokio_kanal"]
+# tokio_channel = ["dep:tokio"]
+# tokio_kanal = ["dep:tokio", "dep:kanal"]
+
+
+

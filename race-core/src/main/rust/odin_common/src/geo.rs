@@ -1,12 +1,8 @@
-#![allow(unused)]
+#![allow(unused,uncommon_codepoints,non_snake_case)]
 
 use crate::*;
 use crate::angle;
-use num::{ToPrimitive, traits, zero};
-
-// convoluted way around unstable trait alias
-pub trait Num: traits::NumOps + traits::Zero + Copy + Send {}
-impl <T: traits::NumOps + traits::Zero + Copy + Send> Num for T {}
+use num::{Num, ToPrimitive, traits, zero};
 
 #[repr(C)]
 #[derive(Debug,Copy, Clone)]
@@ -20,17 +16,18 @@ pub struct BoundingBox <T: Num> {
 // no 'I' or 'O' bands
 const LAT_BAND: [char;22] = ['A','B','C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','X'];
 
-struct UtmZone {
+#[derive(Debug,Copy,Clone)]
+pub struct UtmZone {
     zone: u32,
     band: char,
 }
 
 impl UtmZone {
     fn is_north(&self) -> bool { self.band >= 'N' }
-    fn central_meridian(&self) -> f64 { -180.0 + self.zone*6 - 3.0 }
+    fn central_meridian(&self) -> f64 { -180.0 + (self.zone as f64)*6.0 - 3.0 }
 }
 
-impl <T: Num> BoundingBox<T> {
+impl <T: Num + Copy + ToPrimitive> BoundingBox<T> {
     pub fn new() -> BoundingBox<T> {
         BoundingBox{
             west: zero::<T>(),
@@ -40,7 +37,7 @@ impl <T: Num> BoundingBox<T> {
         }
     }
 
-    pub fn from_wsen<N> (wsen: &[N;4]) -> BoundingBox<T> where N: Num + Into<T> {
+    pub fn from_wsen<N> (wsen: &[N;4]) -> BoundingBox<T> where N: Num + Copy + Into<T> {
         BoundingBox::<T>{
             west: wsen[0].into(),
             south: wsen[1].into(),
@@ -57,8 +54,9 @@ impl <T: Num> BoundingBox<T> {
         unsafe { std::mem::transmute(self) }
     }
 
+    // FIXME - should stay as (T,T) but how can we divide/round
     pub fn center (&self) -> (f64,f64) {
-        ( (self.west + self.east)/2.0, (self.south + self.north) / 2.0 )
+        ( (self.west + self.east).to_f64().unwrap() / 2.0, (self.south + self.north).to_f64().unwrap() / 2.0 )
     }
 }
 
@@ -68,7 +66,7 @@ pub struct GeoBoundingBox (BoundingBox<f64>);
 
 impl GeoBoundingBox {
     pub fn from_wsen_degrees (wsen: &[f64;4]) -> GeoBoundingBox {
-        GeoBoundingBox(BoundingBox::from_wsen::f64(wsen))
+        GeoBoundingBox(BoundingBox::<f64>::from_wsen(wsen))
     }
 }
 
@@ -76,17 +74,18 @@ pub struct UtmBoundingBox (BoundingBox<f64>,UtmZone);
 
 impl UtmBoundingBox {
     pub fn from_wsen_meters (wsen: &[f64;4], utm_zone: UtmZone) -> UtmBoundingBox {
-        UtmBoundingBox(BoundingBox::from_wsen::f64(wsen),utm_zone)
+        UtmBoundingBox(BoundingBox::<f64>::from_wsen(wsen),utm_zone)
     }
 }
 
 
-
+#[derive(Debug,Copy,Clone)]
 pub struct LatLon {
     pub lat_deg: f64,
     pub lon_deg: f64,
 }
 
+#[derive(Debug,Copy,Clone)]
 pub struct UTM {
     pub easting: f64,
     pub northing: f64,
@@ -117,13 +116,18 @@ pub fn utm_zone (lat_lon: &LatLon) -> u32 {
     (((lon_deg + 180.0) / 6.0).trunc() as u32 % 60) + 1
 }
 
-pub fn naive_utm_zone (lon_deg: f64) -> u32 {
-    let d = angle::canonicalize_180(lon_deg);
-    (((d + 180.0) / 6.0).trunc() as u32 % 60) + 1
+pub fn naive_utm_zone (lat_lon: &LatLon) -> UtmZone {
+    let lon = angle::canonicalize_180( lat_lon.lon_deg);
+    let zone = (((lon + 180.0) / 6.0).trunc() as u32 % 60) + 1;
+
+    let lat = angle::canonicalize_180( lat_lon.lat_deg);
+    let band = LAT_BAND[ (lat / 8.0).trunc() as usize ];
+
+	UtmZone { zone, band }
 }
 
 // Krueger approximation - see https://en.wikipedia.org/wiki/Universal_Transverse_Mercator_coordinate_system
-pub fn latlon_to_utm_zone (lat_lon: &LatLon, utm_zone: u32) -> Option<UTM> {
+pub fn latlon_to_utm_zone (lat_lon: &LatLon, utm_zone: UtmZone) -> Option<UTM> {
     let lat_deg = angle::canonicalize_90(lat_lon.lat_deg);
     let lon_deg = angle::canonicalize_180(lat_lon.lon_deg);
 
@@ -144,11 +148,11 @@ pub fn latlon_to_utm_zone (lat_lon: &LatLon, utm_zone: u32) -> Option<UTM> {
 
     if lat_deg < -80.0 || lat_deg > 84.0 { return None } // not valid outside
 
-    let band = LAT_BAND[ (lat_deg + 80.0 / 6.0) as u32 ];
+    let band = LAT_BAND[ (lat_deg + 80.0 / 6.0) as usize ];
 
     let φ = lat_deg.to_radians();
     let λ = lon_deg.to_radians();
-    let λ0 = (((utm_zone -1) * 6 - 180 + 3) as f64).to_radians();
+    let λ0 = (((utm_zone.zone -1) * 6 - 180 + 3) as f64).to_radians();
     let dλ = λ - λ0;
     let N0 = if φ < 0.0 { 10000.0 } else { 0.0 };
 
@@ -160,25 +164,26 @@ pub fn latlon_to_utm_zone (lat_lon: &LatLon, utm_zone: u32) -> Option<UTM> {
     let ξ4 = ξ * 4.0;
     let ξ6 = ξ * 6.0;
 
-    let η = atanh( sin(dλ) / sqrt(1 + t*t));
+    let η = atanh( sin(dλ) / sqrt(1.0 + t*t));
     let η2 = η * 2.0;
     let η4 = η * 4.0;
     let η6 = η * 6.0;
 
-    let easting = (E0 + D*(η + (α1 * cos(ξ2)*sinh(η2)) + (α2 * cos(ξ4)*sinh(η4)) + (α3 * cos(ξ6)*sinh(η6)))) * 1000;
-    let northing = (N0 + D*(ξ + (α1 * sin(ξ2)*cosh(η2)) + (α2 * sin(ξ4)*cosh(η4)) + (α3 * sin(ξ6)*cosh(η6)))) * 1000;
+    let easting = (E0 + D*(η + (α1 * cos(ξ2)*sinh(η2)) + (α2 * cos(ξ4)*sinh(η4)) + (α3 * cos(ξ6)*sinh(η6)))) * 1000.0;
+    let northing = (N0 + D*(ξ + (α1 * sin(ξ2)*cosh(η2)) + (α2 * sin(ξ4)*cosh(η4)) + (α3 * sin(ξ6)*cosh(η6)))) * 1000.0;
 
-    Some( UTM {easting, northing, zone: utm_zone, is_north: φ >= 0.0} )
+    Some( UTM {easting, northing, utm_zone} )
 }
 
 pub fn latlon_to_utm (lat_lon: &LatLon) -> Option<UTM> {
-    naive_utm_zone(lat_lon.lon_deg).and_then( |z| latlon_to_utm_zone(lat_lon,z))
+    let utm_zone = naive_utm_zone( lat_lon);
+    latlon_to_utm_zone( lat_lon, utm_zone)
 }
 
 pub fn utm_to_latlon (utm: &UTM) -> LatLon {
-    let UTM { easting, northing, zone, is_north} = *utm;
-    let N = northing / 1000;
-    let E = easting / 1000;
+    let UTM { easting, northing, utm_zone} = utm;
+    let N = northing / 1000.0;
+    let E = easting / 1000.0;
 
     //let A = 6367.449145823416;
     //let k0 = 0.9996;
@@ -192,7 +197,7 @@ pub fn utm_to_latlon (utm: &UTM) -> LatLon {
     let δ3 = 0.0000000176774599620756;
 
     let E0 = 500.0;
-    let N0 = if is_north { 0.0 } else { 10000.0 };
+    let N0 = if utm_zone.is_north() { 0.0 } else { 10000.0 };
 
     let ξ = (N - N0)/k0_A;
     let ξ2 = ξ * 2.0;
@@ -214,7 +219,7 @@ pub fn utm_to_latlon (utm: &UTM) -> LatLon {
     let χ = asin( sin(ξʹ) / cosh(ηʹ));
 
     let φ = χ + (δ1*sin(2.0*χ)) + (δ2*sin(4.0*χ)) + (δ3*sin(6.0*χ));
-    let λ0 = (zone * 6 - 183).to_f64().unwrap().to_radians();
+    let λ0 = (utm_zone.zone * 6 - 183).to_f64().unwrap().to_radians();
     let λ = λ0 + atan( sin(ξʹ)/cosh(ηʹ));
 
     let lat_deg = φ.to_degrees();

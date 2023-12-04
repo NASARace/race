@@ -1,0 +1,5 @@
+// example config for Ticker actor
+
+TickerConfig (
+    interval_sec: 1,
+)

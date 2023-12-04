@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 # our ODIN crates
-odin_common = { path = "../../../../../race-core/src/main/rust/odin_common" }
+odin_common = { path = "../odin_common" }
 
 chrono = { version = "*", features = ["serde"] }
 geojson = "*"

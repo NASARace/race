@@ -461,7 +461,7 @@ async fn download_file (dt: &DateTime<Utc>, step: usize) -> Result<()> {
                 file.write_all(&chunk)?;
             }
 
-            if response.status() == http::StatusCode::OK {
+            if response.status() == reqwest::StatusCode::OK {
                 let file_len_kb = fs::metadata(file.path())?.len() / 1024;
                 if file_len_kb > 0 {
                     std::fs::rename(file.path(), path); // now make it visible to the world as a permanent file

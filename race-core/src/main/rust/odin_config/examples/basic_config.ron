@@ -1,0 +1,6 @@
+
+BasicConfig (
+    name: "My Basic Config",
+    numbers: [ 42, 43 ],
+    interval: "90sec",
+)
