@@ -3,7 +3,10 @@
 resolver = "2"
 
 members = [
-  "race-core/src/main/rust/odin_common",
+  "race-core/src/main/rust/odin_common",  
+  "race-core/src/main/rust/odin_config",  
+  "race-core/src/main/rust/odin_actor",
+  "race-core/src/main/rust/odin_actor_proc_macros",
   "race-core/src/main/rust/odin_gdal",
   "race-earth/src/main/rust/odin_dem",
   "race-earth/src/main/rust/odin_hrrr",

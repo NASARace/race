@@ -17,6 +17,7 @@ use axum::{
 };
 use serde_derive::Deserialize;
 use structopt::StructOpt;
+use tokio::net::TcpListener;
 use tower_http::{
     classify::{ServerErrorsAsFailures, SharedClassifier},
     trace::TraceLayer,
@@ -116,9 +117,8 @@ async fn main () -> Result<(),Box<dyn Error>> {
         app = app.layer( TraceLayer::new_for_http());
     }
 
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await;
+    let listener = TcpListener::bind(&addr).await?;
+    axum::serve( listener, app).await?;
 
     Ok(())
 }

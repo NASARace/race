@@ -5,10 +5,10 @@ pub mod errors;
 use std::error::Error;
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use axum::body::StreamBody;
 use axum::http::{header, HeaderMap, HeaderValue};
 use axum::http::header::CONTENT_TYPE;
 use axum::response::IntoResponse;
+use axum::body::Body;
 use tokio::io;
 use gdal::Dataset;
 use gdal::spatial_ref::SpatialRef;
@@ -125,7 +125,7 @@ fn create_file (bbox: &BoundingBox<f64>, srs: DemSRS, img_type: DemImgType, outp
 async fn create_response (file: File, img_type: DemImgType) -> impl IntoResponse {
     let f = tokio::fs::File::from_std(file);
     let stream = tokio_util::io::ReaderStream::new(f);
-    let body = StreamBody::new(stream);
+    let body = Body::from_stream(stream);
 
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, HeaderValue::from_static(img_type.content_type()));

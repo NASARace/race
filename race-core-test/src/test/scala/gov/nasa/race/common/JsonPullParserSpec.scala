@@ -802,4 +802,75 @@ class JsonPullParserSpec extends AnyFlatSpec with RaceSpec {
     println(s"res = $res")
     assert( res == (43,-43))
   }
+
+  "a JsonPullParser" should "parse nested arrays" in {
+    val input =
+      """
+        |{
+        |  "id": "something",
+        |  "perimeter": [
+        |    [ 37.829, -121.09823 ],
+        |    [ 37.819, -121.09842 ],
+        |    [ 37.282, -121.39491 ]
+        |  ]
+        |}
+        |""".stripMargin
+
+    case class Position (lat: Double, lon: Double)
+    case class Perimeter (id: String, vertices: Seq[Position])
+
+    class Parser extends StringJsonPullParser {
+      val PERIMETER = asc("perimeter")
+      val ID = asc("id")
+
+      def parse(input: String): Option[Perimeter] = {
+        if (initialize(input)) {
+            readNextObject( parsePerimeter())
+        } else None
+      }
+
+      def parsePerimeter(): Option[Perimeter] = {
+        var id = ""
+        var vertices = Seq.empty[Position]
+
+        foreachMemberInCurrentObject {
+          case ID => id = quotedValue.toString
+          case PERIMETER => vertices = readVertices()
+        }
+
+        if (!id.isEmpty && vertices.nonEmpty) Some(new Perimeter(id, vertices)) else None
+      }
+
+      def readVertices(): Seq[Position] = {
+        val buf = ArrayBuffer.empty[Position]
+
+        foreachElementInCurrentArray {
+          parsePosition() match {
+            case Some(pos) => buf += pos
+            case None => println("error parsing position")
+          }
+        }
+
+        buf.toSeq
+      }
+
+      def parsePosition(): Option[Position] = {
+        val a = readCurrentDoubleArrayInto(ArrayBuffer.empty[Double])
+        if (a.size == 2) Some(Position(a(0),a(1))) else None
+      }
+    }
+
+    println(s"-- parse nested arrays")
+    println(input)
+
+    val p = new Parser()
+    val res = p.parse(input)
+    println(s"result = $res")
+
+    assert( res.isDefined)
+    val perimeter = res.get
+    assert( perimeter.id == "something")
+    assert( perimeter.vertices.length == 3)
+    assert( perimeter.vertices(2).lon == -121.39491)
+  }
 }

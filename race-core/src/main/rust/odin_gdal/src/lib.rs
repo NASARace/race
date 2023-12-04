@@ -142,7 +142,7 @@ pub fn transform_point_2d (transform: &CoordTransform, x: f64, y: f64) -> Result
     Ok((ax[0],ay[0]))
 }
 
-pub fn latlon_to_utm_bounds (bbox: &BoundingBox<f64>, interior:  bool) -> (BoundingBox<f64>,u32) {
+pub fn latlon_to_utm_bounds (bbox: &BoundingBox<f64>, interior:  bool) -> (BoundingBox<f64>,UtmZone) {
     let ll_geo = LatLon {lat_deg: bbox.south, lon_deg: bbox.west };
     let lr_geo = LatLon {lat_deg: bbox.south, lon_deg: bbox.east };
     let ul_geo = LatLon {lat_deg: bbox.north, lon_deg: bbox.west };
@@ -150,7 +150,7 @@ pub fn latlon_to_utm_bounds (bbox: &BoundingBox<f64>, interior:  bool) -> (Bound
 
     let center_geo = LatLon {lat_deg: (ll_geo.lat_deg + ul_geo.lat_deg) / 2.0,
                              lon_deg: (ll_geo.lon_deg + lr_geo.lon_deg) / 2.0 };
-    let zone = utm_zone( &center_geo).unwrap();
+    let zone = naive_utm_zone( &center_geo);
 
     let ll_utm = latlon_to_utm_zone(&ll_geo, zone).unwrap();
     let ul_utm = latlon_to_utm_zone(&ul_geo, zone).unwrap();
@@ -274,9 +274,8 @@ pub fn srs_utm_from_lon_lat (lon_deg: f64, lat_deg: f64, opt_zone: Option<u32>) 
             return Err(misc_error(format!("invalide UTM zone: {}", zone)));
         }
     } else {
-        if let Ok(zone) = utm_zone(lon_deg,lat_deg) { zone } else {
-            return Err(misc_error(format!("invalid geographic lon,lat: {},{}", lon_deg, lat_deg)))
-        }
+		let lat_lon = LatLon { lat_deg, lon_deg };
+        utm_zone( &lat_lon)
     };
 
     let epsg_base = if lat_deg < 0.0 { 32700 } else { 32600 };

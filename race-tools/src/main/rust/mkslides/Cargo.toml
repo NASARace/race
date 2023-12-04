@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odin_common = { path = "../../../../../race-core/src/main/rust/odin_common" }
+odin_common = { path = "../odin_common" }
 
 lazy_static = "*"
 markdown = "1.0.0-alpha.14"

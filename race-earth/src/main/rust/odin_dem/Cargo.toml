@@ -16,8 +16,8 @@ path = "src/bin/getdem.rs"
 [dependencies]
 
 # our ODIN crates
-odin_common = { path = "../../../../../race-core/src/main/rust/odin_common" }
-odin_gdal = { path = "../../../../../race-core/src/main/rust/odin_gdal" }
+odin_common = { path = "../odin_common" }
+odin_gdal = { path = "../odin_gdal" }
 
 lazy_static = "*"
 structopt = "*"
