@@ -1,8 +1,8 @@
 #![allow(unused)]
 
 use odin_actor::prelude::*;
-//use odin_actor::tokio_channel::{ActorSystem,Actor,ActorHandle,Abortable, sleep};
-use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,sleep};
+use odin_actor::tokio_channel::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,sleep};
+//use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,sleep};
 use std::{sync::Arc, future::Future};
 use anyhow::{anyhow,Result};
 

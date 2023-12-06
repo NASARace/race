@@ -1,25 +1,29 @@
 #![allow(unused)]
-#![cfg(feature="tokio_channel")]
+// #![cfg(feature="tokio_channel")]
 
 use tokio::{
-    sync::{mpsc,oneshot},
-    time::{self,Interval,timeout,interval},
-    task
+    time::{self,Interval,interval},
+    task::{self, JoinSet, LocalSet},
+    runtime::Handle,
+    sync::{mpsc::{self,error::TrySendError},oneshot},
 };
+
 use std::{
     time::{Instant,Duration},
-    sync::{Arc, atomic::AtomicU64},
-    future::Future,
+    sync::{Arc,Mutex,atomic::AtomicU64},
+    future::{Future, Ready},
     fmt::Debug, 
     pin::Pin,
     boxed::Box, 
     cell::Cell,
-    marker::Sync
+    marker::Sync,
+    result::{Result as StdResult}
 };
 use crate::{
-    Identifiable, ObjSafeFuture,
-    errors::{Result,OdinActorError, all_op_failed},
+    Identifiable, ObjSafeFuture, SendableFutureCreator, ActorSystemRequest, create_sfc,
+    errors::{Result,OdinActorError, all_op_result, poisoned_lock},
     MsgReceiver,DynMsgReceiver,ReceiveAction, DefaultReceiveAction,
+    secs,millis,micros,nanos,
     SysMsgReceiver, FromSysMsg, _Start_, _Ping_, _Timer_, _Pause_, _Resume_, _Terminate_,
 };
 
@@ -44,14 +48,14 @@ pub type JoinHandle<T> = task::JoinHandle<T>;
 fn create_mpsc_sender_receiver <MsgType> (bound: usize) -> (MpscSender<MsgType>,MpscReceiver<MsgType>)
     where MsgType: Send
 {
-    mpsc::channel::<MsgType>(bound)
+    mpsc::channel(bound)
 }
 
 #[inline]
 fn create_oneshot_sender_receiver <MsgType> () -> (OneshotSender<MsgType>,OneshotReceiver<MsgType>)
     where MsgType: Send
 {
-    oneshot::channel::<MsgType>()
+    oneshot::channel()
 }
 
 #[inline]
@@ -60,12 +64,20 @@ pub async fn sleep (dur: Duration) {
 }
 
 #[inline]
+pub async fn timeout<F,R,E> (to: Duration, fut: F)->Result<R> where F: Future<Output=StdResult<R,E>> {
+    match time::timeout( to, fut).await {
+        Ok(result) => result.map_err(|_| OdinActorError::SendersDropped),
+        Err(e) => Err(OdinActorError::TimeoutError(to))
+    }
+}
+
+#[inline]
 pub async fn yield_now () {
     task::yield_now().await;
 }
 
 #[inline]
-pub fn spawn<F>(future: F) -> JoinHandle<F::Output> 
+pub fn spawn<F>(future: F) -> JoinHandle<F::Output>
     where
         F: Future + Send + 'static,
         F::Output: Send + 'static,
@@ -73,25 +85,56 @@ pub fn spawn<F>(future: F) -> JoinHandle<F::Output>
     task::spawn( future)
 }
 
-/// trait to be implemented for all message types that can be used as questions (with expected answer of type A)
-/// in synchronous ask() patterns.
-/// The create_question() constructor is called from within our generic ask(..) functions, which are creating
-/// the respective OneshotSender/Receiver pairs
-pub trait Respondable<A> 
+#[inline]
+pub fn spawn_blocking<F,R> (fn_once: F) -> JoinHandle<F::Output>
     where
-        A: Send + 'static, 
-        Self: Sized + Send
+        F: FnOnce() -> R + Send + 'static,
+        R: Send + 'static
 {
-    fn create_question (tx: OneshotSender<A>) -> Self;
+    task::spawn_blocking( fn_once)
 }
 
-#[derive(Debug)]
-pub struct Abortable {
-    abort_handle: tokio::task::AbortHandle
+// these functions can be used to communicate back to the actor once the spawn_blocking() executed FnOnce is done
+
+pub fn block_on<F: Future>(future: F) -> F::Output {
+    Handle::current().block_on( future)
 }
-impl Abortable {
-    pub fn abort (&self) { self.abort_handle.abort() }
+
+/// a specialized version that uses a try_send_msg() from within a blocking loop.
+/// Note this comes with the additional cost/constraint of a Clone constraint for the message
+pub fn block_on_send_msg<Msg> (tgt: impl MsgReceiver<Msg>, msg: Msg)->Result<()> where Msg: Send + Clone {
+    loop {
+        match tgt.try_send_msg(msg.clone()) {
+            Ok(()) => return Ok(()),
+            Err(e) => match e {
+                OdinActorError::ReceiverFull => std::thread::sleep(millis(30)),
+                _ => return Err(e)
+            }
+        }
+    }
 }
+
+/// a timeout version of a blocking try_send_msg() loop. Use this if it is not at the end of the spawn_blocking() task
+pub fn block_on_timeout_send_msg<Msg> (tgt: impl MsgReceiver<Msg>, msg: Msg, to: Duration)->Result<()> where Msg: Send + Clone {
+    let mut elapsed = millis(0);
+    loop {
+        match tgt.try_send_msg(msg.clone()) {
+            Ok(()) => return Ok(()),
+            Err(e) => match e {
+                OdinActorError::ReceiverFull => {
+                    if elapsed > to {
+                        return Err(OdinActorError::TimeoutError(to))
+                    }
+                    let dt = millis(30);
+                    std::thread::sleep(dt); // note this is just an approximation but we don't try to minimize latency here
+                    elapsed += dt;
+                }
+                _ => return Err(e)
+            }
+        }
+    }
+}
+
 
 /* #endregion runtime abstractions */
 
@@ -107,7 +150,7 @@ pub trait Actor <MsgType>
     where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug
 {
     // this is what makes an object an actor
-    fn receive (&mut self, msg: MsgType, hself: &ActorHandle<MsgType>) -> impl Future<Output = ReceiveAction> + Send;
+    fn receive (&mut self, msg: MsgType, hself: &ActorHandle<MsgType>, hsys: &ActorSystemHandle) -> impl Future<Output = ReceiveAction> + Send;
 }
 
 // partly opaque struct
@@ -137,10 +180,7 @@ impl <MsgType> ActorHandle <MsgType>
 
     /// this waits for a given timeout duration until the message can be send or the receiver got closed
     pub async fn timeout_send_actor_msg (&self, msg: MsgType, to: Duration)->Result<()> {
-        match timeout( to, self.send_actor_msg(msg)).await {
-            Ok(result) => result,
-            Err(_) => Err(OdinActorError::TimeoutError(to))
-        }
+        timeout( to, self.send_actor_msg(msg)).await
     }
 
     pub async fn timeout_send_msg<M:Into<MsgType>> (&self, msg: M, to: Duration)->Result<()> {
@@ -149,9 +189,11 @@ impl <MsgType> ActorHandle <MsgType>
 
     /// this returns immediately but the caller has to check if the message got sent
     pub fn try_send_actor_msg (&self, msg: MsgType)->Result<()> {
-        self.tx.try_send(msg).map_err( |e| match e {
-            mpsc::error::TrySendError::Full(_) => OdinActorError::ReceiverFull,
-            mpsc::error::TrySendError::Closed(_) => OdinActorError::ReceiverClosed
+        self.tx.try_send(msg).map_err(|e| {
+            match e {
+                TrySendError::Full(_) => OdinActorError::ReceiverFull,
+                TrySendError::Closed(_) => OdinActorError::ReceiverClosed
+            }
         })
     }
 
@@ -161,17 +203,17 @@ impl <MsgType> ActorHandle <MsgType>
 
     // TODO - is this right to skip if we can't send? Maybe that should be an option
 
-    pub fn start_oneshot_timer (&self, id: i64, delay: Duration) -> Abortable {
+    pub fn start_oneshot_timer (&self, id: i64, delay: Duration) -> AbortHandle {
         let h = self.clone();
 
         let th = spawn( async move {
             sleep(delay).await;
             h.try_send_actor_msg( _Timer_{id}.into() );
         });
-        Abortable { abort_handle: th.abort_handle() }
+        th.abort_handle()
     }
 
-    pub fn start_repeat_timer (&self, id: i64, timer_interval: Duration) -> Abortable {
+    pub fn start_repeat_timer (&self, id: i64, timer_interval: Duration) -> AbortHandle {
         let h = self.clone();
         let mut interval = interval(timer_interval);
 
@@ -183,7 +225,7 @@ impl <MsgType> ActorHandle <MsgType>
                 }
             }
         });
-        Abortable { abort_handle: th.abort_handle() }
+        th.abort_handle()
     }
 }
 
@@ -269,26 +311,74 @@ impl <MsgType> SysMsgReceiver for ActorHandle<MsgType>
 
 /* #region ActorSystem ************************************************************************************/
 
-/// internal struct to 
 struct ActorEntry {
     id: Arc<String>,
     type_name: &'static str,
-    abortable: Abortable,          // this is a runtime specific type
+    abortable: AbortHandle,
     receiver: Box<dyn SysMsgReceiver>,
     ping_response: Arc<AtomicU64>
 }
 
+#[derive(Clone)]
+pub struct ActorSystemHandle {
+    sender: MpscSender<ActorSystemRequest>
+}
+impl ActorSystemHandle {
+    pub async fn send_msg (&self, msg: ActorSystemRequest, to: Duration)->Result<()> {
+        timeout( to, self.sender.send(msg)).await
+    }
+
+    pub async fn actor_of <MsgType,ActorType,T> (&self, actor: ActorType, bound: usize, id: T) -> Result<ActorHandle<MsgType>>
+        where 
+            MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static,
+            ActorType: Actor<MsgType> + Clone + Send + 'static,
+            T: ToString
+    {
+        let actor_id = Arc::new(id.to_string());
+        let (tx, rx) = create_mpsc_sender_receiver::<MsgType>( bound);
+        let actor_handle = ActorHandle { id: actor_id.clone(), tx };
+        let hself = actor_handle.clone();
+        let hsys = self.clone();
+
+        let type_name = std::any::type_name::<ActorType>();
+        let sys_msg_receiver = Box::new(actor_handle.clone());
+
+        let func = move || { ActorSystem::run_actor( actor,hself,rx,hsys) };
+        let sfc = create_sfc(func);
+
+        self.send_msg( ActorSystemRequest::RequestActorOf { id: actor_id.clone(), type_name, sys_msg_receiver, sfc}, secs(1)).await?;
+
+        Ok(actor_handle)
+    }
+
+    pub async fn request_termination (&self, to: Duration)->Result<()> {
+        self.send_msg( ActorSystemRequest::RequestTermination, to).await
+    }
+}
+
+/// the ActorSystem representation for the function in which it is created
 pub struct ActorSystem {
     id: String,
-    join_set: task::JoinSet<()>,
-    actors: Vec<ActorEntry>,
-    ping_cycle: u32
+    ping_cycle: u32,
+    request_sender: MpscSender<ActorSystemRequest>,
+    request_receiver: MpscReceiver<ActorSystemRequest>,
+    join_set: task::JoinSet<()>, 
+    actor_entries: Vec<ActorEntry>
 }
 
 impl ActorSystem {
 
     pub fn new<T: ToString> (id: T)->Self {
-        ActorSystem { id: id.to_string(), join_set: task::JoinSet::new(), actors: Vec::new(), ping_cycle: 0 }
+        let (tx,rx) = create_mpsc_sender_receiver(8);
+
+        ActorSystem { 
+            id: id.to_string(), 
+            ping_cycle: 0,
+            request_sender: tx,
+            request_receiver: rx,
+            join_set: JoinSet::new(),
+            actor_entries: Vec::new()
+        }
     }
 
     // the public function to create an actor handle for a given actor object and spawn a task for it
@@ -305,55 +395,92 @@ impl ActorSystem {
         let (tx, rx) = create_mpsc_sender_receiver::<MsgType>( bound);
         let actor_handle = ActorHandle { id: actor_id.clone(), tx };
         let hself = actor_handle.clone();
+        let hsys = ActorSystemHandle { sender: self.request_sender.clone()};
 
-        let abort_handle = self.join_set.spawn( Self::run_actor(actor,hself,rx));
+        let abort_handle = self.join_set.spawn( Self::run_actor( actor,hself,rx,hsys) );
 
         let actor_entry = ActorEntry {
-            id: actor_id.clone(),
+            id: actor_id,
             type_name: std::any::type_name::<ActorType>(),
-            abortable: Abortable { abort_handle },
-            receiver: Box::new(actor_handle.clone()),
+            abortable: abort_handle,
+            receiver: Box::new(actor_handle.clone()), // stores it as a SysMsgReceiver trait object
             ping_response: Arc::new(AtomicU64::new(0))
         };
 
-        self.actors.push( actor_entry);
-
+        self.actor_entries.push( actor_entry);
         actor_handle
     }
 
     // the (internal) task function - consume the actor and loop while there are potential senders
-    async fn run_actor <MsgType,ActorType> (mut actor: ActorType, hself: ActorHandle<MsgType>, mut rx: MpscReceiver<MsgType>)
+    async fn run_actor <MsgType,ActorType> (
+        mut actor: ActorType, 
+        hself: ActorHandle<MsgType>, 
+        mut rx: MpscReceiver<MsgType>, 
+        hsys: ActorSystemHandle
+    )
         where 
             MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static,
             ActorType: Actor<MsgType> + Send + 'static,
     {
-        while let Some(msg) = rx.recv().await {
-            if let ReceiveAction::Stop = actor.receive(msg,&hself).await {
-                rx.close();
-                break;
+        loop {
+            match rx.recv().await {
+                Some(msg) => {
+                    match actor.receive(msg,&hself,&hsys).await {
+                        ReceiveAction::Continue => {} // just go on
+                        ReceiveAction::Stop => {
+                            rx.close();
+                            break;
+                        }
+                        ReceiveAction::RequestTermination => {
+                            hsys.send_msg(ActorSystemRequest::RequestTermination, secs(1)).await;         
+                        }
+                    }
+                }
+                None => break // TODO shall we treat ReceiveError::Closed and ::SendClosed the same? what if there are no senders yet?
             }
         }
+
+        // TODO - remove actor entry from ActorSystemData
     }
 
+    // this is used from spawned actors sending us RequestActorOf messages
+    fn spawn_actor (&mut self, actor_id: Arc<String>, type_name: &'static str, sys_msg_receiver: Box<dyn SysMsgReceiver>, sfc: SendableFutureCreator) {
+        let abort_handle = self.join_set.spawn( sfc());
+        let actor_entry = ActorEntry {
+            id: actor_id,
+            type_name,
+            abortable: abort_handle,
+            receiver: sys_msg_receiver, // stores it as a SysMsgReceiver trait object
+            ping_response: Arc::new(AtomicU64::new(0))
+        };
+
+        self.actor_entries.push( actor_entry);
+    }
+
+    // this should NOT be accessible from actors, hence we require a &mut self
     pub async fn wait_all (&mut self, to: Duration) -> Result<()> {
-        let len = self.join_set.len();
+        let mut join_set = &mut self.join_set;
+
+        let len = join_set.len();
         let mut closed = 0;
-        while let Some(_res) = self.join_set.join_next().await {
+        while let Some(_res) = join_set.join_next().await {
             closed += 1;
         }
-        closed == self.actors.len();
         
-        if closed == len { Ok(()) } else { Err(all_op_failed("join", len, len-closed))}
+        all_op_result("start_all", len, len-closed)   
     }
 
-    pub fn abort_all(&mut self) {
-        self.join_set.abort_all();
+
+    pub async fn abort_all (&mut self) {
+        let mut join_set = &mut self.join_set;
+        join_set.abort_all();
     }
 
     pub async fn ping_all (&mut self, to: Duration)->Result<()> {
-        self.ping_cycle += 1;
+        let actor_entries = &self.actor_entries;
 
-        for actor_entry in &self.actors {
+        self.ping_cycle += 1;
+        for actor_entry in actor_entries {
             let response = actor_entry.ping_response.clone();
             actor_entry.receiver.send_ping( _Ping_{ cycle: self.ping_cycle, sent: Instant::now(), response });
         }
@@ -361,19 +488,28 @@ impl ActorSystem {
     }
 
     pub async fn start_all (&self, to: Duration)->Result<()> {
+        let actor_entries = &self.actor_entries;
+
         let mut failed = 0;
-        for actor_entry in &self.actors {
+        for actor_entry in actor_entries {
             if actor_entry.receiver.send_start(_Start_{}, to).await.is_err() { failed += 1 }
         }
-        self.all_op_result("start_all", failed)
+        // TODO - do we need to wait until everybody has processed _Start_ ?
+        all_op_result("start_all", actor_entries.len(), failed)
     }
 
-    pub async fn terminate_all (&self, to: Duration)->Result<()> {
+    pub async fn terminate_all (&self, to: Duration)->Result<()>  {
+        let mut len = 0;
         let mut failed = 0;
-        for actor_entry in &self.actors {
+
+        //for actor_entry in self.actors.iter().rev() { // send terminations in reverse ?
+        for actor_entry in self.actor_entries.iter() {
+            len += 1;
             if actor_entry.receiver.send_terminate(_Terminate_{}, to).await.is_err() { failed += 1 };
         }
-        self.all_op_result("start_all", failed)
+
+        // no need to wait for responses since we use the join_set to sync
+        all_op_result("terminate_all", len, failed)
     }
 
     pub async fn terminate_and_wait (&mut self, to: Duration)->Result<()> {
@@ -381,14 +517,35 @@ impl ActorSystem {
 
         let res = self.wait_all(to).await;
         if (res.is_err()) {
-            self.abort_all()
+            self.abort_all().await
         }
         res
     }
 
-    fn all_op_result (&self, op: &'static str, failed: usize)->Result<()> {
-        if failed == 0 { Ok(()) } else { Err(all_op_failed("terminate_all", self.actors.len(), failed)) }
+    pub async fn process_requests (&mut self)->Result<()> {
+        loop {
+            match self.request_receiver.recv().await {
+                Some(msg) => {
+                    use ActorSystemRequest::*;
+                    match msg {
+                        RequestTermination => {
+                            self.terminate_and_wait(secs(5)).await?;
+                            break;
+                        }
+                        RequestActorOf { id, type_name, sys_msg_receiver, sfc } => {
+                            self.spawn_actor( id, type_name, sys_msg_receiver, sfc)
+                        }
+                    }
+                }
+                None => {
+                    return Err(OdinActorError::ReceiverClosed) // ??
+                }
+            }
+        }
+
+        Ok(())
     }
+
 }
 
 /* #endregion ActorSystem */
@@ -400,14 +557,30 @@ impl ActorSystem {
  * user (actor) code
  */
 
+ /// trait to be implemented for all message types that can be used as questions (with expected answer of type A)
+/// in synchronous ask() patterns.
+pub trait Respondable<A> where A: Send + 'static, Self: Sized + Send {
+    fn sender(self)->OneshotSender<A>;
 
-pub async fn ask <Q,A> (tgt: impl MsgReceiver<Q>)->Result<A>
+    fn reply (self, answer: A)->impl std::future::Future<Output = Result<()>> + Send {
+        let tx = self.sender();
+        async move { tx.send(answer).map_err(|_| OdinActorError::ReceiverClosed) }
+    }
+
+    fn timeout_reply (self, to: Duration, answer: A)->impl std::future::Future<Output = Result<()>> + Send {
+        let tx = self.sender();
+        async move { tx.send(answer).map_err(|_| OdinActorError::ReceiverClosed) }
+    }
+}
+
+pub async fn ask <Q,A,C> (tgt: impl MsgReceiver<Q>, ctor: C)->Result<A>
     where
         Q: Respondable<A> + Send + 'static, 
-        A: Send + 'static
+        A: Send + 'static,
+        C: FnOnce(OneshotSender<A>)->Q
 {
     let (tx,rx) = create_oneshot_sender_receiver::<A>();
-    let q = Respondable::create_question(tx);
+    let q = ctor(tx);
 
     tgt.send_msg(q).await?;
 
@@ -416,22 +589,21 @@ pub async fn ask <Q,A> (tgt: impl MsgReceiver<Q>)->Result<A>
 
 /// create a question message of type Q, send it to tgt and timeout wait for an answer of type A.
 /// this is the general pattern for synchronous message exchange 
-pub async fn timeout_ask <Q,A> (tgt: impl MsgReceiver<Q>, to: Duration)->Result<A>
+pub async fn timeout_ask <Q,A,C> (to: Duration, tgt: impl MsgReceiver<Q>, ctor: C)->Result<A>
     where
         Q: Respondable<A> + Send + 'static, 
-        A: Send + 'static
+        A: Send + 'static,
+        C: FnOnce(OneshotSender<A>)->Q
 {
     let (tx,rx) = create_oneshot_sender_receiver::<A>();
-    let q = Respondable::create_question(tx);
+    let q = ctor(tx);
 
     tgt.timeout_send_msg(q, to).await?;
 
-    match timeout( to, rx).await {
-        Ok(result) => result.map_err(|_| OdinActorError::SendersDropped),
-        Err(e) => Err(OdinActorError::TimeoutError(to))
-    }
+    timeout(to, rx).await
 }
 
 // a sync try_ask() does not make sense since we do have to await the response 
+
 
 /* #endregion message patterns */

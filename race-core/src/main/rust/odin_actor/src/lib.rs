@@ -14,7 +14,7 @@ pub mod prelude;
 //#[cfg(feature = "tokio_kanal")]
 pub mod tokio_kanal;
 
-#[cfg(feature = "tokio_channel")]
+//#[cfg(feature = "tokio_channel")]
 pub mod tokio_channel;
 
 
@@ -42,11 +42,10 @@ pub type SendableFutureCreator = Box<dyn FnOnce() -> Pin<Box<dyn Future<Output =
 // see https://stackoverflow.com/questions/74920440/how-do-i-wrap-a-closure-which-returns-a-future-without-it-being-sync
 pub fn create_sfc <F,R> (func: F) -> SendableFutureCreator
     where
-        F: FnOnce() -> R + Clone + Send + 'static,
+        F: FnOnce() -> R  + Send + 'static,
         R: Future<Output = ()> + Send + 'static,
 {
     Box::new(move || {
-        let func = func.clone();
         Box::pin(async move {
             let fut = { func() }; 
             fut.await;

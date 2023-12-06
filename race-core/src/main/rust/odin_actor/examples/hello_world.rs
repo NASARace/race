@@ -21,6 +21,7 @@ impl Actor<GreeterMsg> for Greeter {
     }
 }
 
+pub struct Blah;
 
 #[tokio::main]
 async fn main() ->Result<()> {
