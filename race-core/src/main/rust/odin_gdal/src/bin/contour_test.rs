@@ -18,10 +18,6 @@ struct CliOpts {
     #[structopt(long)]
     three_d: bool,
 
-    /// id_field in output 
-    #[structopt(long)]
-    id: Option<u32>,
-
     /// attr name
     #[structopt(long, short)]
     attr: Option<String>,
@@ -86,13 +82,6 @@ fn main () -> Result<()> {
         Some(tgt_l.as_str())
     } else { None };
 
-    let id_field: Option<u32> = if let Some(id) = &ARGS.id {
-        Some(*id)
-    } else { None };
-
-
-
-
     let mut contourer = ContourBuilder::new( &src_ds, tgt_path)?;
     contourer.set_band(band);
     contourer.set_interval(interval);
@@ -110,9 +99,6 @@ fn main () -> Result<()> {
     }
     if tgt_layer.is_some() {
         contourer.set_tgt_layer_name(tgt_layer.unwrap());
-    }
-    if id_field.is_some() {
-        contourer.set_field_id(id_field.unwrap());
     }
     if ARGS.polygon {
         contourer.set_poly();

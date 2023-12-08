@@ -5,6 +5,7 @@ use std::ptr::{null, null_mut};
 use gdal::Dataset;
 use gdal::spatial_ref::SpatialRef;
 use gdal_sys::GDALTermProgress;
+use gdal_sys::OGRFieldType::OFTInteger;
 use gdal_sys::{GDALDatasetH, OGRDataSourceH, GDALContourGenerateEx, CSLConstList, GDALGetRasterBand, OGR_DS_CreateLayer, OGRLayerH, OGRwkbGeometryType, OGR_L_GetLayerDefn};
 use libc::{c_int, c_uint};
 use crate::get_driver_name_from_filename;
@@ -16,7 +17,6 @@ pub struct ContourBuilder <'a> {
     band_no: Option<c_int>,
     src_band: Option<gdal_sys::GDALRasterBandH>,
     tgt_layer_name: CString,
-    field_id: c_uint,
     field_id_index: Option<c_int>,
     interval: Option<c_int>,
     attr_min_name: Option<CString>,
@@ -40,7 +40,6 @@ impl <'a> ContourBuilder<'a> {
             band_no: None,
             src_band: None,
             tgt_layer_name : CString::new("contour").unwrap(),
-            field_id: 0,
             field_id_index: None,
             interval: None,
             attr_min_name: None,
@@ -98,11 +97,6 @@ impl <'a> ContourBuilder<'a> {
         self
     }
 
-    pub fn set_field_id (&mut self, id: u32) ->  &mut ContourBuilder<'a>  {
-        self.field_id = id;
-        self
-    }
-
     fn create_tgt_ds (& self) -> Result<OGRDataSourceH> { // split into create tgt_dataset and create tgt_layer - can close dataset after?
         unsafe{
             // create target dataset 
@@ -142,16 +136,10 @@ impl <'a> ContourBuilder<'a> {
                     OGRwkbGeometryType::wkbLineString
                 }
             };
+            
             let tgt_layer = OGR_DS_CreateLayer(tgt_ds, self.tgt_layer_name.as_ptr(), srs, poly_type, null_mut());
-            // 2. add id field
-            let id = CString::new("ID").unwrap();
-            let h_fld = gdal_sys::OGR_Fld_Create(id.as_ptr(), self.field_id);
-            gdal_sys::OGR_Fld_SetWidth(h_fld, 8);
-            gdal_sys::OGR_L_CreateField(tgt_layer, h_fld, 0);
-            gdal_sys::OGR_Fld_Destroy(h_fld);
-            self.field_id_index =  Some(gdal_sys::OGR_FD_GetFieldIndex(OGR_L_GetLayerDefn(tgt_layer), id.as_ptr()));
-
-            // 3. create elevation attribute - check for conflicts with polygonize
+            
+            // 2. create elevation attribute - check for conflicts with polygonize
             if self.polygonize {
                 if self.attr_name.is_some(){
                     self.attr_name = None;
@@ -177,6 +165,13 @@ impl <'a> ContourBuilder<'a> {
                 self.create_elev_attr(self.attr_max_name.clone().unwrap(), tgt_layer);
                 self.attr_max_id = Some(gdal_sys::OGR_FD_GetFieldIndex(OGR_L_GetLayerDefn(tgt_layer), self.attr_max_name.clone().unwrap().as_ptr()));
             }
+            // 3. add id field - needs to be after elevation to work? original cpp has it before 
+            let id = CString::new("ID").unwrap();
+            let h_fld = gdal_sys::OGR_Fld_Create(id.as_ptr(), OFTInteger);
+            gdal_sys::OGR_Fld_SetWidth(h_fld, 8);
+            gdal_sys::OGR_L_CreateField(tgt_layer, h_fld, 0);
+            gdal_sys::OGR_Fld_Destroy(h_fld);
+            self.field_id_index =  Some(gdal_sys::OGR_FD_GetFieldIndex(OGR_L_GetLayerDefn(tgt_layer), id.as_ptr()));
 
             Ok(tgt_layer)
         }
@@ -184,9 +179,9 @@ impl <'a> ContourBuilder<'a> {
 
     fn create_elev_attr(&self, attr:  CString, tgt_layer: OGRLayerH) -> Result<()>{
         unsafe{
-            let h_fld = gdal_sys::OGR_Fld_Create(attr.as_ptr(), gdal_sys::OGRFieldType::OFTReal);
-            let field_err = gdal_sys::OGR_L_CreateField(tgt_layer, h_fld, 0);
-            gdal_sys::OGR_Fld_Destroy(h_fld);
+            let new_fld = gdal_sys::OGR_Fld_Create(attr.as_ptr(), gdal_sys::OGRFieldType::OFTReal);
+            let field_err = gdal_sys::OGR_L_CreateField(tgt_layer, new_fld, 0);
+            gdal_sys::OGR_Fld_Destroy(new_fld);
             if (field_err == gdal_sys::OGRErr::OGRERR_FAILURE){
                 return Err(OdinGdalError::MiscError("error creating elevation field in target".to_string()));
             }
