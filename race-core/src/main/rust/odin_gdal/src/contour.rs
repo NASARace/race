@@ -220,40 +220,27 @@ impl <'a> ContourBuilder<'a> {
         }
     }
     
-    fn build_options(&self) -> Result<CslStringList> {// Result<CSLConstList> {
+    fn build_options(&self) -> Result<CslStringList> {
         unsafe {
-            //let mut options: CSLConstList = null_mut();
             let mut options = CslStringList::new();
             if let Some(attr_id) = self.attr_id {
                 options.add_string(&format!("ELEV_FIELD={:?}", attr_id).to_string());
-                //let attr_str = CString::new(format!("ELEV_FIELD={:?}", attr_id))?;
-                //options = gdal_sys::CSLAddString(options, attr_str.as_ptr());
             }
             if let Some(attr_max_id) = self.attr_max_id{
                 options.add_string(&format!("ELEV_FIELD_MAX={:?}", attr_max_id).to_string());
-                // let attr_max_str = CString::new(format!("ELEV_FIELD_MAX={:?}", attr_max_id))?;
-                // options = gdal_sys::CSLAddString(options, attr_max_str.as_ptr());
             }
             if let Some(attr_min_id) = self.attr_min_id{
                 options.add_string(&format!("ELEV_FIELD_MIN={:?}", attr_min_id).to_string());
-                // let attr_min_str = CString::new(format!("ELEV_FIELD_MIN={:?}", attr_min_id))?;
-                // options = gdal_sys::CSLAddString(options, attr_min_str.as_ptr());
             }
             if self.polygonize {
                 options.add_string("POLYGONIZE=YES");
-                // let poly_str = CString::new("POLYGONIZE=YES")?;
-                // options = gdal_sys::CSLAddString(options, poly_str.as_ptr());
             }
-            // let field_id_str  = CString::new(format!("ID_FIELD={:?}", self.field_id_index.unwrap()))?; // self.field_id_index is already checked and set in create target layer
-            // options = gdal_sys::CSLAddString(options, field_id_str.as_ptr());
             options.add_string(&format!("ID_FIELD={:?}", self.field_id_index.unwrap()).to_string());
             if let Some(interval) = self.interval{
                 options.add_string(&format!("LEVEL_INTERVAL={}", interval).to_string());
             } else {
                 return Err(OdinGdalError::MiscError("no interval set for contour operations".to_string()))
             };
-            // let interval_str = CString::new(format!("LEVEL_INTERVAL={}", interval))?;
-            // options = gdal_sys::CSLAddString(options, interval_str.as_ptr());
             Ok(options)
         }
     }
