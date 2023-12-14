@@ -64,49 +64,36 @@ fn main () -> Result<()> {
     let interval = ARGS.interval;
     let band = ARGS.band;
 
-    // parsing optional arguments
-
-    let attr_min_name: Option<&str> = if let Some(amin) = &ARGS.amin {
-        Some(amin.as_str())
-    } else { None };
-
-    let attr_max_name: Option<&str> = if let Some(amax) = &ARGS.amax {
-        Some(amax.as_str())
-    } else { None };
-
-    let attr_name: Option<&str> = if let Some(attr) = &ARGS.attr {
-        Some(attr.as_str())
-    } else { None };
-
-    let tgt_layer: Option<&str> = if let Some(tgt_l) = &ARGS.tgt_layer {
-        Some(tgt_l.as_str())
-    } else { None };
+    // setting mandatory arguments
 
     let mut contourer = ContourBuilder::new( &src_ds, tgt_path)?;
     contourer.set_band(band);
     contourer.set_interval(interval);
 
-    // setting optional arguments
+    // parsing and setting optional arguments
 
-    if attr_name.is_some() {
-        contourer.set_attr_name(attr_name.unwrap());
+    if let Some(amin) = &ARGS.amin {
+        contourer.set_attr_min_name(amin.as_str())?;
     }
-    if attr_max_name.is_some() {    
-        contourer.set_attr_max_name(attr_max_name.unwrap());
+
+    if let Some(amax) = &ARGS.amax {
+        contourer.set_attr_max_name(amax.as_str())?;
+    } 
+
+    if let Some(attr) = &ARGS.attr {
+        contourer.set_attr_name(attr.as_str())?;
     }
-    if attr_min_name.is_some() {
-        contourer.set_attr_min_name(attr_min_name.unwrap());
+
+    if let Some(tgt_l) = &ARGS.tgt_layer {
+        contourer.set_tgt_layer_name(tgt_l.as_str())?;
     }
-    if tgt_layer.is_some() {
-        contourer.set_tgt_layer_name(tgt_layer.unwrap());
-    }
+
     if ARGS.polygon {
         contourer.set_poly();
     }
     if ARGS.three_d {
         contourer.set_3_d();
     }
-
 
     // execute
     contourer.exec()?;

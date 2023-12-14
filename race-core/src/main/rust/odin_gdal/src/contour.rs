@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::fs;
 use std::ptr::{null, null_mut};
 use gdal::Dataset;
+use gdal::cpl::CslStringList;
 use gdal::spatial_ref::SpatialRef;
 use gdal_sys::GDALTermProgress;
 use gdal_sys::OGRFieldType::OFTInteger;
@@ -34,12 +35,14 @@ impl <'a> ContourBuilder<'a> {
         let path = tgt.as_ref();
         let tgt_str = path.to_str().ok_or(OdinGdalError::InvalidFileName(path.display().to_string()))?;
         let tgt_filename = CString::new(tgt_str)?;
+        let tgt_layer_name = CString::new("contour")?;
+
         Ok(ContourBuilder {
             src_ds: src_ds,
             tgt_filename: tgt_filename,
             band_no: None,
             src_band: None,
-            tgt_layer_name : CString::new("contour").unwrap(),
+            tgt_layer_name : tgt_layer_name,
             field_id_index: None,
             interval: None,
             attr_min_name: None,
@@ -71,9 +74,9 @@ impl <'a> ContourBuilder<'a> {
         self
     }
 
-    pub fn set_tgt_layer_name(&mut self, name: &str) -> &mut ContourBuilder<'a>  {
-        self.tgt_layer_name = CString::new(name).unwrap();
-        self
+    pub fn set_tgt_layer_name(&mut self, name: &str) -> Result<&mut ContourBuilder<'a>>  {
+        self.tgt_layer_name = CString::new(name)?;
+        Ok(self)
     }
 
     pub fn set_3_d(&mut self) -> &mut ContourBuilder<'a>  {
@@ -81,32 +84,32 @@ impl <'a> ContourBuilder<'a> {
         self
     }
 
-    pub fn set_attr_name (&mut self, name: &str) -> &mut ContourBuilder<'a>  {
-        self.attr_name = Some(CString::new(name).unwrap());
-        self
+    pub fn set_attr_name (&mut self, name: &str) -> Result<&mut ContourBuilder<'a>>  {
+        self.attr_name = Some(CString::new(name)?);
+        Ok(self)
     }
 
-    pub fn set_attr_min_name(&mut self, name: &str) -> &mut ContourBuilder<'a>  {
-        self.attr_min_name = Some(CString::new(name).unwrap());
-        self
+    pub fn set_attr_min_name(&mut self, name: &str) -> Result<&mut ContourBuilder<'a>>  {
+        self.attr_min_name = Some(CString::new(name)?);
+        Ok(self)
     }
 
 
-    pub fn set_attr_max_name (&mut self, name: &str) -> &mut ContourBuilder<'a>  {
-        self.attr_max_name = Some(CString::new(name).unwrap());
-        self
+    pub fn set_attr_max_name (&mut self, name: &str) -> Result<&mut ContourBuilder<'a>>  {
+        self.attr_max_name = Some(CString::new(name)?);
+        Ok(self)
     }
 
     fn create_tgt_ds (& self) -> Result<OGRDataSourceH> { // split into create tgt_dataset and create tgt_layer - can close dataset after?
         unsafe{
             // create target dataset 
             // 1. get driver from file 
-            let tgt_format: &str = if let Some(driver_name) = get_driver_name_from_filename(self.tgt_filename.as_c_str().to_str().unwrap()) {
+            let tgt_format: &str = if let Some(driver_name) = get_driver_name_from_filename(self.tgt_filename.as_c_str().to_str().unwrap()) { // self.tgt_filename checked during new
                 driver_name
             } else {
                 "GeoJSON" // our last fallback
             };
-            let c_tgt_format = CString::new(tgt_format).unwrap();
+            let c_tgt_format = CString::new(tgt_format)?;
             let c_driver = gdal_sys::GDALGetDriverByName(c_tgt_format.as_ptr());
             if c_driver == null_mut() {
                 return Err(misc_error(format!("unknown output format {:?}", c_tgt_format)))
@@ -152,21 +155,21 @@ impl <'a> ContourBuilder<'a> {
                     return Err(OdinGdalError::MiscError("-amin/-amax is ignored in line contouring mode. use -a instead.".to_string()))
                 }
             }
+            if let Some(name) = &self.attr_name {
+                self.create_elev_attr(name.clone(), tgt_layer);
+                self.attr_id = Some(gdal_sys::OGR_FD_GetFieldIndex(OGR_L_GetLayerDefn(tgt_layer), name.clone().as_ptr()));
+            }
+            if let Some(min_name) = &self.attr_min_name {
+                self.create_elev_attr(min_name.clone(), tgt_layer);
+                self.attr_min_id = Some(gdal_sys::OGR_FD_GetFieldIndex(OGR_L_GetLayerDefn(tgt_layer), min_name.clone().as_ptr()));
+            }
+            if let Some(max_name) = &self.attr_max_name {
+                self.create_elev_attr(max_name.clone(), tgt_layer);
+                self.attr_max_id = Some(gdal_sys::OGR_FD_GetFieldIndex(OGR_L_GetLayerDefn(tgt_layer), max_name.clone().as_ptr()));
+            }
 
-            if self.attr_name.is_some(){
-                self.create_elev_attr(self.attr_name.clone().unwrap(), tgt_layer);
-                self.attr_id = Some(gdal_sys::OGR_FD_GetFieldIndex(OGR_L_GetLayerDefn(tgt_layer), self.attr_name.clone().unwrap().as_ptr()));
-            }
-            if self.attr_min_name.is_some(){
-                self.create_elev_attr(self.attr_min_name.clone().unwrap(), tgt_layer);
-                self.attr_min_id = Some(gdal_sys::OGR_FD_GetFieldIndex(OGR_L_GetLayerDefn(tgt_layer), self.attr_min_name.clone().unwrap().as_ptr()));
-            }
-            if self.attr_max_name.is_some(){
-                self.create_elev_attr(self.attr_max_name.clone().unwrap(), tgt_layer);
-                self.attr_max_id = Some(gdal_sys::OGR_FD_GetFieldIndex(OGR_L_GetLayerDefn(tgt_layer), self.attr_max_name.clone().unwrap().as_ptr()));
-            }
             // 3. add id field - needs to be after elevation to work? original cpp has it before 
-            let id = CString::new("ID").unwrap();
+            let id = CString::new("ID")?;
             let h_fld = gdal_sys::OGR_Fld_Create(id.as_ptr(), OFTInteger);
             gdal_sys::OGR_Fld_SetWidth(h_fld, 8);
             gdal_sys::OGR_L_CreateField(tgt_layer, h_fld, 0);
@@ -196,14 +199,17 @@ impl <'a> ContourBuilder<'a> {
         self.contour(tgt_layer, tgt_ds, options)
     }
 
-    fn contour(&self, tgt_layer: OGRLayerH, tgt_ds: OGRDataSourceH, options: CSLConstList) -> Result<()> {
+    fn contour(&self, tgt_layer: OGRLayerH, tgt_ds: OGRDataSourceH, options: CslStringList) -> Result<()> {
         unsafe {
             reset_last_gdal_error();
             // invoke
-            let c_contour_op = gdal_sys::GDALContourGenerateEx(self.src_band.unwrap(), tgt_layer, options, Some(GDALTermProgress), null_mut());
+            let band = if let Some(src_band) = self.src_band {
+                src_band
+            } else {
+                return Err(OdinGdalError::MiscError("error: no source band set for contour operations".to_string()))
+            };
+            let c_contour_op = gdal_sys::GDALContourGenerateEx(band, tgt_layer, options.as_ptr(), Some(GDALTermProgress), null_mut());
             // destroy
-            gdal_sys::CSLDestroy(options); // remove options
-            // gdal_sys::OGRCleanupAll(); // clean up - causes mem error
             if c_contour_op == gdal_sys::CPLErr::CE_None {
                 gdal_sys::GDALFlushCache(tgt_ds); // close target
                 gdal_sys::GDALFlushCache(self.src_ds.c_dataset()); // close source
@@ -214,32 +220,40 @@ impl <'a> ContourBuilder<'a> {
         }
     }
     
-    fn build_options(&self) -> Result<CSLConstList> {
+    fn build_options(&self) -> Result<CslStringList> {// Result<CSLConstList> {
         unsafe {
-            let mut options: CSLConstList = null_mut();
-            if self.attr_id.is_some() {
-                let attr_id = if let Some(format) = &self.attr_id { &format } else { null() };
-                let attr_str = CString::new(format!("ELEV_FIELD={:?}", attr_id)).unwrap();
-                options = gdal_sys::CSLAddString(options, attr_str.as_ptr());
+            //let mut options: CSLConstList = null_mut();
+            let mut options = CslStringList::new();
+            if let Some(attr_id) = self.attr_id {
+                options.add_string(&format!("ELEV_FIELD={:?}", attr_id).to_string());
+                //let attr_str = CString::new(format!("ELEV_FIELD={:?}", attr_id))?;
+                //options = gdal_sys::CSLAddString(options, attr_str.as_ptr());
             }
-            if self.attr_max_id.is_some() {
-                let attr_max_id = if let Some(format) = &self.attr_max_id { &format } else { null() };
-                let attr_max_str = CString::new(format!("ELEV_FIELD_MAX={:?}", attr_max_id)).unwrap();
-                options = gdal_sys::CSLAddString(options, attr_max_str.as_ptr());
+            if let Some(attr_max_id) = self.attr_max_id{
+                options.add_string(&format!("ELEV_FIELD_MAX={:?}", attr_max_id).to_string());
+                // let attr_max_str = CString::new(format!("ELEV_FIELD_MAX={:?}", attr_max_id))?;
+                // options = gdal_sys::CSLAddString(options, attr_max_str.as_ptr());
             }
-            if self.attr_min_id.is_some() {
-                let attr_min_id = if let Some(format) = &self.attr_min_id { &format } else { null() };
-                let attr_min_str = CString::new(format!("ELEV_FIELD_MIN={:?}", attr_min_id)).unwrap();
-                options = gdal_sys::CSLAddString(options, attr_min_str.as_ptr());
+            if let Some(attr_min_id) = self.attr_min_id{
+                options.add_string(&format!("ELEV_FIELD_MIN={:?}", attr_min_id).to_string());
+                // let attr_min_str = CString::new(format!("ELEV_FIELD_MIN={:?}", attr_min_id))?;
+                // options = gdal_sys::CSLAddString(options, attr_min_str.as_ptr());
             }
             if self.polygonize {
-                let poly_str = CString::new("POLYGONIZE=YES").unwrap();
-                options = gdal_sys::CSLAddString(options, poly_str.as_ptr());
+                options.add_string("POLYGONIZE=YES");
+                // let poly_str = CString::new("POLYGONIZE=YES")?;
+                // options = gdal_sys::CSLAddString(options, poly_str.as_ptr());
             }
-            let field_id_str  = CString::new(format!("ID_FIELD={:?}", self.field_id_index.unwrap())).unwrap();
-            options = gdal_sys::CSLAddString(options, field_id_str.as_ptr());
-            let interval_str = CString::new(format!("LEVEL_INTERVAL={}", self.interval.unwrap())).unwrap();
-            options = gdal_sys::CSLAddString(options, interval_str.as_ptr());
+            // let field_id_str  = CString::new(format!("ID_FIELD={:?}", self.field_id_index.unwrap()))?; // self.field_id_index is already checked and set in create target layer
+            // options = gdal_sys::CSLAddString(options, field_id_str.as_ptr());
+            options.add_string(&format!("ID_FIELD={:?}", self.field_id_index.unwrap()).to_string());
+            if let Some(interval) = self.interval{
+                options.add_string(&format!("LEVEL_INTERVAL={}", interval).to_string());
+            } else {
+                return Err(OdinGdalError::MiscError("no interval set for contour operations".to_string()))
+            };
+            // let interval_str = CString::new(format!("LEVEL_INTERVAL={}", interval))?;
+            // options = gdal_sys::CSLAddString(options, interval_str.as_ptr());
             Ok(options)
         }
     }
