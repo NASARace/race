@@ -1,4 +1,4 @@
-#[allow(unused_imports)]
+#![allow(unused_imports)]
 
 use std::{
     pin::{Pin,pin}, 
@@ -6,7 +6,7 @@ use std::{
     time::{Duration,Instant}, 
     fmt::Debug, 
     sync::{Arc, atomic::{AtomicU64,Ordering}},
-    cmp::min
+    cmp::min, marker::PhantomData
 };
 
 pub mod prelude;
@@ -17,15 +17,14 @@ pub mod tokio_kanal;
 //#[cfg(feature = "tokio_channel")]
 pub mod tokio_channel;
 
+pub mod macros;
 
 pub mod errors;
 use errors::Result;
 
-pub mod macros;
-
-extern crate odin_actor_proc_macros;
+extern crate odin_macro;
 #[doc(hidden)]
-pub use odin_actor_proc_macros::{define_actor_msg_set, impl_actor};
+pub use odin_macro::{define_actor_msg_type, match_actor_msg, cont, stop, term, impl_actor};
 
 #[inline] pub fn secs (n: u64)->Duration { Duration::from_secs(n) }
 #[inline] pub fn millis (n: u64)->Duration { Duration::from_millis(n) }
@@ -37,12 +36,12 @@ pub use odin_actor_proc_macros::{define_actor_msg_set, impl_actor};
 pub type ObjSafeFuture<'a, T> = Pin<Box<dyn Future<Output=T> + Send + 'a>>;
 
 /// sendable function that returns a future
-pub type SendableFutureCreator = Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static>;
+pub type SendableFutureCreator = Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync + 'static>;
 
 // see https://stackoverflow.com/questions/74920440/how-do-i-wrap-a-closure-which-returns-a-future-without-it-being-sync
 pub fn create_sfc <F,R> (func: F) -> SendableFutureCreator
     where
-        F: FnOnce() -> R  + Send + 'static,
+        F: FnOnce() -> R  + Send + Sync + 'static,
         R: Future<Output = ()> + Send + 'static,
 {
     Box::new(move || {
@@ -52,6 +51,7 @@ pub fn create_sfc <F,R> (func: F) -> SendableFutureCreator
         })
     })
 }
+
 
 /* #region runtime/channel agnostic traits and types **************************************************************/
 /*
@@ -68,6 +68,11 @@ pub trait Identifiable {
     fn id(&self) -> &str;
 }
 
+/// while it can be used explicitly this trait is normally transparent and hidden behind the [`define_actor`] macro
+pub trait ActorReceiver <MsgType> where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug {
+    fn receive (&mut self, msg: MsgType)-> impl Future<Output = ReceiveAction> + Send;
+}
+
 pub enum ReceiveAction {
     Continue, // continue receiving messages
     Stop,  // stop receiving messages
@@ -77,7 +82,7 @@ pub enum ReceiveAction {
 /// single message type receiver trait to abstract concrete ActorHandle<MsgSet> instances that would
 /// force the client to know all messages the receiver understands, which reduces re-usability of the
 /// receiver. Note this trait is not object-safe (use [`DynMsgReceiver`] for dynamic subscription)
-pub trait MsgReceiver<MsgType>: Identifiable + Debug {
+pub trait MsgReceiver<MsgType>: Identifiable + Debug + Send + Clone {
     fn send_msg (&self, msg: MsgType)->impl Future<Output = Result<()>> + Send;
     fn timeout_send_msg (&self, msg: MsgType, to: Duration)->impl Future<Output = Result<()>> + Send;
     fn try_send_msg (&self, msg:MsgType)->Result<()>;
@@ -196,7 +201,7 @@ pub trait FromSysMsg: From<_Start_> + From<_Ping_> + From<_Timer_> + From<_Pause
 
 /// object-safe trait for each actor handle to send system messages
 // TODO - should sent_timer() be async too?
-pub trait SysMsgReceiver: Send + 'static {
+pub trait SysMsgReceiver where Self: Send + Sync + 'static {
     fn send_start (&self,msg: _Start_, to: Duration) -> ObjSafeFuture<Result<()>>;
     fn send_pause (&self, msg: _Pause_, to: Duration) -> ObjSafeFuture<Result<()>>;
     fn send_resume (&self, msg: _Resume_, to: Duration) -> ObjSafeFuture<Result<()>>;
@@ -216,4 +221,7 @@ pub trait DefaultReceiveAction {
 /* #endregion runtime/channel agnostic sytem messages */
 
 // a message set that only contains our system messages
-define_actor_msg_set!( pub enum SysMsg{} );
+define_actor_msg_type! {
+    pub SysMsg = // only the automatically added system message variants
+}
+

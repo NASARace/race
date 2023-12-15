@@ -1,12 +1,13 @@
 [package]
-name = "odin_actor_proc_macros"
-version = "0.1.0"
+name = "odin_macro"
+version = "0.2.0"
+license-file = "LICENSE.txt"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "odin_actor_proc_macros"
+name = "odin_macro"
 path = "src/lib.rs"
 proc-macro = true
 

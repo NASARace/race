@@ -8,9 +8,6 @@ edition = "2024"
 [build]
 rustflags = ["--cfg", "tokio_unstable"]
 
-# no nested workspaces
-# [workspace]
-# members = [".", "odin_actor_proc_macros"]
 
 [dependencies]
 #tokio = { version = "*", features = ["full", "tracing"], optional = true }
@@ -25,7 +22,7 @@ ron = "*"
 serde = { version = "*", features = ["derive"] }
 parse_duration = "*"
 
-odin_actor_proc_macros = { version="*", path="../odin_actor_proc_macros" }
+odin_macro = { version="*", path="../odin_macro" }
 odin_config = { version = "*", path="../odin_config" }
 
 [features]

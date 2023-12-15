@@ -331,7 +331,7 @@ impl ActorSystemHandle {
     pub async fn actor_of <MsgType,ActorType,T> (&self, actor: ActorType, bound: usize, id: T) -> Result<ActorHandle<MsgType>>
         where 
             MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static,
-            ActorType: Actor<MsgType> + Clone + Send + 'static,
+            ActorType: Actor<MsgType> + Clone + Send + Sync + 'static,
             T: ToString
     {
         let actor_id = Arc::new(id.to_string());

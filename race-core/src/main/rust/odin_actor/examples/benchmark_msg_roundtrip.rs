@@ -5,42 +5,41 @@
 
 use odin_actor::prelude::*;
 use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle};
+
 use std::time::{Instant,Duration};
 use std::sync::Mutex;
 
-const MAX_CYCLE: u64 = 5_000_000;
+const MAX_CYCLE: u64 = 10_000_000;
 
 static ELASPED_ROUNDTRIP: Mutex<Duration> = Mutex::new( Duration::new(0,0));
 
 #[derive(Debug)]
 pub struct Cycle;
 
-define_actor_msg_set!( pub enum TestMsg {Cycle} );
+define_actor_msg_type! {
+    TestMsg = Cycle
+}
 
-struct TestActor {
+struct TestActorState {
     start_time: Instant,
     round: u64
 }
 
-impl Actor<TestMsg> for TestActor {
-    async fn receive (&mut self, msg: TestMsg, hself: &ActorHandle<TestMsg>, hsys: &ActorSystemHandle)->ReceiveAction {
-        match_actor_msg! { msg: TestMsg as
-            Cycle => {
-                if self.round >= MAX_CYCLE {
-                    let now = Instant::now();
-                    let elapsed = now - self.start_time;
-                    *ELASPED_ROUNDTRIP.lock().unwrap() += elapsed;
-                    ReceiveAction::RequestTermination
-
-                } else {
-                    if self.round == 0 { 
-                        self.start_time = Instant::now()
-                    }
-                    self.round += 1;
-                    hself.try_send_msg(Cycle{}); // since this is the only send there can't be more than one message in the queue
-                    ReceiveAction::Continue
-                }
+impl_actor! { match msg: TestMsg for TestActorState as
+    Cycle => {
+        if self.state.round < MAX_CYCLE {
+            if self.state.round == 0 { 
+                self.state.start_time = Instant::now()
             }
+            self.state.round += 1;
+            self.hself.try_send_msg(Cycle{}); // since this is the only send there can't be more than one message in the queue
+            ReceiveAction::Continue
+            
+        } else {
+            let now = Instant::now();
+            let elapsed = now - self.state.start_time;
+            *ELASPED_ROUNDTRIP.lock().unwrap() += elapsed;
+            ReceiveAction::RequestTermination
         }
     }
 }
@@ -52,7 +51,7 @@ pub async fn main()->std::result::Result<(),Box<dyn std::error::Error>> {
     let start = Instant::now();
 
     let mut actor_system = ActorSystem::new("raw_msg");
-    let a = actor_system.actor_of(TestActor { start_time: Instant::now(), round: 0 }, 8, "test_actor");
+    let a = spawn_actor!( actor_system, "test_actor", TestActorState { start_time: Instant::now(), round: 0 })?;
 
     a.try_send_msg( Cycle{})?;
     actor_system.process_requests().await?;
