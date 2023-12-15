@@ -32,9 +32,9 @@ impl Spawner {
     }
 }
 
-impl_actor! { match msg: SpawnerMsg for Spawner as 
+impl_actor! { match msg for Actor<Spawner,SpawnerMsg> as 
     _Start_ => cont! { 
-        self.timer = Some(self.hself.start_repeat_timer( 1, millis(1000)));
+        self.timer = Some(self.start_repeat_timer( 1, millis(1000)));
         println!("started timer");
     }
     _Timer_ => cont! { 
@@ -42,7 +42,7 @@ impl_actor! { match msg: SpawnerMsg for Spawner as
         println!("tick {}", self.count);
         if self.count > 15 { 
             println!("spawner had enough, terminating..");
-            self.hsys.request_termination(millis(500)).await; 
+            self.request_termination(millis(500)).await; 
         }
     }
     Spawn => cont! {

@@ -27,7 +27,7 @@ impl Updater {
     }
 }
 
-impl_actor! { match msg: UpdaterMsg for Updater as
+impl_actor! { match msg for Actor<Updater,UpdaterMsg> as
     _Start_ => cont! {
         self.timer = Some(self.hself.start_repeat_timer( 1, secs(1)));
         println!("{} started update timer", self.hself.id);
@@ -56,7 +56,7 @@ define_actor_msg_type! { ClientMsg = Update }
 
 struct Client;
 
-impl_actor! { match msg: ClientMsg for Client as
+impl_actor! { match msg for Actor<Client,ClientMsg> as
     Update => cont! { println!("{} got {:?}", self.hself.id, msg) }
 }
 

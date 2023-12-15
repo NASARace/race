@@ -18,7 +18,7 @@ impl Default for TickerConfig {
     fn default()->Self { TickerConfig { interval_sec: 1 } }
 }
 
-define_actor_msg_type! { TickerMsg = }
+define_actor_msg_type! { TickerMsg }
 
 struct Ticker {
     config: TickerConfig,
@@ -32,9 +32,9 @@ impl Ticker {
     }
 }
 
-impl_actor! { match msg: TickerMsg for Ticker as 
+impl_actor! { match msg for Actor <Ticker,TickerMsg>  as 
     _Start_ => cont! { 
-        self.timer = Some(self.hself.start_repeat_timer( 1, secs(self.config.interval_sec)));
+        self.timer = Some(self.start_repeat_timer( 1, secs(self.config.interval_sec)));
         println!("started timer");
     }
     _Timer_ => cont! { 

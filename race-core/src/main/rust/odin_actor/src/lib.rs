@@ -11,20 +11,20 @@ use std::{
 
 pub mod prelude;
 
+pub const DEFAULT_CHANNEL_BOUNDS: usize = 16;
+
 //#[cfg(feature = "tokio_kanal")]
 pub mod tokio_kanal;
 
 //#[cfg(feature = "tokio_channel")]
 pub mod tokio_channel;
 
-pub mod macros;
-
 pub mod errors;
 use errors::Result;
 
 extern crate odin_macro;
 #[doc(hidden)]
-pub use odin_macro::{define_actor_msg_type, match_actor_msg, cont, stop, term, impl_actor};
+pub use odin_macro::{define_actor_msg_type, match_actor_msg, cont, stop, term, impl_actor, spawn_actor};
 
 #[inline] pub fn secs (n: u64)->Duration { Duration::from_secs(n) }
 #[inline] pub fn millis (n: u64)->Duration { Duration::from_millis(n) }
@@ -88,9 +88,10 @@ pub trait MsgReceiver<MsgType>: Identifiable + Debug + Send + Clone {
     fn try_send_msg (&self, msg:MsgType)->Result<()>;
 }
 
-/// this is a single message type receiver trait that is object safe
-/// This trait is the basis for making actors combine through abstract publish/subscribe
-/// patterns.
+/// this is a single message type receiver trait that is object safe, which means its
+/// async [`send_msg`] and [`timeout_send_msg`] methods return [`ObjSafeFuture`] futures
+/// (`Pin<Box<dyn Future<..>>>`), hence they incur runtime cost.
+/// This trait is the basis for making actors combine through publish/subscribe messages
 /// Use the more efficient [`MsgReceiver`] if trait objects are not required
 pub trait DynMsgReceiver<MsgType>: Identifiable + Debug + Send  {
     fn send_msg (&self, msg: MsgType) -> ObjSafeFuture<Result<()>>;

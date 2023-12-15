@@ -25,7 +25,7 @@ struct Questioner <A> where A: MsgReceiver<Ask<Question,Answer>> {
     responder: A
 }
 
-impl_actor! { match msg: QuestionerMsg for Questioner<A> where A: MsgReceiver<Ask<Question,Answer>> as
+impl_actor! { match msg for Actor<Questioner<A>,QuestionerMsg> where A: MsgReceiver<Ask<Question,Answer>> as
     AskNow => term! {
         let q = Question("what is the answer to life, the universe and everything?".to_string());
         /*
@@ -54,7 +54,7 @@ define_actor_msg_type! { ResponderMsg = Ask<Question,Answer> }
 
 struct Responder;
 
-impl_actor! { match msg: ResponderMsg for Responder as
+impl_actor! { match msg for Actor<Responder,ResponderMsg> as
     Ask<Question,Answer> => cont! {
         println!("{} got question: \"{:?}\", thinking..", self.hself.id(), msg.question);
         sleep( millis(500)).await;

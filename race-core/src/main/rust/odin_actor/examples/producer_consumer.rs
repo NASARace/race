@@ -11,14 +11,14 @@ use anyhow::{anyhow,Result};
 #[derive(Debug)]
 pub struct MyMsg(i64);
 
-define_actor_msg_type! { ProducerMsg = } // TODO - synonym for SysMsg but we need our own type
+define_actor_msg_type! { ProducerMsg }
 
 // we don't need to know anything about the client other than it processes MyMsg
 pub struct Producer<Client> where Client: MsgReceiver<MyMsg> {
     client: Client
 }
 
-impl_actor! { match msg: ProducerMsg for Producer<T> where T: MsgReceiver<MyMsg> as
+impl_actor! { match msg for Actor<Producer<T>,ProducerMsg> where T: MsgReceiver<MyMsg> as
     _Start_ => term! { 
         let msg = MyMsg(42);
         println!("producer started, sent {:?} and requests termination", msg);
@@ -36,7 +36,7 @@ define_actor_msg_type! { ConsumerMsg = MyMsg }
 
 pub struct Consumer;
 
-impl_actor! { match msg: ConsumerMsg for Consumer as 
+impl_actor! { match msg for Actor<Consumer,ConsumerMsg> as 
     MyMsg => cont! { println!("consumer got a {:?}", msg); }
 }
 

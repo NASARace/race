@@ -29,7 +29,7 @@ use proc_macro2::{
 };
 use quote::{quote,format_ident,ToTokens};
 use syn::{ 
-	self,Ident,Path,ItemStruct,ItemEnum,ItemFn,FnArg,Token,Type,TypePath,Block,ExprMacro,Constraint,
+	self,Ident,Path,ItemStruct,ItemEnum,ItemFn,FnArg,Token,Type,TypePath,Block,ExprMacro,Constraint,Expr,
     parse_macro_input,
     punctuated::{Punctuated},
     parse::{Parse,ParseStream,Result}, token, ExprMethodCall, PathSegment, Stmt, Visibility,
@@ -174,9 +174,15 @@ impl Parse for MsgEnum {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let visibility: Visibility = parse_visibility(input);
         let name: Ident = input.parse()?;
-        let _: Token![=] = input.parse()?;
-        let variant_types = Punctuated::<Path,Token![|]>::parse_terminated(input)?;
-        let variant_types = variant_types.into_iter().collect();
+
+        let lookahead = input.lookahead1();
+        let variant_types: Vec<Path> = if lookahead.peek(Token![=]) {
+            let _: Token![=] = input.parse()?;
+            let variant_types = Punctuated::<Path,Token![|]>::parse_terminated(input)?;
+            variant_types.into_iter().collect()
+        } else {
+            Vec::new()
+        };
         
         Ok( MsgEnum { visibility, name, variant_types })
     }
@@ -363,7 +369,11 @@ fn parse_match_arms (input: ParseStream)->Result<Vec::<MsgMatchArm>> {
 /// ```
 #[proc_macro]
 pub fn impl_actor (item: TokenStream) -> TokenStream {
-    let ActorReceive { msg_name, msg_type, state_type, state_constraints, match_arms }: ActorReceive = syn::parse(item).unwrap();
+    let ActorReceive { msg_name, msg_type, state_type, state_constraints, match_arms }: ActorReceive = match syn::parse(item) {
+        Ok(actor_receive) => actor_receive,
+        Err(e) => panic!( "expected \"match 𝑚𝑠𝑔𝑉𝑎𝑟𝑁𝑎𝑚𝑒 for Actor<𝑆𝑡𝑎𝑡𝑒𝑇𝑦𝑝𝑒,𝑀𝑠𝑔𝑇𝑦𝑝𝑒> 𝑾ℎ𝑒𝑟𝑒𝐶𝑙𝑎𝑢𝑠𝑒﹖ as 𝑀𝑠𝑔𝑇𝑦𝑝𝑒𝑉𝑎𝑟𝑖𝑎𝑛𝑡 => {{..}}, ..\", got {:?}", e)
+    };
+
     let variant_names: Vec<Ident> = get_variant_names_from_match_arms(&match_arms);
     let match_actions: Vec<&MsgMatchAction> = match_arms.iter().map( |a| { &a.match_action }).collect();
     let constraint_names = collect_typevar_names( &state_constraints);
@@ -402,10 +412,14 @@ impl Parse for ActorReceive {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let _: Token![match] = input.parse()?;
         let msg_name: Ident = input.parse()?;
-        let _: Token![:] = input.parse()?;
-        let msg_type: Path = input.parse()?;
         let _: Token![for] = input.parse()?;
+        parse_ident_value(input, "Actor")?;
+        let _: Token![<] = input.parse()?;
         let state_type: Path = input.parse()?;
+        let _: Token![,] = input.parse()?;
+        let msg_type: Path = input.parse()?;
+        let _: Token![>] = input.parse()?;
+
         let state_constraints: Vec<Constraint> = parse_constraints( input)?;
         let _: Token![as] = input.parse()?;
 
@@ -479,6 +493,57 @@ pub fn term (ts: TokenStream)->TokenStream {
 }
 
 /* #endregion match arm macros  */
+
+/* #region spawn_actor ***********************************************************/
+
+/// spawn_actor!( actor_sys, actor_name, actor_state [,bounds])
+#[proc_macro]
+pub fn spawn_actor (item: TokenStream)->TokenStream {
+    let SpawnActor { asys_name, aname_expr, astate_expr, channel_bounds } = match syn::parse(item) {
+        Ok(actor_receive) => actor_receive,
+        Err(e) => panic!( "expected \"spawn_actor!( 𝑎𝑐𝑡𝑜𝑟𝑆𝑦𝑠𝑡𝑒𝑚, 𝑎𝑐𝑡𝑜𝑟𝑁𝑎𝑚𝑒, 𝑎𝑐𝑡𝑟𝑆𝑡𝑎𝑡𝑒 [,𝑐ℎ𝑎𝑛𝑒𝑙𝐵𝑜𝑢𝑛𝑑𝑠])\", got {:?}", e)
+    };
+
+    let new_item: TokenStream = if let Some(channel_bounds) = channel_bounds {
+        quote! { #asys_name.spawn_actor( #asys_name.new_actor( #aname_expr, #astate_expr, #channel_bounds)) }
+    } else {
+        quote! { #asys_name.spawn_actor( #asys_name.new_actor( #aname_expr, #astate_expr, DEFAULT_CHANNEL_BOUNDS)) }
+    }.into();
+
+    new_item
+}
+
+struct SpawnActor {
+    asys_name: Ident,
+    aname_expr: Expr,
+    astate_expr: Expr,
+    channel_bounds: Option<Expr>
+}
+
+impl Parse for SpawnActor {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let asys_name: Ident = input.parse()?;
+        let _: Token![,] = input.parse()?;
+        let aname_expr: Expr = input.parse()?;
+        let _: Token![,] = input.parse()?;
+        let astate_expr: Expr = input.parse()?;
+
+        let lookahead = input.lookahead1();
+        let channel_bounds = if lookahead.peek( Token![,]) {
+            let _: Token![,] = input.parse()?;
+            let bounds_expr: Expr = input.parse()?;
+            Some(bounds_expr)
+        } else {
+            None
+        };
+
+        Ok( SpawnActor { asys_name, aname_expr, astate_expr, channel_bounds } )
+    }
+}
+
+
+
+/* #endregion spawn_actor */
 
 /* #region support funcs *********************************************************/
 

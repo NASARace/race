@@ -147,32 +147,75 @@ pub fn block_on_timeout_send_msg<Msg> (tgt: impl MsgReceiver<Msg>, msg: Msg, to:
  * MsgReceiver trait objects but those seem necessary for dynamic (msg based) subscription 
  */
 
-pub struct Actor<T,MsgType> 
+pub struct Actor <StateType,MsgType> 
 where 
-    T: Send + 'static, 
+    StateType: Send + 'static, 
     MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
 {
-    pub state: T,
+    pub state: StateType,
     pub hself: ActorHandle<MsgType>,
     pub hsys: ActorSystemHandle
 }
 
-
-impl <T,MsgType> Deref for Actor<T,MsgType>
+impl <StateType,MsgType> Actor <StateType,MsgType> 
 where 
-    T: Send + 'static, 
+    StateType: Send + 'static, 
     MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
 {
-    type Target = T;
+    //--- unfortunately we can only have one Deref so we forward these explicitly
+
+    #[inline(always)]
+    pub fn id (&self)->&str {
+        self.hself.id()
+    }
+
+    #[inline(always)]
+    pub fn send_msg<M:Into<MsgType>> (&self, msg: M)->impl Future<Output=Result<()>> {
+        self.hself.send_actor_msg( msg.into())
+    }
+
+    #[inline(always)]
+    pub fn timeout_send_msg<M:Into<MsgType>> (&self, msg: M, to: Duration)->impl Future<Output=Result<()>> {
+        self.hself.timeout_send_actor_msg( msg.into(), to)
+    }
+
+    #[inline(always)]
+    pub fn try_send_msg<M: Into<MsgType>> (&self, msg:M)->Result<()> {
+        self.hself.try_send_actor_msg(msg.into())
+    }
+
+    #[inline(always)]
+    pub fn start_oneshot_timer (&self, id: i64, delay: Duration) -> AbortHandle {
+        oneshot_timer_for( self.hself.clone(), id, delay)
+    }
+
+    #[inline(always)]
+    pub fn start_repeat_timer (&self, id: i64, timer_interval: Duration) -> AbortHandle {
+        repeat_timer_for( self.hself.clone(), id, timer_interval)
+    }
+
+    #[inline(always)]
+    pub async fn request_termination (&self, to: Duration)->Result<()> {
+        self.hsys.send_msg( ActorSystemRequest::RequestTermination, to).await
+    }
+}
+
+
+impl <StateType,MsgType> Deref for Actor<StateType,MsgType>
+where 
+    StateType: Send + 'static, 
+    MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
+{
+    type Target = StateType;
 
     fn deref(&self) -> &Self::Target {
         &self.state
     }
 }
 
-impl <T,MsgType> DerefMut for Actor<T,MsgType>
+impl <StateType,MsgType> DerefMut for Actor<StateType,MsgType>
 where 
-    T: Send + 'static, 
+    StateType: Send + 'static, 
     MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
@@ -230,30 +273,42 @@ impl <MsgType> ActorHandle <MsgType>
     // TODO - is this right to skip if we can't send? Maybe that should be an option
 
     pub fn start_oneshot_timer (&self, id: i64, delay: Duration) -> AbortHandle {
-        let h = self.clone();
-
-        let th = spawn( async move {
-            sleep(delay).await;
-            h.try_send_actor_msg( _Timer_{id}.into() );
-        });
-        th.abort_handle()
+        oneshot_timer_for( self.clone(), id, delay)
     }
 
     pub fn start_repeat_timer (&self, id: i64, timer_interval: Duration) -> AbortHandle {
-        let h = self.clone();
-        let mut interval = interval(timer_interval);
-
-        let th = spawn( async move {
-            while h.is_running() {
-                interval.tick().await;
-                if h.is_running() {
-                    h.try_send_actor_msg( _Timer_{id}.into() );
-                }
-            }
-        });
-        th.abort_handle()
+        repeat_timer_for( self.clone(), id, timer_interval)
     }
 }
+
+// note this consumed the ActorHandle since we have to move it into a Future
+fn oneshot_timer_for<MsgType> (ah: ActorHandle<MsgType>, id: i64, delay: Duration)->AbortHandle
+where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
+{
+    let th = spawn( async move {
+        sleep(delay).await;
+        ah.try_send_actor_msg( _Timer_{id}.into() );
+    });
+    th.abort_handle()
+}
+
+fn repeat_timer_for<MsgType> (ah: ActorHandle<MsgType>, id: i64, timer_interval: Duration)->AbortHandle
+where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
+{
+    let mut interval = interval(timer_interval);
+
+    let th = spawn( async move {
+        while ah.is_running() {
+            interval.tick().await;
+            if ah.is_running() {
+                ah.try_send_actor_msg( _Timer_{id}.into() );
+            }
+        }
+    });
+    th.abort_handle()
+}
+
+
 
 impl <MsgType> Identifiable for ActorHandle<MsgType> 
 where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
@@ -429,10 +484,10 @@ impl ActorSystem {
     // We also can't use a default blanket Receive impl for Actor and min_specialization - apart from that it isn't stable yet
     // it does not support async traits
 
-    pub fn new_actor<T,MsgType> (&self, id: impl ToString, state: T, bound: usize) 
-            -> (Actor<T,MsgType>, ActorHandle<MsgType>, AsyncReceiver<MsgType>)
+    pub fn new_actor<StateType,MsgType> (&self, id: impl ToString, state: StateType, bound: usize) 
+            -> (Actor<StateType,MsgType>, ActorHandle<MsgType>, AsyncReceiver<MsgType>)
         where 
-            T: Send + 'static,
+            StateType: Send + 'static,
             MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
     {
         actor_tuple_for( ActorSystemHandle { sender: self.request_sender.clone()}, id, state, bound)
@@ -570,10 +625,10 @@ impl ActorSystem {
 
 }
 
-fn actor_tuple_for<T,MsgType> (hsys: ActorSystemHandle, id: impl ToString, state: T, bound: usize)
-           -> (Actor<T,MsgType>, ActorHandle<MsgType>, MpscReceiver<MsgType>)
+fn actor_tuple_for<StateType,MsgType> (hsys: ActorSystemHandle, id: impl ToString, state: StateType, bound: usize)
+           -> (Actor<StateType,MsgType>, ActorHandle<MsgType>, MpscReceiver<MsgType>)
 where 
-    T: Send + 'static,
+    StateType: Send + 'static,
     MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
 {
     let actor_id = Arc::new(id.to_string());

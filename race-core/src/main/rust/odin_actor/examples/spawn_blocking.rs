@@ -38,7 +38,7 @@ impl Spawner {
     }
 }
 
-impl_actor! { match msg: SpawnerMsg for Spawner as
+impl_actor! { match msg for Actor<Spawner,SpawnerMsg> as
     _Start_ => cont! { 
         self.timer = Some(self.hself.start_repeat_timer( 1, millis(1000)));
         println!("started timer");
