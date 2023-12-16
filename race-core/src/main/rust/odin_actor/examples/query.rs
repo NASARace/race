@@ -5,7 +5,7 @@ use odin_actor::errors::{OdinActorError,Result as OdinResult};
 //use odin_actor::tokio_channel::{ActorSystem,Actor,ActorHandle,Abortable, sleep};
 use odin_actor::tokio_kanal::{
     ActorSystem,ActorSystemHandle,Actor,ActorHandle,
-    sleep,Ask,ask_ref,timeout_ask_ref
+    sleep,Query,query_ref,timeout_query_ref,
 };
 
 use std::{sync::Arc, future::Future, time::Duration};
@@ -21,21 +21,21 @@ use anyhow::{anyhow,Result};
 #[derive(Debug)] struct AskNow;
 define_actor_msg_type! { QuestionerMsg = AskNow }
 
-struct Questioner <A> where A: MsgReceiver<Ask<Question,Answer>> {
-    responder: A
+struct Questioner <M> where M: MsgReceiver<Query<Question,Answer>> + Sync {
+    responder: M
 }
 
-impl_actor! { match msg for Actor<Questioner<A>,QuestionerMsg> where A: MsgReceiver<Ask<Question,Answer>> as
+impl_actor! { match msg for Actor<Questioner<M>,QuestionerMsg> where M: MsgReceiver<Query<Question,Answer>> + Sync as
     AskNow => term! {
         let q = Question("what is the answer to life, the universe and everything?".to_string());
         /*
-        match ask_ref( self.responder, q).await {
+        match query_ref( self.responder, q).await {
             Ok(response) => println!("{} got the answer: {}", self.hself.id(), response.0),
             Err(e) => println!("{} : deepthought is gone {:?}", self.hself.id(), e)
         }
         */
     
-        match timeout_ask_ref( &self.responder, q, secs(1)).await {
+        match timeout_query_ref( &self.responder, q, secs(1)).await {
             Ok(response) => println!("{} got the answer: {}", self.hself.id, response.0),
             Err(e) => match e {
                 OdinActorError::ReceiverClosed => println!("{} : deepthought is gone.", self.hself.id),
@@ -50,16 +50,16 @@ impl_actor! { match msg for Actor<Questioner<A>,QuestionerMsg> where A: MsgRecei
 /* #endregion */
 
 /* #region responder ************************************************************/
-define_actor_msg_type! { ResponderMsg = Ask<Question,Answer> }
+define_actor_msg_type! { ResponderMsg = Query<Question,Answer> }
 
 struct Responder;
 
 impl_actor! { match msg for Actor<Responder,ResponderMsg> as
-    Ask<Question,Answer> => cont! {
-        println!("{} got question: \"{:?}\", thinking..", self.hself.id(), msg.question);
+    Query<Question,Answer> => cont! {
+        println!("{} got question: \"{:?}\", thinking..", self.hself.id(), msg.topic);
         sleep( millis(500)).await;
         //sleep( millis(1500)).await; // this will cause a timeout
-        match msg.reply(Answer("42".to_string())).await {
+        match msg.respond(Answer("42".to_string())).await {
             Ok(()) => {},
             Err(e) => println!("deepthought couldn't send the answer because {:?}", e)
         };

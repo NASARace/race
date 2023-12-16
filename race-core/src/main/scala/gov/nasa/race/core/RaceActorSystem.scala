@@ -281,7 +281,7 @@ class RaceActorSystem(val config: Config) extends LogController with VerifiableA
     * mandatory RaceActor lookup
     */
   def getRaceActorRef (actorName: String): ActorRef = {
-    val sel = system.actorSelection(s"/user/$name/$actorName")
+    val sel = system.actorSelection(s"*/$actorName")
     val future: Future[ActorRef] = sel.resolveOne(1.second)
     Await.result(future,1.second) // this throws a ActorNotFound or TimedoutException if it does not succeed
   }

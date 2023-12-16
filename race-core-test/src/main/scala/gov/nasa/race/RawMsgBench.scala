@@ -28,7 +28,9 @@ class RawMsgBenchActor (val config: Config) extends RaceActor {
 
   case class Cycle ( start_time: Long, round: Long )
 
-  val MAX_CYCLE = 2000000;
+  // more rounds -> per round goes down because of hotspot optimizer
+  //val MAX_CYCLE = 1000000;
+  val MAX_CYCLE = 100;
 
   override def handleMessage: Receive = {
     case Cycle(start_time, round) =>

@@ -7,9 +7,10 @@ use tokio::{
     runtime::Handle
 };
 use kanal::{
-    bounded_async,AsyncSender,AsyncReceiver,oneshot_async,OneshotAsyncSender,OneshotAsyncReceiver, SendError
+    bounded_async,AsyncSender,AsyncReceiver, SendError
 };
 use std::{
+    any::type_name,
     time::{Instant,Duration},
     sync::{Arc,Mutex,atomic::AtomicU64},
     future::Future,
@@ -17,14 +18,14 @@ use std::{
     pin::Pin,
     boxed::Box, 
     cell::Cell,
-    marker::Sync,
+    marker::{Sync, PhantomData},
     result::{Result as StdResult},
     ops::{Deref,DerefMut}
 };
 use crate::{
     Identifiable, ObjSafeFuture, SendableFutureCreator, ActorSystemRequest, create_sfc,
     errors::{Result,OdinActorError, all_op_result, poisoned_lock},
-    ActorReceiver,MsgReceiver,DynMsgReceiver,ReceiveAction, DefaultReceiveAction,
+    ActorReceiver,MsgReceiver,DynMsgReceiver,ReceiveAction, DefaultReceiveAction, Respondable,
     secs,millis,micros,nanos,
     SysMsgReceiver, FromSysMsg, _Start_, _Ping_, _Timer_, _Pause_, _Resume_, _Terminate_,
 };
@@ -39,8 +40,6 @@ use crate::{
  * desirable to hoist some constructs since they are not compatible between runtime/channel implementations.
  */
 
-pub type OneshotSender<M> = OneshotAsyncSender<M>;
-pub type OneshotReceiver<M> = OneshotAsyncReceiver<M>;
 pub type MpscSender<M> = AsyncSender<M>;
 pub type MpscReceiver<M> =AsyncReceiver<M>;
 pub type AbortHandle = task::AbortHandle;
@@ -51,13 +50,6 @@ fn create_mpsc_sender_receiver <MsgType> (bound: usize) -> (MpscSender<MsgType>,
     where MsgType: Send
 {
     kanal::bounded_async::<MsgType>(bound)
-}
-
-#[inline]
-fn create_oneshot_sender_receiver <MsgType> () -> (OneshotSender<MsgType>,OneshotReceiver<MsgType>)
-    where MsgType: Send
-{
-    kanal::oneshot_async::<MsgType>()
 }
 
 #[inline]
@@ -136,7 +128,6 @@ pub fn block_on_timeout_send_msg<Msg> (tgt: impl MsgReceiver<Msg>, msg: Msg, to:
         }
     }
 }
-
 
 /* #endregion runtime abstractions */
 
@@ -418,7 +409,7 @@ impl ActorSystemHandle {
     }
 
     pub fn new_actor<T,MsgType> (&self, id: impl ToString, state: T, bound: usize) 
-            -> (Actor<T,MsgType>, ActorHandle<MsgType>, AsyncReceiver<MsgType>)
+            -> (Actor<T,MsgType>, ActorHandle<MsgType>, MpscReceiver<MsgType>)
     where 
         T: Send + 'static,
         MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
@@ -426,7 +417,7 @@ impl ActorSystemHandle {
         actor_tuple_for( self.clone(), id, state, bound)
     }
 
-    pub async fn spawn_actor<MsgType,ReceiverType> (&self, act: (ReceiverType, ActorHandle<MsgType>, AsyncReceiver<MsgType>))->Result<ActorHandle<MsgType>> 
+    pub async fn spawn_actor<MsgType,ReceiverType> (&self, act: (ReceiverType, ActorHandle<MsgType>, MpscReceiver<MsgType>))->Result<ActorHandle<MsgType>> 
     where
         MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static,
         ReceiverType: ActorReceiver<MsgType> + Send + Sync + 'static
@@ -485,7 +476,7 @@ impl ActorSystem {
     // it does not support async traits
 
     pub fn new_actor<StateType,MsgType> (&self, id: impl ToString, state: StateType, bound: usize) 
-            -> (Actor<StateType,MsgType>, ActorHandle<MsgType>, AsyncReceiver<MsgType>)
+            -> (Actor<StateType,MsgType>, ActorHandle<MsgType>, MpscReceiver<MsgType>)
         where 
             StateType: Send + 'static,
             MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
@@ -495,7 +486,7 @@ impl ActorSystem {
 
     /// although this implementation is infallible others (e.g. through an [`ActorHandle`] or using different
     /// channel types) are not. To keep it consistent we return a `Result<ActorHandle>``
-    pub fn spawn_actor <MsgType,ReceiverType> (&mut self, act: (ReceiverType, ActorHandle<MsgType>, AsyncReceiver<MsgType>))
+    pub fn spawn_actor <MsgType,ReceiverType> (&mut self, act: (ReceiverType, ActorHandle<MsgType>, MpscReceiver<MsgType>))
             ->Result<ActorHandle<MsgType>>
         where
             MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static,
@@ -508,7 +499,7 @@ impl ActorSystem {
 
         let actor_entry = ActorEntry {
             id: actor_handle.id.clone(),
-            type_name: std::any::type_name::<ReceiverType>(),
+            type_name: type_name::<ReceiverType>(),
             abortable: abort_handle,
             receiver: Box::new(actor_handle.clone()), // stores it as a SysMsgReceiver trait object
             ping_response: Arc::new(AtomicU64::new(0))
@@ -668,61 +659,99 @@ where
 
 /* #endregion ActorSystem */
 
-/* #region message patterns *******************************************************************************/
+/* #region Queries ***************************************************************************/
 
-/// receiver-side envelope message for ask pattern (used in respective receive() impl)
-pub struct Ask<Q,A> where Q: Send + Debug, A: Send + Debug {
-    pub question: Q,                 // the question payload
-    tx: OneshotAsyncSender<A>    // the response sender
+/// QueryBuilder avoids the extra cost of a per-request channel allocation and is therefore slightly faster
+/// compared to a per-query Oneshot channel
+pub struct QueryBuilder<R>  where R: Send + Debug {
+    tx: MpscSender<R>,
+    rx: MpscReceiver<R>,
 }
 
-impl <Q,A> Ask<Q,A> where Q: Send + Debug, A: Send + Debug {
-    pub async fn reply (self, a: A)->Result<()> {
-        self.tx.send(a).await.map_err(|_| OdinActorError::ReceiverClosed)
+impl <R> QueryBuilder<R> where R: Send + Debug {
+    pub fn new ()->Self {
+        let (tx,rx) = create_mpsc_sender_receiver::<R>(1);
+        QueryBuilder { tx, rx }
     }
-    // add timeout_reply, try_reply 
+
+    pub async fn query <M,T> (&self, responder: M, topic: T)->Result<R> 
+    where T: Send + Debug, M: MsgReceiver<Query<T,R>>
+    {
+        let msg = Query { topic, tx: self.tx.clone() };
+        responder.send_msg(msg).await;
+        self.rx.recv().await.map_err(|_| OdinActorError::SendersDropped)
+    }
+
+    /// if we use this version `M` has to be `Send` + `Sync` but we save the cost of cloning the responder on each query
+    pub async fn query_ref <M,T> (&self, responder: &M, topic: T)->Result<R> 
+    where T: Send + Debug, M: MsgReceiver<Query<T,R>> + Sync
+    {
+        let msg = Query { topic, tx: self.tx.clone() };
+        responder.send_msg(msg).await;
+        self.rx.recv().await.map_err(|_| OdinActorError::SendersDropped)
+    }
+
+    pub async fn timeout_query <M,T> (&self, responder: M, topic: T, to: Duration)->Result<R> 
+    where T: Send + Debug, M: MsgReceiver<Query<T,R>>
+    {
+        timeout( to, self.query( responder, topic)).await
+    }
+
+    /// if we use this version `M` has to be `Send` + `Sync` but we save the cost of cloning the responder on each query
+    pub async fn timeout_query_ref <M,T> (&self, responder: &M, topic: T, to: Duration)->Result<R> 
+    where T: Send + Debug, M: MsgReceiver<Query<T,R>> + Sync
+    {
+        timeout( to, self.query_ref( responder, topic)).await
+    }
 }
 
-impl<Q,A> Debug for Ask<Q,A>  where Q: Send + Debug, A: Send + Debug {
+pub struct Query<T,R> where T: Send + Debug, R: Send + Debug {
+    pub topic: T,
+    tx: MpscSender<R>
+}
+
+impl <T,R> Respondable<R> for Query<T,R> where T: Send + Debug, R: Send + Debug {
+    async fn respond (self, r: R)->Result<()> {
+        self.tx.send(r).await.map_err(|_| OdinActorError::ReceiverClosed)
+    }
+}
+
+impl<T,R> Debug for Query<T,R>  where T: Send + Debug, R: Send + Debug {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Ask({:?})", self.question)
+        write!(f, "Request<{},{}>{:?})", type_name::<T>(), type_name::<R>(), self.topic)
     }
 }
 
-pub async fn ask<Q,A,M> (responder: M, question: Q)->Result<A>  
-where Q: Send + Debug, A: Send + Debug, M: MsgReceiver<Ask<Q,A>>
+/// oneshot query
+pub async fn query<T,R,M> (responder: M, topic: T)->Result<R> 
+where T: Send + Debug, R: Send + Debug, M: MsgReceiver<Query<T,R>>
 {
-    let (tx,rx) = create_oneshot_sender_receiver();
-
-    let msg = Ask { question, tx };
-    responder.send_msg(msg).await;
-
-    rx.recv().await.map_err(|_| OdinActorError::SendersDropped)
+    let qb = QueryBuilder::<R>::new();
+    qb.query( responder, topic).await
 }
 
-/// ask version that is based on a [`MsgReceiver<Ask<Q,A>`] ref. Note that `MsgReceiver<Ask<_>>`
-/// is not `Sync` since `Ask` is not (because of its `OneshotAsyncSender` field), hence we
-/// have to clone the `MsgReceiver` before it is used in async code (which would capture the ref)
-pub fn ask_ref<Q,A,M> (responder: &M, question: Q)->impl Future<Output=Result<A>>
-where Q: Send + Debug, A: Send + Debug, M: MsgReceiver<Ask<Q,A>>
+pub async fn query_ref<T,R,M> (responder: &M, topic: T)->Result<R> 
+where T: Send + Debug, R: Send + Debug, M: MsgReceiver<Query<T,R>> + Sync
 {
-    ask( responder.clone(), question)
+    let qb = QueryBuilder::<R>::new();
+    qb.query_ref( responder, topic).await
 }
 
-pub async fn timeout_ask<Q,A,M> (responder: M, question: Q, to: Duration)->Result<A>  
-where Q: Send + Debug, A: Send + Debug, M: MsgReceiver<Ask<Q,A>>
+/// oneshot timeout query
+pub async fn timeout_query<T,R,M> (responder: M, topic: T, to: Duration)->Result<R> 
+where T: Send + Debug, R: Send + Debug, M: MsgReceiver<Query<T,R>>
 {
-    let (tx,rx) = create_oneshot_sender_receiver();
-
-    let msg = Ask { question, tx };
-    responder.timeout_send_msg(msg, to).await?;
-
-    timeout( to, rx.recv()).await
+    let qb = QueryBuilder::<R>::new();
+    qb.timeout_query( responder, topic, to).await
 }
 
-pub fn timeout_ask_ref<Q,A,M> (responder: &M, question: Q, to: Duration)->impl Future<Output=Result<A>>
-where Q: Send + Debug, A: Send + Debug, M: MsgReceiver<Ask<Q,A>>
+pub async fn timeout_query_ref<T,R,M> (responder: &M, topic: T, to: Duration)->Result<R> 
+where T: Send + Debug, R: Send + Debug, M: MsgReceiver<Query<T,R>> + Sync
 {
-    timeout_ask( responder.clone(), question, to)
+    let qb = QueryBuilder::<R>::new();
+    qb.timeout_query_ref( responder, topic, to).await
 }
-/* #endregion message patterns */
+
+/* #endregion QueryBuilder & Query */
+
+// we ditch the OneshotQuery (using a oneshot channel) since it doesn't really save us anything

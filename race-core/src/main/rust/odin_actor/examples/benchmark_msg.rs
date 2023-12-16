@@ -9,7 +9,9 @@ use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle};
 use std::time::{Instant,Duration};
 use std::sync::Mutex;
 
+// larger numbers -> less per cycle (L2?)
 const MAX_CYCLE: u64 = 10_000_000;
+//const MAX_CYCLE: u64 = 100;
 
 static ELASPED_ROUNDTRIP: Mutex<Duration> = Mutex::new( Duration::new(0,0));
 

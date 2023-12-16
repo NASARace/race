@@ -99,6 +99,11 @@ pub trait DynMsgReceiver<MsgType>: Identifiable + Debug + Send  {
     fn try_send_msg (&self, msg: MsgType) -> Result<()>;
 }
 
+/// common interface between Query and OneshotQuery
+pub trait Respondable<R> where R: Debug + Send {
+    fn respond(self, r:R)->impl Future<Output=Result<()>>;
+}
+
 pub type Subscriber<M> = Box<dyn DynMsgReceiver<M> + Send + Sync + 'static>;
 
 pub fn subscriber<M> (s: impl DynMsgReceiver<M> + Send + Sync + 'static)->Subscriber<M> {
