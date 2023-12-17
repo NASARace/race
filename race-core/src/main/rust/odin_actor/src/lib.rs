@@ -13,10 +13,10 @@ pub mod prelude;
 
 pub const DEFAULT_CHANNEL_BOUNDS: usize = 16;
 
-//#[cfg(feature = "tokio_kanal")]
+#[cfg(feature = "tokio_kanal")]
 pub mod tokio_kanal;
 
-//#[cfg(feature = "tokio_channel")]
+#[cfg(feature = "tokio_channel")]
 pub mod tokio_channel;
 
 pub mod errors;

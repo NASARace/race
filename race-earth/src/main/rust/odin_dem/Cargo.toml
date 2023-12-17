@@ -16,8 +16,8 @@ path = "src/bin/getdem.rs"
 [dependencies]
 
 # our ODIN crates
-odin_common = { path = "../odin_common" }
-odin_gdal = { path = "../odin_gdal" }
+odin_common = { workspace = true }
+odin_gdal = { workspace = true }
 
 lazy_static = "*"
 structopt = "*"

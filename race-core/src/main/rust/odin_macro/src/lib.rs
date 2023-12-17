@@ -29,7 +29,7 @@ use proc_macro2::{
 };
 use quote::{quote,format_ident,ToTokens};
 use syn::{ 
-	self,Ident,Path,ItemStruct,ItemEnum,ItemFn,FnArg,Token,Type,TypePath,Block,ExprMacro,Constraint,Expr,
+	self,Ident,Path,ItemStruct,ItemEnum,ItemFn,FnArg,Token,Type,TypePath,Block,ExprMacro,WhereClause,WherePredicate,PredicateType,Expr,
     parse_macro_input,
     punctuated::{Punctuated},
     parse::{Parse,ParseStream,Result}, token, ExprMethodCall, PathSegment, Stmt, Visibility,
@@ -369,24 +369,21 @@ fn parse_match_arms (input: ParseStream)->Result<Vec::<MsgMatchArm>> {
 /// ```
 #[proc_macro]
 pub fn impl_actor (item: TokenStream) -> TokenStream {
-    let ActorReceive { msg_name, msg_type, state_type, state_constraints, match_arms }: ActorReceive = match syn::parse(item) {
+    let ActorReceive { msg_name, msg_type, state_type, where_clause, match_arms }: ActorReceive = match syn::parse(item) {
         Ok(actor_receive) => actor_receive,
         Err(e) => panic!( "expected \"match 𝑚𝑠𝑔𝑉𝑎𝑟𝑁𝑎𝑚𝑒 for Actor<𝑆𝑡𝑎𝑡𝑒𝑇𝑦𝑝𝑒,𝑀𝑠𝑔𝑇𝑦𝑝𝑒> 𝑾ℎ𝑒𝑟𝑒𝐶𝑙𝑎𝑢𝑠𝑒﹖ as 𝑀𝑠𝑔𝑇𝑦𝑝𝑒𝑉𝑎𝑟𝑖𝑎𝑛𝑡 => {{..}}, ..\", got {:?}", e)
     };
 
     let variant_names: Vec<Ident> = get_variant_names_from_match_arms(&match_arms);
     let match_actions: Vec<&MsgMatchAction> = match_arms.iter().map( |a| { &a.match_action }).collect();
-    let constraint_names = collect_typevar_names( &state_constraints);
 
-    let opt_constraints: TokenStream2 = if state_constraints.is_empty() { quote! {} } else {
-        quote! { where #( #state_constraints ),* }
-    };
-    let opt_constraint_names: TokenStream2 = if constraint_names.is_empty() { quote! {} } else {
-        quote! { < #( #constraint_names ),* > }
+    let typevars: Vec<&Path> = if let Some(ref wc) = where_clause { collect_typevars( wc) } else { Vec::new() }; 
+    let typevar_tokens: TokenStream2 = if typevars.is_empty() { quote! {} } else {
+        quote! { < #( #typevars ),* > }
     };
 
     let new_item: TokenStream = quote! {
-        impl #opt_constraint_names ActorReceiver<#msg_type> for Actor<#state_type,#msg_type> #opt_constraints {
+        impl #typevar_tokens ActorReceiver<#msg_type> for Actor<#state_type,#msg_type> #where_clause {
             async fn receive (&mut self, msg: #msg_type)->ReceiveAction {
                 match #msg_name {
                     #( #msg_type::#variant_names (#msg_name) => #match_actions, )*
@@ -404,7 +401,7 @@ struct ActorReceive {
     msg_name: Ident,
     msg_type: Path,
     state_type: Path,
-    state_constraints: Vec<Constraint>, 
+    where_clause: Option<WhereClause>, 
     match_arms: Vec<MsgMatchArm>
 } 
 
@@ -420,38 +417,28 @@ impl Parse for ActorReceive {
         let msg_type: Path = input.parse()?;
         let _: Token![>] = input.parse()?;
 
-        let state_constraints: Vec<Constraint> = parse_constraints( input)?;
+        let where_clause: Option<WhereClause> = input.parse()?;
+
         let _: Token![as] = input.parse()?;
 
         let match_arms = parse_match_arms(input)?;
 
-        Ok( ActorReceive { msg_name, msg_type, state_type, state_constraints, match_arms } )
+        Ok( ActorReceive { msg_name, msg_type, state_type, where_clause, match_arms } )
     }
 }
 
-// unfortunately we have to do this explicitly since Punctuated is eager, assuming the rest 
-// of the ParseStream only consists of its elements (which is not the case here)
-fn parse_constraints (input: ParseStream<'_>) -> syn::Result<Vec<Constraint>> {
-    let mut constraints = Vec::new();
+fn collect_typevars<'a> (where_clause: &'a WhereClause) -> Vec<&'a Path> {
+    let mut typevars = Vec::new();
 
-    let lookahead = input.lookahead1();
-    if lookahead.peek( Token![where]) {
-        let _: Token![where] = input.parse()?;
-
-        loop {
-            let c: Constraint = input.parse()?;
-            constraints.push(c);
-
-            let lookahead = input.lookahead1();
-            if lookahead.peek( Token![,]) {
-                let _: Token![,] = input.parse()?;
-            } else {
-                break
+    for where_predicate in &where_clause.predicates {
+        if let WherePredicate::Type(predicate_type) = where_predicate {
+            if let Type::Path(ref type_path)  = predicate_type.bounded_ty {
+                typevars.push( &type_path.path)
             }
         }
-    } 
+    }
 
-    Ok(constraints)
+    typevars
 }
 
 /* #endregion actor receive definition */
@@ -611,14 +598,6 @@ fn parse_ident_value (input: ParseStream<'_>, expected: &str)->syn::Result<()> {
         Err( syn::Error::new(ident.span(), format!("expected `{}`", expected)))
     } else {
         Ok(())
-    }
-}
-
-fn collect_typevar_names<'a> (constraints: &'a Vec<Constraint>) -> Vec<&'a Ident> {
-    if constraints.is_empty() {
-        Vec::new()
-    } else {
-        constraints.into_iter().map( |c| &c.ident ).collect()
     }
 }
 

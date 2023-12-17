@@ -25,4 +25,5 @@ serde_derive = "*"
 ron = "*"
 
 # our ODIN crates
-odin_common = { path = "../odin_common" }
+# odin_common = { path = "../odin_common" }
+odin_common = { workspace = true }

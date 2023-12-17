@@ -6,7 +6,7 @@ members = [
   "race-core/src/main/rust/odin_common",  
   "race-core/src/main/rust/odin_config",  
   "race-core/src/main/rust/odin_actor",
-  "race-core/src/main/rust/odin_actor_proc_macros",
+  "race-core/src/main/rust/odin_macro",
   "race-core/src/main/rust/odin_gdal",
   "race-earth/src/main/rust/odin_dem",
   "race-earth/src/main/rust/odin_hrrr",
@@ -21,3 +21,9 @@ members = [
   "race-tools/src/main/rust/webrun"
 ]
 
+[workspace.dependencies]
+
+odin_common = { version = "*", path = "race-core/src/main/rust/odin_common" }
+odin_config = { version = "*", path = "race-core/src/main/rust/odin_config" }
+odin_macro  = { version = "*", path = "race-core/src/main/rust/odin_macro" }
+odin_gdal   = { version = "*", path = "race-core/src/main/rust/odin_gdal" }
