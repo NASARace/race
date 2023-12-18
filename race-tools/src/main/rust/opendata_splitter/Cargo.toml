@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 # our ODIN crates
-odin_common = { path = "../odin_common" }
+odin_common = { workspace = true }
 
 chrono = { version = "*", features = ["serde"] }
 geojson = "*"

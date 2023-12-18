@@ -6,6 +6,7 @@ local-build.sbt
 .vscode/
 tmp/
 _book/
+book/
 **/local.conf
 node_modules/
 doc/reports/

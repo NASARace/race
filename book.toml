@@ -1,0 +1,6 @@
+[book]
+authors = ["Peter Mehlitz"]
+language = "en"
+multilingual = false
+src = "doc/odin_book/src"
+title = "ODIN - The Open Data Integration Framework for Wildland Fires"

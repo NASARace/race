@@ -2,6 +2,7 @@
 
 pub mod errors;
 pub mod warp;
+pub mod contour;
 
 use gdal;
 use gdal_sys;
