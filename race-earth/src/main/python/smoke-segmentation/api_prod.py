@@ -69,7 +69,6 @@ def load_model():
 
 @app.route("/predict", methods=["POST", "GET"])
 def predict():
-    data = {"success": False}
     if request.method == 'GET':
         response = Response(status=200) 
         return response   
@@ -135,17 +134,17 @@ def predict():
                 # clear memory
                 del output #closes new tiff
                 # response
-                data["success"] = True
-                data["output"] = output_path
                 K.clear_session()
                 return send_file(output_path, mimetype='image/tiff', as_attachment=True)
             except:
+                logger.error("error during segmentation")
                 abort(400, "error during segmentation")
         else: # file is not a tif
+            logger.error("file not a geotiff")
             abort(400, "request file is not a geotiff")
     else: # undefined request
+        logger.error("invalid request")
         abort(400, "invalid request type") 
-    return jsonify(data)
 
 @app.route('/stop_server', methods=['GET'])
 def stop_server():
