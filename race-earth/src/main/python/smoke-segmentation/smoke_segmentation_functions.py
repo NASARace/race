@@ -115,7 +115,8 @@ class DataLoader:
         return inputs
 
 def initiate_model(model_path):
-    model = keras.models.load_model(model_path, compile=False)
+    #print(model_path)
+    model = keras.models.load_model(filepath=model_path, compile=False)
     model.compile(loss="sparse_categorical_crossentropy", 
                   optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), 
                   metrics=["accuracy", 
@@ -138,15 +139,15 @@ def get_segmented_tif(original_tif, mask, output_path):
     output_tif.FlushCache() ##saves to disk
     return output_tif
 
-def get_segmeneted_mutiband_tif(original_tif, mask, output_path):
+def get_segmeneted_mutiband_tif(original_tif_geo_transform, original_tif_proj, original_tif_meta, mask, output_path):
     driver = gdal.GetDriverByName("GTiff")
     mask = mask.reshape(mask.shape[:2])
     [rows, cols] = mask.shape
     output_tif= driver.Create(output_path, cols, rows, 3, gdal.GDT_Byte)
-    output_tif.SetGeoTransform(original_tif.GetGeoTransform())##sets same geotransform as input
-    output_tif.SetProjection(original_tif.GetProjection())##sets same projection as input
+    output_tif.SetGeoTransform(original_tif_geo_transform)##sets same geotransform as input
+    output_tif.SetProjection(original_tif_proj)##sets same projection as input
     new_metadata = {'0': 'no smoke no clouds', '1': 'smoke', '2': 'cloud'}
-    new_metadata.update(original_tif.GetMetadata())
+    new_metadata.update(original_tif_meta)
     output_tif.SetMetadata(new_metadata)##sets same metadata as input and adds key for interpreting segmetation mask
     smoke_mask = np.zeros(mask.shape)
     smoke_mask[np.where(mask==1)] = 1
