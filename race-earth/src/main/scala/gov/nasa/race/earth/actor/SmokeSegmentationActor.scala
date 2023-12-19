@@ -20,18 +20,16 @@ package gov.nasa.race.earth.actor
 import akka.actor.ActorRef
 import akka.http.scaladsl.model.{HttpEntity, HttpMethods, MediaTypes}
 import com.typesafe.config.Config
-import gov.nasa.race
 import gov.nasa.race.ResultValue
-import gov.nasa.race.common.ConstAsciiSlice.asc
-import gov.nasa.race.common.{ExternalProc, StringJsonPullParser}
+import gov.nasa.race.common.ExternalProc
+import gov.nasa.race.config.ConfigUtils.ConfigWrapper
 import gov.nasa.race.core.{BusEvent, PublishingRaceActor, SubscribingRaceActor}
 import gov.nasa.race.util.FileUtils
-import gov.nasa.race.earth.{Gdal2Tiles, GdalContour, GdalPolygonize, GdalWarp, SmokeAvailable}
+import gov.nasa.race.earth.{GdalContour, GdalWarp, SmokeAvailable}
 import gov.nasa.race.http.{FileRetrieved, HttpActor}
 import gov.nasa.race.uom.DateTime
 
 import java.io.File
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
@@ -39,17 +37,7 @@ import scala.language.postfixOps
 import scala.sys.process.Process
 import scala.util.{Failure, Success}
 
-
-trait  SmokeSegmentationActor extends PublishingRaceActor with SubscribingRaceActor{
-  // unsure what might go here - may omit
-}
-
-/**
-  * a import actor class which performs image segmentation to get smoke and cloud geojsons
-  * @param config
-  */
-
-class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentationActor with HttpActor{
+class SmokeSegmentationImportActor(val config: Config) extends PublishingRaceActor with SubscribingRaceActor with HttpActor{
   case class ContourDataSet (files: Seq[File], date: DateTime)
   case class SegmentDataset (file: File, date:DateTime)
   case class WarpDataset (file: File, date:DateTime)
@@ -58,17 +46,30 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
 
   val dataDir: File = new File(config.getString("data-dir"), "tifs")
   val dataDirContours: File = new File(config.getString("data-dir"), "contours")
-  val pythonPath: File = new File(config.getString("python-exe"))
-  val apiPath: File = new File(System.getProperty("user.dir"), config.getString("api-exe"))
-  val apiCwd: File = new File(System.getProperty("user.dir"), config.getString("api-cwd"))
-  val apiProcess = new SmokeSegmentationAPIProcess(pythonPath, Some(apiCwd), apiPath)
-  //apiProcess.ignoreOutput
 
-  var runningProc:Process = startAPI // starts the Python server hosting model API and checks if it is available
-  var apiAvailable: Boolean = true //false
-  val gdalContour:File = new File(config.getString("gdal-contour"))
-  //val gdalContour:File = new File(config.getStringOrElse("gdal-contour", getExecutableFile("gdal-contour-prog", "gdal_contour").getPath))
-  val gdalWarp: File = new File(config.getString("gdal-warp"))
+  val gdalContour:File = getExecutableFile("gdal-contour-prog", "gdal_contour")
+  val gdalWarp: File = getExecutableFile("gdal-warp-prog", "gdalwarp")
+  var apiProcess: Option[SmokeSegmentationAPIProcess] = None
+  // python server set up
+  val startApi: Boolean = config.getBoolean("start-api")
+  if (startApi) {
+    val pythonPath: File = new File(config.getString("python-exe"))
+    val apiPath: File = new File(System.getProperty("user.dir"), config.getString("api-exe"))
+    val apiCwd: File = new File(System.getProperty("user.dir"), config.getString("api-cwd"))
+    apiProcess = Some(new SmokeSegmentationAPIProcess(pythonPath, Some(apiCwd), apiPath))
+    var runningProc:Process = startAPI // starts the Python server hosting model API and checks if it is available
+  }
+  //apiProcess.ignoreOutput()
+
+
+  var apiAvailable:Boolean = false
+  val serviceFuture = IsServiceAvailable()
+  Await.result(serviceFuture,  Duration.Inf)
+  serviceFuture.onComplete {
+    case Success(v) => info ("smoke api status confirmed")
+    case Failure(x) => warning(s"smoke api status could not be confirmed $x")
+  }
+
 
   override def onStartRaceActor(originator: ActorRef): Boolean = {
     super.onStartRaceActor(originator)
@@ -100,7 +101,7 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
   }
 
   def startAPI: Process = {
-    val runningProc = apiProcess.customExec()
+    val runningProc = apiProcess.get.customExec()
     Thread.sleep(6000) // bad practice - need to remove?
     val serviceFuture = IsServiceAvailable()
     Await.result(serviceFuture,  Duration.Inf)
@@ -137,7 +138,7 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
 
   override def handleMessage: PartialFunction[Any, Unit] = handleSmokeMessage orElse super.handleMessage
 
-  def makeRequest(importedImage: FileRetrieved): Unit = { // flatmap, break up, add thread boundaries for the on completes
+  def makeRequest(importedImage: FileRetrieved): Unit = {
     val serviceFuture = IsServiceAvailable()
     Await.result(serviceFuture, 3.seconds)
     serviceFuture.onComplete {
@@ -149,17 +150,19 @@ class SmokeSegmentationImportActor(val config: Config) extends SmokeSegmentation
       val reqEntity = HttpEntity(MediaTypes.`image/tiff`, tiffBytes) // image/tiff
       val outputFile: File = new File(dataDir.getPath, importedImage.req.file.getName.replace(".tif", "_segmented.tif"))
       httpRequestFileWithTimeout(apiPort, outputFile, 240.seconds, HttpMethods.POST, entity = reqEntity).onComplete {
-        case Success(f) =>
+        case Success(f) => // gets response - check for 200 then filter
+          println(f)
           info(s"download complete: $f")
           self ! SegmentDataset(f, importedImage.date)
         case Failure(x) =>
+          println(x)
           warning(s"download failed: $x")
       }
     }
   }
 
   def reduceResolution(segmentedData:SegmentDataset): Unit = {
-    val warpCmd = new GdalWarp(gdalWarp)
+    val warpCmd = new GdalWarp(getExecutableFile("gdalwarp-prog", "gdalwarp"))//gdalWarp)
     val res = warpCmd.reset()
       .setInFile(segmentedData.file)
       .setOutFile(new File(segmentedData.file.getPath.replace(".tif", "_reduced.tif"))) // this is overwritten if reset called before exec
