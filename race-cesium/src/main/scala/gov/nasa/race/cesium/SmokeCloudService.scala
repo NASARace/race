@@ -176,3 +176,9 @@ trait SmokeLayerService extends CesiumService with FileServerRoute with PushWSRa
   * a single page application that processes smoke and cloud segmentation images
   */
 class CesiumSmokeApp(val parent: ParentActor, val config: Config) extends DocumentRoute with SmokeLayerService with ImageryLayerService
+
+class CesiumSmokeDemoApp(val parent: ParentActor, val config: Config) //custom smoke demo app to show goes-r hotspots and smoke
+  extends DocumentRoute
+    with ImageryLayerService
+    with GoesrService
+    with SmokeLayerService
