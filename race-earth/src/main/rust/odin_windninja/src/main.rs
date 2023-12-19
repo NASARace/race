@@ -1,4 +1,3 @@
-#![allow(unused)]
 /*
  * Copyright (c) 2023, United States Government, as represented by the
  * Administrator of the National Aeronautics and Space Administration.
@@ -15,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#![allow(unused)]
 
 /// server to run WindNinja 
 /// test manually with 
