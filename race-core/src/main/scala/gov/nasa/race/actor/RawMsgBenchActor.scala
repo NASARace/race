@@ -14,12 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race
+package gov.nasa.race.actor
 
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import gov.nasa.race.core.RaceActor
-import gov.nasa.race.main.ConsoleMain
 
 /**
  * benchmarking actor for raw self message speed
@@ -30,7 +29,7 @@ class RawMsgBenchActor (val config: Config) extends RaceActor {
 
   // more rounds -> per round goes down because of hotspot optimizer
   //val MAX_CYCLE = 1000000;
-  val MAX_CYCLE = 100;
+  val MAX_CYCLE = config.getLong("rounds")
 
   override def handleMessage: Receive = {
     case Cycle(start_time, round) =>
@@ -50,11 +49,5 @@ class RawMsgBenchActor (val config: Config) extends RaceActor {
       self ! Cycle(System.nanoTime(), 0)
       true
     } else false
-  }
-}
-
-object RawMsgBench {
-  def main (args: Array[String]): Unit = {
-    ConsoleMain.main(Array("src/resources/raw-msg.conf"))
   }
 }

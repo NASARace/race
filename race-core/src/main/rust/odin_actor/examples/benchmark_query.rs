@@ -34,24 +34,25 @@ impl_actor! { match msg for Actor<Responder,ResponderMsg> as
 define_actor_msg_type! { RequesterMsg = StartQueries }
 
 struct Requester <M> where M: MsgReceiver<Query<Question,Answer>> {
-    responder: M
+    responder: M,
+    max_rounds: u64
 }
 
 impl_actor! { match msg for Actor<Requester<M>,RequesterMsg> where M: MsgReceiver<Query<Question,Answer>> + Send + Sync as
     StartQueries => term! {
         println!("--- running queries from other actor");
-        run_queries(self.responder.clone()).await
+        run_queries(self.responder.clone(), self.max_rounds).await
     }
 }
 
 /* #endregion requester */
 
-async fn run_queries <M> (responder: M)->Result<()> where M: MsgReceiver<Query<Question,Answer>> + Sync {
-    println!("running {} queries", MAX_ROUNDS);
+async fn run_queries <M> (responder: M, max_rounds: u64)->Result<()> where M: MsgReceiver<Query<Question,Answer>> + Sync {
+    println!("running {} queries", max_rounds);
     let mut qb = QueryBuilder::<Answer>::new();
     let mut round: u64 = 0;
     let start_time = Instant::now();
-    while round < MAX_ROUNDS {
+    while round < max_rounds {
         let answer = qb.query_ref( &responder, Question{}).await?;
         if (answer.0 != 42) { panic!{"wrong answer on round {}: {}", round, answer.0} }
 
@@ -64,33 +65,39 @@ async fn run_queries <M> (responder: M)->Result<()> where M: MsgReceiver<Query<Q
     Ok(())
 }
 
-// larger numbers -> less per round (L2?)
-const MAX_ROUNDS: u64 = 1_000_000;
-//const MAX_ROUNDS: u64 = 100;
-
 #[tokio::main]
 async fn main ()->Result<()> {
+    let max_rounds = get_max_rounds();
     let mut actor_system = ActorSystem::new("main");
 
     let responder = spawn_actor!( actor_system, "responder", Responder{})?;
-    let requester = spawn_actor!( actor_system, "requester", Requester { responder: responder.clone() })?;
+    let requester = spawn_actor!( actor_system, "requester", Requester { responder: responder.clone(), max_rounds })?;
 
     // no need for a second actor, we can ask from wherever we have an ActorHandle or MsgReceiver
     // BUT - running from tokio::main is 30x slower than from other task !!
     println!("--- running queries directly from main");
-    run_queries( responder.clone()).await?;
+    run_queries( responder.clone(), max_rounds).await?;
 
-    // no difference between actor and non-actor task
-
+    // run query from other non-actor task
     let jh = spawn( {
         println!("--- running queries from non-actor task");
-        run_queries( responder)
+        run_queries( responder, max_rounds)
     });
     jh.await?;
 
+    // run query from another actor
     requester.send_msg(StartQueries{}).await;
     
     actor_system.process_requests().await;
 
     Ok(())
+}
+
+fn get_max_rounds()->u64 {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() == 1 {
+        1_000_000 // our default value
+    } else {
+        args[1].parse().expect("max round argument not an integer")
+    }
 }

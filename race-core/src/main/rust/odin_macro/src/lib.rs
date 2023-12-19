@@ -217,12 +217,13 @@ fn parse_visibility (input: ParseStream) -> Visibility {
 pub fn match_algebraic_type (item: TokenStream) -> TokenStream {
     let MsgMatch { msg_name, msg_type, match_arms }: MsgMatch = syn::parse(item).unwrap();
     let variant_names: Vec<Ident> = get_variant_names_from_match_arms(&match_arms);
+    let is_mut: Vec<&Option<Token![mut]>> = match_arms.iter().map( |a| { &a.is_mut }).collect();
     let match_actions: Vec<&MsgMatchAction> = match_arms.iter().map( |a| { &a.match_action }).collect();
 
     let new_item: TokenStream = quote! {
         match #msg_name {
             #(
-                #msg_type::#variant_names (#msg_name) => #match_actions
+                #msg_type::#variant_names (#is_mut #msg_name) => #match_actions
             ),*
         }
     }.into();
@@ -263,11 +264,12 @@ pub fn match_algebraic_type (item: TokenStream) -> TokenStream {
 pub fn match_actor_msg (item: TokenStream)->TokenStream {
     let MsgMatch { msg_name, msg_type, match_arms }: MsgMatch = syn::parse(item).unwrap();
     let variant_names: Vec<Ident> = get_variant_names_from_match_arms(&match_arms);
+    let is_mut: Vec<&Option<Token![mut]>> = match_arms.iter().map( |a| { &a.is_mut }).collect();
     let match_actions: Vec<&MsgMatchAction> = match_arms.iter().map( |a| { &a.match_action }).collect();
 
     let new_item: TokenStream = quote! {
         match #msg_name {
-            #( #msg_type::#variant_names (#msg_name) => #match_actions, )*
+            #( #msg_type::#variant_names (#is_mut #msg_name) => #match_actions, )*
             _ => #msg_name . default_receive_action()
         }
     }.into();
@@ -292,6 +294,7 @@ struct MsgMatch {
 
 struct MsgMatchArm {
     variant_type: Path,
+    is_mut: Option<Token![mut]>,
     match_action: MsgMatchAction,
 }
 
@@ -327,6 +330,11 @@ fn parse_match_arms (input: ParseStream)->Result<Vec::<MsgMatchArm>> {
     let mut match_arms = Vec::<MsgMatchArm>::new();
     
     while !input.is_empty() {
+        let lookahead = input.lookahead1();
+        let is_mut: Option<Token![mut]> = if lookahead.peek( Token![mut]) {
+            Some(input.parse()?)
+        } else { None };
+
         let variant_type: Path = input.parse()?;
         let _: Token![=>] = input.parse()?;
         let lookahead = input.lookahead1();
@@ -348,7 +356,7 @@ fn parse_match_arms (input: ParseStream)->Result<Vec::<MsgMatchArm>> {
             let _: Token![,] = input.parse()?;
         }
 
-        match_arms.push( MsgMatchArm { variant_type, match_action } );
+        match_arms.push( MsgMatchArm { variant_type, is_mut, match_action } );
     }
 
     Ok(match_arms)
@@ -375,6 +383,7 @@ pub fn impl_actor (item: TokenStream) -> TokenStream {
     };
 
     let variant_names: Vec<Ident> = get_variant_names_from_match_arms(&match_arms);
+    let is_mut: Vec<&Option<Token![mut]>> = match_arms.iter().map( |a| { &a.is_mut }).collect();
     let match_actions: Vec<&MsgMatchAction> = match_arms.iter().map( |a| { &a.match_action }).collect();
 
     let typevars: Vec<&Path> = if let Some(ref wc) = where_clause { collect_typevars( wc) } else { Vec::new() }; 
@@ -386,7 +395,7 @@ pub fn impl_actor (item: TokenStream) -> TokenStream {
         impl #typevar_tokens ActorReceiver<#msg_type> for Actor<#state_type,#msg_type> #where_clause {
             async fn receive (&mut self, msg: #msg_type)->ReceiveAction {
                 match #msg_name {
-                    #( #msg_type::#variant_names (#msg_name) => #match_actions, )*
+                    #( #msg_type::#variant_names (#is_mut #msg_name) => #match_actions, )*
                     _ => #msg_name . default_receive_action()
                 }
             }

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gov.nasa.race
+package gov.nasa.race.actor
 
 import akka.actor.ActorRef
 import akka.pattern.ask
@@ -47,6 +47,7 @@ class AskBenchResponder (val config: Config) extends RaceActor {
 
 class AskBenchQuestioner (val config: Config) extends RaceActor {
   implicit val timeout: Timeout = Timeout(System.getProperty("race.timeout", "15").toInt seconds)
+  val MAX_ROUND = config.getLong("rounds")
 
   override def onStartRaceActor(originator: ActorRef): Boolean = {
     self ! StartAsking
@@ -59,10 +60,6 @@ class AskBenchQuestioner (val config: Config) extends RaceActor {
       println(s"start asking $responderRef ..")
       var round = 0
       val startTime = System.nanoTime()
-
-      // more rounds -> per round goes down because of hotspot optimizer
-      val MAX_ROUND = 1000000;
-      val MAX_ROUND = 100;
 
       while (round < MAX_ROUND) {
         askForResult( responderRef ? Question()) {
@@ -83,6 +80,6 @@ object RawAskBench {
   var responderRef: ActorRef = null
 
   def main (args: Array[String]): Unit = {
-    ConsoleMain.main(Array("src/resources/raw-ask.conf"))
+    ConsoleMain.main(Array("config/local/raw-ask.conf"))
   }
 }
