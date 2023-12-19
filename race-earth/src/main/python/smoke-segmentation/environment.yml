@@ -96,6 +96,7 @@ dependencies:
       - google-pasta==0.2.0
       - grpcio==1.59.0
       - h5py==3.10.0
+      - huggingface-hub==0.19.4
       - humanfriendly==10.0
       - idna==3.4
       - jmespath==1.0.1
