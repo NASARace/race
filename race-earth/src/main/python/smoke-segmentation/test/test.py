@@ -8,17 +8,19 @@ sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),".."))
 from smoke_segmentation_functions import *
 import requests
 from osgeo import gdal #must be imported first
-import json
 import numpy as np
 
 class test_smoke_segmentation_functions(unittest.TestCase):
     def setUp(self):
-        self.test_tiff = os.path.join(os.path.dirname(os.getcwd()), 'data', 'test_data', "GOES16-ABI-CONUS-GEOCOLOR-5000x3000.tif")
-        self.test_png = os.path.join(os.path.dirname(os.getcwd()), 'data', 'test_data', "Screenshot 2022-10-24 120046.png")
-        self.test_jpg = os.path.join(os.path.dirname(os.getcwd()), 'data', 'test_data', "Screenshot 2022-10-24 120046.jpg")
+        # download test tif
+        self.test_tiff = os.path.join(os.getcwd(), "test_input.tif")
+        r = requests.get("https://cdn.star.nesdis.noaa.gov/GOES18/ABI/CONUS/GEOCOLOR/GOES18-ABI-CONUS-GEOCOLOR-5000x3000.tif")
+        # download the file
+        with open(self.test_tiff, 'wb') as f:
+            f.write(r.content)
+        # instantiate variables
         self.api = "http://localhost:5000/predict"
-        self.output_files = [""]
-        self.headers = {'content-type': 'application/json'}
+        self.output_files = [self.test_tiff]
         self.target_shape = (64,64)
         self.test_array_1 = np.random.rand(64,64,3)
         self.test_array_2 = np.random.rand(120,64,3)
@@ -34,40 +36,48 @@ class test_smoke_segmentation_functions(unittest.TestCase):
                 os.remove(file)
         
     def test_tiff_segmentation(self):
-        payload = {"file": self.test_tiff}
-        payload = json.dumps(payload)
+        output_path = "test.tif"
+        with open(self.test_tiff, 'rb') as f:
+            data = f.read()
+        payload = {"file": (self.test_tiff, data, 'image/tiff') }
         # submit the request
-        r = requests.post(self.api, data=payload, headers=self.headers).json()
-        self.assertTrue(r["success"])
-        self.output_files = r["output"]
+        r = requests.post(self.api, files=payload)
+        # download the file
+        with open(output_path, 'wb') as f:
+            f.write(r.content)
+        self.assertTrue(r.status_code==200)
         #check metadata
         original_tiff = gdal.Open(self.test_tiff)
-        for output_path in r["output"]:
-            output_tiff = gdal.Open(output_path)
-            self.assertEqual(original_tiff.GetGeoTransform(), output_tiff.GetGeoTransform())
-            self.assertEqual(original_tiff.GetProjection(), output_tiff.GetProjection())
-            original_metadata = original_tiff.GetMetadata()
-            for k in original_metadata:
-                self.assertEqual(original_metadata[k], output_tiff.GetMetadata()[k])
-            del output_tiff
+        output_tiff = gdal.Open(output_path)
+        self.assertEqual(original_tiff.GetGeoTransform(), output_tiff.GetGeoTransform())
+        self.assertEqual(original_tiff.GetProjection(), output_tiff.GetProjection())
+        original_metadata = original_tiff.GetMetadata()
+        for k in original_metadata:
+            self.assertEqual(original_metadata[k], output_tiff.GetMetadata()[k])
+        del output_tiff
         del original_tiff
-            
 
-    def test_png_segmentation(self):
-        payload = {"file": self.test_png}
-        payload = json.dumps(payload)
+        # test file itself
+        output_path = "test.tif"
+        with open(self.test_tiff, 'rb') as f:
+            data = f.read()
         # submit the request
-        r = requests.post(self.api, data=payload, headers=self.headers).json()
-        self.assertTrue(r["success"])
-        self.output_files = r["output"]
-
-    def test_jpg_segmentation(self):
-        payload = {"file": self.test_jpg}
-        payload = json.dumps(payload)
-        # submit the request
-        r = requests.post(self.api, data=payload, headers=self.headers).json()
-        self.assertTrue(r["success"])
-        self.output_files = r["output"]
+        r = requests.post(self.api, data=data, headers={'content-type': 'image/tiff'})
+        # download the file
+        with open(output_path, 'wb') as f:
+            f.write(r.content)
+        self.assertTrue(r.status_code==200)
+        #check metadata
+        original_tiff = gdal.Open(self.test_tiff)
+        output_tiff = gdal.Open(output_path)
+        self.assertEqual(original_tiff.GetGeoTransform(), output_tiff.GetGeoTransform())
+        self.assertEqual(original_tiff.GetProjection(), output_tiff.GetProjection())
+        original_metadata = original_tiff.GetMetadata()
+        for k in original_metadata:
+            self.assertEqual(original_metadata[k], output_tiff.GetMetadata()[k])
+        del output_tiff
+        del original_tiff
+        self.output_files.append(output_path)
 
     def test_get_tiles(self):
         images, full_tiled_shape, padding_tuple, overlap = get_tiles(self.test_array_1, self.target_shape, overlap=0)
