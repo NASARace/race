@@ -91,15 +91,17 @@ async fn main ()->Result<()> {
 
     // no need for a second actor, we can ask from wherever we have an ActorHandle or MsgReceiver
     // BUT - running from tokio::main is 30x slower than from other task !!
-    println!("--- running queries directly from main");
-    run_queries( responder.clone(), max_rounds).await?;
+    //println!("--- running queries directly from main");
+    //run_queries( responder.clone(), max_rounds).await?;
 
     // run query from other non-actor task
+    /*
     let jh = spawn( {
         println!("--- running queries from non-actor task");
         run_queries( responder, max_rounds)
     });
     jh.await?;
+    */
 
     // run query from another actor
     requester.send_msg(StartQueries{}).await;

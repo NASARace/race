@@ -176,12 +176,12 @@ pub fn block_on_timeout_send_msg<Msg> (tgt: impl MsgReceiver<Msg>, msg: Msg, to:
      }
  
      #[inline(always)]
-     pub fn send_msg<M:Into<MsgType>> (&self, msg: M)->impl Future<Output=Result<()>> {
+     pub fn send_msg<M:Into<MsgType>> (&self, msg: M)->impl Future<Output=Result<()>> + '_ {
          self.hself.send_actor_msg( msg.into())
      }
  
      #[inline(always)]
-     pub fn timeout_send_msg<M:Into<MsgType>> (&self, msg: M, to: Duration)->impl Future<Output=Result<()>> {
+     pub fn timeout_send_msg<M:Into<MsgType>> (&self, msg: M, to: Duration)->impl Future<Output=Result<()>> + '_ {
          self.hself.timeout_send_actor_msg( msg.into(), to)
      }
  
