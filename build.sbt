@@ -10,7 +10,7 @@ ThisBuild / shellPrompt := { state => "[" + Project.extract(state).currentRef.pr
 enablePlugins(LaikaPlugin)
 
 lazy val commonSettings = commonRaceSettings ++ Seq(
-  version := "1.8.1",
+  version := "1.9.0",
   dependencyOverrides ++= raceDependencyOverrides
 )
 

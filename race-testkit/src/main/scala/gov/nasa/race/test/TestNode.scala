@@ -236,7 +236,7 @@ abstract class JvmTestNode (val name: String) extends TestNode with AutomatedCon
   def startAsDaemon (f: =>Unit): Thread = {
     new Thread {
       setDaemon(true)
-      start()
+      this.start()
 
       override def run(): Unit = f
     }
