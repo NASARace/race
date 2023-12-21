@@ -19,7 +19,7 @@ package gov.nasa.race.earth.actor
 
 import com.typesafe.config.Config
 import gov.nasa.race.core.{BusEvent, PeriodicRaceActor, PublishingRaceActor, SubscribingRaceActor}
-import gov.nasa.race.earth.{Gdal2Tiles, ImageTilesAvailable}
+import gov.nasa.race.earth.Gdal2Tiles
 import gov.nasa.race.http.{FileRetrieved, HttpFileRetriever, RequestFile}
 import gov.nasa.race.uom.DateTime
 import gov.nasa.race.common.FileAvailable
