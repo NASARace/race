@@ -31,4 +31,6 @@ conf
 *.code-workspace
 .bsp
 *.lock
+build/
+
 
