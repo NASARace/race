@@ -55,6 +55,10 @@ pub enum OdinActorError {
     #[error("failed to join task")]
     JoinError,
 
+    // a generic error
+    #[error("operation failed {0}")]
+    OpFailed(String)
+
     //... and more to come
 }
 
@@ -68,4 +72,8 @@ pub fn all_op_failed <T: ToString> (op: T, all: usize, failed: usize)->OdinActor
 
 pub fn poisoned_lock <T: ToString> (op: T)->OdinActorError {
     OdinActorError::PoisonedLockError(op.to_string())
+}
+
+pub fn op_failed (msg: impl ToString)->OdinActorError {
+    OdinActorError::OpFailed(msg.to_string())
 }

@@ -497,7 +497,7 @@ impl ActorSystem {
             StateType: Send + 'static,
             MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
     {
-        actor_tuple_for( ActorSystemHandle { sender: self.request_sender.clone()}, id, state, bound)
+        actor_tuple_for( ActorSystemHandle { sender: self.request_sender.clone() }, id, state, bound)
     }
 
     /// although this implementation is infallible others (e.g. through an [`ActorHandle`] or using different
