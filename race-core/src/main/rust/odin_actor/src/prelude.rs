@@ -22,5 +22,5 @@ pub use crate::{
     secs,millis,micros,nanos,
     DEFAULT_CHANNEL_BOUNDS,
     define_actor_msg_type, match_actor_msg, cont, stop, term, impl_actor, spawn_actor,
-    send_msg_callback, sync_callback,msg_subscriber,
+    send_msg_callback, sync_callback, async_callback, msg_subscriber,
 };

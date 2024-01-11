@@ -110,6 +110,14 @@ impl <T> AsyncCallback<T> where T: Clone + Send + Sync {
     }
 }
 
+/// this is a specialized async callback with an action that consists of sending a message to
+/// some (possibly 3rd) actor like so
+/// ```
+///   let htracks = spawn_actor!(...)
+///   let hserver = spawn_actor!(...);
+///   ...
+///   htracks.send_msg( Execute( send_msg_callback!( hserver <- |tracks: Vec<Track>| TrackList(tracks)).await?;
+/// ```
 #[macro_export]
 macro_rules! send_msg_callback {
     { $tgt:ident <- |$d:ident : $t_d:ty| $e:expr } =>
@@ -125,6 +133,13 @@ macro_rules! send_msg_callback {
         }
     }
 }
+
+#[macro_export]
+macro_rules! async_callback {
+    ( |$v:ident : $t:ty| $e:expr ) =>
+    { Callback::Async( AsyncCallback::new( |$v : $t| Box::pin( async move { $e.await } )) ) }
+}
+
 
 // we need a Debug impl so that we can have messages that have Callback objects as payloads
 impl<T> Debug for AsyncCallback<T> where T: Clone + Send + Sync {

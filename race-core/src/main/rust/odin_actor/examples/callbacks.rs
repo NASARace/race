@@ -20,7 +20,7 @@ use tokio;
 use std::future::Future;
 use odin_actor::{prelude::*};
 use odin_actor::errors::Result;
-use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,AbortHandle};
+use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,AbortHandle,sleep};
 
 /* #region updater ***************************************************************************/
 struct Updater {
@@ -109,11 +109,20 @@ async fn main ()->Result<()> {
     let action = send_msg_callback!( server <- |data: u64| PublishWsMsg{data});
     updater.send_msg( AddUpdateCallback{id: "server".to_string(), action} ).await?;
 
-    let action =  sync_callback!( |data:u64| { println!("spooky sync action from a distance with {data}"); Ok(()) } );
+    let action = sync_callback!( |data:u64| { println!("spooky sync action from a distance with {data}"); Ok(()) } );
+    updater.send_msg( TriggerCallback( action)).await?;
+
+    let action = async_callback!( |data: u64| async_action(data) );
     updater.send_msg( TriggerCallback( action)).await?;
 
     actor_system.start_all(millis(20)).await?;
     actor_system.process_requests().await?;
 
+    Ok(())
+}
+
+async fn async_action (data: u64)->Result<()> {
+    sleep( secs(2)).await;
+    println!("async action with {data}");
     Ok(())
 }
