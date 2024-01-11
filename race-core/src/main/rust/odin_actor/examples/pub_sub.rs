@@ -25,21 +25,21 @@ use std::{sync::Arc, future::Future, pin::Pin};
 
 #[derive(Debug,Clone)] struct Update(u64);
 
-#[derive(Debug)] struct Subscribe(Subscriber<Update>);
+#[derive(Debug)] struct Subscribe(MsgSubscriber<Update>);
 
 /* #region Updater ********************************************************/
 
 define_actor_msg_type! { UpdaterMsg = Subscribe }
 
 struct Updater {
-    subscribers: Subscriptions<Update>,
+    subscribers: MsgSubscriptions<Update>,
     count: u64,
     timer: Option<AbortHandle>
 }
 
 impl Updater {
     fn new ()->Self {
-        Updater { subscribers: Subscriptions::new(), count: 0, timer: None }
+        Updater { subscribers: MsgSubscriptions::new(), count: 0, timer: None }
     }
 }
 
@@ -87,8 +87,8 @@ async fn main ()->Result<()> {
     let client_1 = spawn_actor!( actor_system, "client-1", Client{})?;
     let client_2 = spawn_actor!( actor_system, "client-2", Client{})?;
 
-    updater.send_msg( Subscribe( subscriber(client_1))).await;
-    updater.send_msg( Subscribe( subscriber(client_2))).await;
+    updater.send_msg( Subscribe( msg_subscriber(client_1))).await;
+    updater.send_msg( Subscribe( msg_subscriber(client_2))).await;
 
     actor_system.start_all(millis(20)).await?;
     actor_system.process_requests().await

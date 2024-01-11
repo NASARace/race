@@ -254,6 +254,13 @@ pub fn block_on_timeout_send_msg<Msg> (tgt: impl MsgReceiver<Msg>, msg: Msg, to:
          self.send_actor_msg( msg.into()).await
      }
  
+    /// this version consumes self, which is handy if we send from within a closure that
+    /// did capture the ActorHandle. Without it the borrow checker would complain that we
+    /// borrow self within a future from our closure context
+    pub async fn move_send_msg<M:Into<MsgType>> (self, msg: M)->Result<()> {
+        self.send_actor_msg( msg.into()).await
+    }
+
      /// this waits for a given timeout duration until the message can be send or the receiver got closed
      pub async fn timeout_send_actor_msg (&self, msg: MsgType, to: Duration)->Result<()> {
          timeout( to, self.send_actor_msg(msg)).await
@@ -263,6 +270,11 @@ pub fn block_on_timeout_send_msg<Msg> (tgt: impl MsgReceiver<Msg>, msg: Msg, to:
          self.timeout_send_actor_msg( msg.into(), to).await
      }
  
+    /// for use in closures that capture the actor handle - see [`move_send_msg`]
+    pub async fn timeout_move_send_msg<M:Into<MsgType>> (self, msg: M, to: Duration)->Result<()> {
+        self.timeout_send_msg( msg, to).await
+    }
+
      /// this returns immediately but the caller has to check if the message got sent
      pub fn try_send_actor_msg (&self, msg: MsgType)->Result<()> {
          match self.tx.try_send(msg) {
@@ -351,10 +363,20 @@ pub fn block_on_timeout_send_msg<Msg> (tgt: impl MsgReceiver<Msg>, msg: Msg, to:
          self.send_actor_msg( msg.into())
      }
  
+    /// for use in closures that capture the MsgReceiver - see [`ActorHandle::move_send_msg`]
+    fn move_send_msg (self, msg: M) -> impl Future<Output = Result<()>> + Send {
+        self.move_send_msg( msg)
+    }
+
      fn timeout_send_msg (&self, msg: M, to: Duration) -> impl Future<Output = Result<()>> + Send {
          self.timeout_send_actor_msg( msg.into(), to)
      }
- 
+
+    /// for use in closures that capture the MsgReceiver - see [`ActorHandle::move_send_msg`]
+    fn timeout_move_send_msg (self, msg: M, to: Duration) -> impl Future<Output = Result<()>> + Send {
+        self.timeout_move_send_msg( msg, to)
+    }
+
      fn try_send_msg (&self, msg: M) -> Result<()> {
          self.try_send_actor_msg( msg.into())
      }
@@ -369,11 +391,11 @@ pub fn block_on_timeout_send_msg<Msg> (tgt: impl MsgReceiver<Msg>, msg: Msg, to:
      fn send_msg (&self, msg: M) -> ObjSafeFuture<Result<()>> {
          Box::pin( self.send_actor_msg( msg.into()))
      }
- 
+
      fn timeout_send_msg (&self, msg: M, to: Duration) -> ObjSafeFuture<Result<()>> {
          Box::pin( self.timeout_send_actor_msg( msg.into(), to))
      }
- 
+
      fn try_send_msg (&self, msg: M) -> Result<()> {
          self.try_send_actor_msg( msg.into())
      }

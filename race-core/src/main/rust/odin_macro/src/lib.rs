@@ -52,7 +52,94 @@ use syn::{
 };
 use std::collections::HashSet;
 
-/* #region define macros *********************************************************/
+/* #region define_service_type ***************************************************/
+
+/// macro to define a composite type from MicroService implementing types. This is used for [`odin_server::Server`] initialization
+/// and avoids the problem that we cannot use trait objects to put the service components into a generic container
+/// (such as `Vec<Box<dyn MicroService>>`) since the MicroService trait is not object safe - it has methods returning
+/// `impl Future<..>` types. Use like so:
+/// ```
+///   define_service_type! { TrackServices = ImageryService + TrackService }
+/// ```
+/// which gets expanded into:
+/// ```
+///   struct TrackServices (ImageryService, TrackService);
+///   impl MicroService for TrackServices {
+///     fn router (&self, hserver: ActorHandle<ServerMsg>)->Option<Router> { 
+///       // merges routers
+///     }
+///     fn send_init_ws_msg (&self, hserver: ActorHandle<ServerMsg>)->impl Future<Output=Result<()>>+Send { 
+///       // calls send_init_ws_msg(hserver).await? for each component
+///     }
+///     fn handle_incoming_ws_msg (&self, hserver: ActorHandle<ServerMsg>, msg: &str)->impl Future<Output=Result<()>>+Send {
+///       // calls handle_incoming_ws_msg(hserver,msg).await? for each component
+///     }
+///   }
+/// ```
+#[proc_macro]
+pub fn define_service_type (item: TokenStream) -> TokenStream {
+    let ServiceComposition {visibility, name, component_types }= syn::parse(item).unwrap();
+    let merged_routes: Vec<TokenStream2> = component_types.iter().enumerate().map( |(idx,ct)|{
+        quote! { if let Some(r) = self.#idx.router(hserver) { router = router.merge(r); } }
+    }).collect();
+    let init_msg: Vec<TokenStream2> = component_types.iter().enumerate().map( |(idx,ct)|{
+        quote! { self.#idx.send_init_ws_msg(hserver).await? }
+    }).collect();
+    let incoming_msg: Vec<TokenStream2> = component_types.iter().enumerate().map( |(idx,ct)|{
+        quote! { self.#idx.handle_incoming_ws_msg(hserver, msg).await? }
+    }).collect();
+
+    let new_item: TokenStream = quote! {
+        #visibility struct #name (
+            #( #component_types ),*
+        );
+        impl MicroService for #name {
+            fn router (&self, hserver: ActorHandle<ServerMsg>)->Option<Router> {
+                let mut router = Router::new();
+                #(#merged_routes)*
+                Some(router)
+            }
+            fn send_init_ws_msg (&self, hserver: ActorHandle<ServerMsg>)->impl Future<Output=Result<()>> + Send {
+                #(#init_msg);*
+            }
+            fn handle_incoming_ws_msg (&self, hserver: ActorHandle<ServerMsg>, msg: &str)->impl Future<Output=Result<()>> + Send {
+                #(#incoming_msg);*
+            }
+        }
+    }.into();
+    //println!("-----\n{}\n-----", new_item.to_string());
+    new_item
+}
+
+#[derive(Debug)]
+struct ServiceComposition {
+    visibility: Visibility,
+    name: Ident,
+    component_types: Vec<Path>
+}
+
+impl Parse for ServiceComposition {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let visibility: Visibility = parse_visibility(input);
+        let name: Ident = input.parse()?;
+
+        let lookahead = input.lookahead1();
+        let component_types: Vec<Path> = if lookahead.peek(Token![=]) {
+            let _: Token![=] = input.parse()?;
+            let component_types = Punctuated::<Path,Token![+]>::parse_terminated(input)?;
+            component_types.into_iter().collect()
+        } else {
+            Vec::new()
+        };
+        
+        Ok( ServiceComposition { visibility, name, component_types })
+    }
+}
+
+/* #endregion define_service_type */
+
+
+/* #region define_algebraic_type ******************************************************/
 
 /// macro to define algebraic types (using a Haskell'ish syntax), which are mapped into enums
 /// whose variant names are transparent (automatically generated from element types).
@@ -102,9 +189,12 @@ pub fn define_algebraic_type (item: TokenStream) -> TokenStream {
         }
     }.into();
     //println!("-----\n{}\n-----", new_item.to_string());
-
     new_item
 }
+
+/* #endregion define_algebraic_type */
+
+/* #region define_actor_msg_type ***********************************************************/
 
 /// the odin_actor specific version of the general [`define_algebraic_type`] macro.
 /// this automatically adds system messages (_Start_,_Terminate_,..) variants and
@@ -204,16 +294,7 @@ impl Parse for MsgEnum {
     }
 }
 
-fn parse_visibility (input: ParseStream) -> Visibility {
-    let lookahead = input.lookahead1();
-    if lookahead.peek(Token![pub]) {
-        input.parse::<Visibility>().unwrap()
-    } else {
-        Visibility::Inherited
-    }
-} 
-
-/* #endregion define macros */
+/* #endregion define_actor_msg_type */
 
 /* #region match macros **********************************************************/
 
@@ -387,7 +468,7 @@ fn parse_match_arms (input: ParseStream)->Result<Vec::<MsgMatchArm>> {
 /// 
 /// Example:
 /// ```
-/// define_actor! { match msg: ResponderMsg for Responder as
+/// impl_actor! { match msg: ResponderMsg for Responder as
 ///     Ask<Question,Answer> => ...
 /// }
 /// ```
@@ -625,5 +706,14 @@ fn parse_ident_value (input: ParseStream<'_>, expected: &str)->syn::Result<()> {
         Ok(())
     }
 }
+
+fn parse_visibility (input: ParseStream) -> Visibility {
+    let lookahead = input.lookahead1();
+    if lookahead.peek(Token![pub]) {
+        input.parse::<Visibility>().unwrap()
+    } else {
+        Visibility::Inherited
+    }
+} 
 
 /* #endregion support funcs */

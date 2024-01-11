@@ -150,8 +150,9 @@ pub fn block_on_timeout_send_msg<Msg> (tgt: impl MsgReceiver<Msg>, msg: Msg, to:
 /* #region Actor and ActorHandle *******************************************************************************/
 /*
  * We could hoist Actor and ActorHandle if we put MpscSender and Abortable behind traits and add them as
- * generic type params but that would obfuscate the code. The real optimization we would like is to avoid
- * MsgReceiver trait objects but those seem necessary for dynamic (msg based) subscription 
+ * generic type params but that would (a) obfuscate the code and (b) loose the capability to store hself and hsys.
+ *  
+ * The real optimization we would like is to avoid MsgReceiver trait objects but those seem necessary for dynamic (msg based) subscription 
  */
 
 pub struct Actor <StateType,MsgType> 
@@ -255,6 +256,13 @@ impl <MsgType> ActorHandle <MsgType>
         self.send_actor_msg( msg.into()).await
     }
 
+    /// this version consumes self, which is handy if we send from within a closure that
+    /// did capture the ActorHandle. Without it the borrow checker would complain that we
+    /// borrow self within a future from our closure context
+    pub async fn move_send_msg<M:Into<MsgType>> (self, msg: M)->Result<()> {
+        self.send_actor_msg( msg.into()).await
+    }
+
     /// this waits for a given timeout duration until the message can be send or the receiver got closed
     pub async fn timeout_send_actor_msg (&self, msg: MsgType, to: Duration)->Result<()> {
         timeout( to, self.send_actor_msg(msg)).await
@@ -262,6 +270,11 @@ impl <MsgType> ActorHandle <MsgType>
 
     pub async fn timeout_send_msg<M:Into<MsgType>> (&self, msg: M, to: Duration)->Result<()> {
         self.timeout_send_actor_msg( msg.into(), to).await
+    }
+
+    /// for use in closures that capture the actor handle - see [`move_send_msg`]
+    pub async fn timeout_move_send_msg<M:Into<MsgType>> (self, msg: M, to: Duration)->Result<()> {
+        self.timeout_send_msg( msg, to).await
     }
 
     /// this returns immediately but the caller has to check if the message got sent
@@ -276,6 +289,7 @@ impl <MsgType> ActorHandle <MsgType>
     pub fn try_send_msg<M: Into<MsgType>> (&self, msg:M)->Result<()> {
         self.try_send_actor_msg(msg.into())
     }
+
 
     // TODO - is this right to skip if we can't send? Maybe that should be an option
 
@@ -350,8 +364,18 @@ impl <M,MsgType> MsgReceiver <M> for ActorHandle <MsgType>
         self.send_actor_msg( msg.into())
     }
 
+    /// for use in closures that capture the MsgReceiver - see [`ActorHandle::move_send_msg`]
+    fn move_send_msg (self, msg: M) -> impl Future<Output = Result<()>> + Send {
+        self.move_send_msg( msg)
+    }
+
     fn timeout_send_msg (&self, msg: M, to: Duration) -> impl Future<Output = Result<()>> + Send {
         self.timeout_send_actor_msg( msg.into(), to)
+    }
+
+    /// for use in closures that capture the MsgReceiver - see [`ActorHandle::move_send_msg`]
+    fn timeout_move_send_msg (self, msg: M, to: Duration) -> impl Future<Output = Result<()>> + Send {
+        self.timeout_move_send_msg( msg, to)
     }
 
     fn try_send_msg (&self, msg: M) -> Result<()> {

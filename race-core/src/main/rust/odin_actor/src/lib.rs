@@ -38,6 +38,9 @@ pub mod tokio_channel;
 pub mod errors;
 use errors::Result;
 
+mod msg_patterns;
+pub use msg_patterns::*;
+
 extern crate odin_macro;
 #[doc(hidden)]
 pub use odin_macro::{define_actor_msg_type, match_actor_msg, cont, stop, term, impl_actor, spawn_actor};
@@ -100,7 +103,9 @@ pub enum ReceiveAction {
 /// receiver. Note this trait is not object-safe (use [`DynMsgReceiver`] for dynamic subscription)
 pub trait MsgReceiver<MsgType>: Identifiable + Debug + Send + Clone {
     fn send_msg (&self, msg: MsgType)->impl Future<Output = Result<()>> + Send;
+    fn move_send_msg (self, msg: MsgType)->impl Future<Output = Result<()>> + Send;
     fn timeout_send_msg (&self, msg: MsgType, to: Duration)->impl Future<Output = Result<()>> + Send;
+    fn timeout_move_send_msg (self, msg: MsgType, to: Duration)->impl Future<Output = Result<()>> + Send;
     fn try_send_msg (&self, msg:MsgType)->Result<()>;
 }
 
@@ -113,53 +118,6 @@ pub trait DynMsgReceiver<MsgType>: Identifiable + Debug + Send  {
     fn send_msg (&self, msg: MsgType) -> ObjSafeFuture<Result<()>>;
     fn timeout_send_msg (&self, msg: MsgType, to: Duration) -> ObjSafeFuture<Result<()>>;
     fn try_send_msg (&self, msg: MsgType) -> Result<()>;
-}
-
-/// common interface between Query and OneshotQuery
-pub trait Respondable<R> where R: Debug + Send {
-    fn respond(self, r:R)->impl Future<Output=Result<()>>;
-}
-
-pub type Subscriber<M> = Box<dyn DynMsgReceiver<M> + Send + Sync + 'static>;
-
-pub fn subscriber<M> (s: impl DynMsgReceiver<M> + Send + Sync + 'static)->Subscriber<M> {
-    Box::new(s)
-}
-
-/// container to keep a dynamically updated list of homogenous DynMsgReceiver instances
-/// Subscriptions objects are used as fields within concrete actor structs to implement publish/subscribe
-/// patterns that hide the concrete types of the subscribers (which don't even have to be actors) 
-pub struct Subscriptions<M>
-    where M: Send + Clone + Debug + 'static
-{
-    list: Vec<Subscriber<M>>, 
-}
-
-// TODO - should we automatically remove subscribers we fail to send to?
-impl<M> Subscriptions<M> 
-        where M: Send + Clone + Debug + 'static
-{
-    pub fn new()->Subscriptions<M> {
-        Subscriptions { list: Vec::new() }
-    }
-
-    pub fn add (&mut self, subscriber: Subscriber<M>) {
-        self.list.push( subscriber);
-    }
-
-    pub async fn publish_msg (&self, msg: M) -> Result<()> {
-        for p in &self.list {
-            p.send_msg( msg.clone()).await?
-        }
-        Ok(())
-    }
-
-    pub async fn timeout_publish_msg (&self, msg: M, to: Duration) -> Result<()> {
-        for ref p in &self.list {
-            p.timeout_send_msg( msg.clone(), to).await?
-        }
-        Ok(())
-    }
 }
 
 /* #endregion runtime/channel agnostic traits and types */
