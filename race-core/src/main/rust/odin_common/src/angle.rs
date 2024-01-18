@@ -17,6 +17,7 @@
 #![allow(unused)]
 
 use std::{ops,cmp,fmt};
+use serde::{Serialize,Deserialize};
 
 pub fn canonicalize_90 (d:f64) -> f64 {
     let mut x = d % 360.0;
@@ -42,7 +43,7 @@ pub fn canonicalize_360 (d: f64) -> f64 {
 //--- Angle
 
 /// abstraction for angles [0..360]
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug,Clone,Copy,Serialize,Deserialize)]
 pub struct Angle(f64);
 
 impl Angle {
@@ -128,7 +129,7 @@ impl cmp::PartialEq for Angle {
 //--- LatAngle
 
 /// Angle with value bounds [-90..90]
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug,Clone,Copy,Serialize,Deserialize)]
 pub struct LatAngle(f64);
 
 impl LatAngle {
@@ -216,7 +217,7 @@ impl cmp::PartialEq for LatAngle {
 //--- LonAngle
 
 /// abstraction for angles [-180..180]
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug,Clone,Copy,Serialize,Deserialize)]
 pub struct LonAngle(f64);
 
 impl LonAngle {

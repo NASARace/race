@@ -138,7 +138,6 @@ impl Parse for ServiceComposition {
 
 /* #endregion define_service_type */
 
-
 /* #region define_algebraic_type ******************************************************/
 
 /// macro to define algebraic types (using a Haskell'ish syntax), which are mapped into enums
