@@ -120,18 +120,29 @@ impl <T> AsyncCallback<T> where T: Clone + Send + Sync {
 /// ```
 #[macro_export]
 macro_rules! send_msg_callback {
-    { $tgt:ident <- |$d:ident : $t_d:ty| $e:expr } =>
-    {
+    { $tgt:ident <- | $d:ident : $t_d:ty | $e:expr } =>  {
         {
             let $tgt = $tgt.clone();
             Callback::Async( AsyncCallback::new (
-                move |$d:$t_d| {
+                move | $d : $t_d | {
                     let $tgt = $tgt.clone();
                     Box::pin( $tgt.move_send_msg( $e) )
                 }
             ))
         }
-    }
+    };
+
+    { $tgt:ident <- || $e:expr } =>  {
+        {
+            let $tgt = $tgt.clone();
+            Callback::Async( AsyncCallback::new (
+                move |()| {
+                    let $tgt = $tgt.clone();
+                    Box::pin( $tgt.move_send_msg( $e) )
+                }
+            ))
+        }
+    };
 }
 
 #[macro_export]
@@ -181,6 +192,10 @@ pub struct CallbackList<T> where T: Clone + Send + Sync {
 impl <T> CallbackList<T> where T: Clone + Send + Sync {
     pub fn new()->Self {
         CallbackList { list: Vec::new() }
+    }
+
+    pub fn is_empty (&self)->bool {
+        self.list.is_empty()
     }
 
     pub fn add (&mut self, id: String, cb: Callback<T>) {

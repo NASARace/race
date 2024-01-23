@@ -16,8 +16,10 @@
  */
 
 use chrono::{DateTime,Utc,NaiveDate,NaiveTime,NaiveDateTime,Local,TimeZone};
-use serde::Serializer;
+use serde::{Serialize,Deserialize,Serializer,Deserializer};
+use std::time::Duration;
 use std::ffi::OsStr;
+use parse_duration::parse;
 
 /// return minutes since given given DateTime<Utc> (negative if in future)
 pub fn elapsed_minutes_since (dt: &DateTime<Utc>) -> i64 {
@@ -53,6 +55,19 @@ pub fn ser_short_rfc3339<S: Serializer> (dt: &DateTime<Utc>, s: S) -> Result<S::
     s.serialize_str(&dfm)
 }
 
+pub fn deserialize_duration <'a,D>(deserializer: D) -> Result<Duration,D::Error>
+    where D: Deserializer<'a>
+{
+    String::deserialize(deserializer).and_then( |string| {
+        parse(string.as_str())
+            .map_err( |e| serde::de::Error::custom(format!("{:?}",e)))
+    })
+}
+
+pub fn serialize_duration<S: Serializer> (dur: &Duration, s: S) -> Result<S::Ok, S::Error>  {
+    let dfm = format!("{:?}", dur);
+    s.serialize_str(&dfm)
+}
 
 //--- support for structopt parsers
 

@@ -62,7 +62,7 @@ pub type AbortHandle = task::AbortHandle;
 pub type JoinHandle<T> = task::JoinHandle<T>;
 
 #[inline]
-fn create_mpsc_sender_receiver <MsgType> (bound: usize) -> (MpscSender<MsgType>,MpscReceiver<MsgType>)
+pub fn create_mpsc_sender_receiver <MsgType> (bound: usize) -> (MpscSender<MsgType>,MpscReceiver<MsgType>)
     where MsgType: Send
 {
     kanal::bounded_async::<MsgType>(bound)
