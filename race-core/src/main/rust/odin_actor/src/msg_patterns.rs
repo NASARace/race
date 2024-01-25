@@ -110,35 +110,34 @@ impl <T> AsyncCallback<T> where T: Clone + Send + Sync {
     }
 }
 
-/// this is a specialized async callback with an action that consists of sending a message to
-/// some (possibly 3rd) actor like so
+/// this is a specialized async callback with an action that sends a message back to
+/// some (possibly 3rd) actor. The Fn(T)->M argument returns the message that is sent 
 /// ```
 ///   let htracks = spawn_actor!(...)
 ///   let hserver = spawn_actor!(...);
 ///   ...
-///   htracks.send_msg( Execute( send_msg_callback!( hserver <- |tracks: Vec<Track>| TrackList(tracks)).await?;
+///   htracks.send_msg( Execute( msg_callback!( hserver, |tracks: Vec<Track>| TrackList(tracks)).await?;
 /// ```
 #[macro_export]
-macro_rules! send_msg_callback {
-    { $tgt:ident <- | $d:ident : $t_d:ty | $e:expr } =>  {
+macro_rules! msg_callback {
+    { $tgt:expr, | $d:ident : $t_d:ty | $e:expr } =>  {
         {
-            let $tgt = $tgt.clone();
+            let recipient = $tgt.clone();
             Callback::Async( AsyncCallback::new (
                 move | $d : $t_d | {
-                    let $tgt = $tgt.clone();
-                    Box::pin( $tgt.move_send_msg( $e) )
+                    let recipient = recipient.clone(); // this is called multiple times
+                    Box::pin( recipient.move_send_msg( $e) )
                 }
             ))
         }
     };
-
-    { $tgt:ident <- || $e:expr } =>  {
+    { $tgt:expr, $e:expr } => {
         {
-            let $tgt = $tgt.clone();
+            let recipient = $tgt.clone();
             Callback::Async( AsyncCallback::new (
                 move |()| {
-                    let $tgt = $tgt.clone();
-                    Box::pin( $tgt.move_send_msg( $e) )
+                    let recipient = recipient.clone(); // this is called multiple times
+                    Box::pin( recipient.move_send_msg( $e) )
                 }
             ))
         }
@@ -147,8 +146,13 @@ macro_rules! send_msg_callback {
 
 #[macro_export]
 macro_rules! async_callback {
-    ( |$v:ident : $t:ty| $e:expr ) =>
-    { Callback::Async( AsyncCallback::new( |$v : $t| Box::pin( async move { $e.await } )) ) }
+    { |$v:ident : $t:ty| $e:expr } => { 
+        Callback::Async( AsyncCallback::new( |$v : $t| Box::pin( async move { $e.await } )) ) 
+    };
+
+    { || $e:expr } => {
+        Callback::Async( AsyncCallback::new( |()| Box::pin( async move { $e.await } )) ) 
+    }
 }
 
 

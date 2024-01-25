@@ -366,7 +366,15 @@ pub fn match_actor_msg (item: TokenStream)->TokenStream {
     let new_item: TokenStream = quote! {
         match #msg_name {
             #( #msg_type::#variant_names (#is_mut #msg_name) => #match_actions, )*
-            _ => #msg_name . default_receive_action()
+
+            // this relies on Rust allowing duplicated match patterns and ignoring all but the first
+            #msg_type::_Start_(_) => msg.default_receive_action(),
+            #msg_type::_Ping_(_) => msg.default_receive_action(),
+            #msg_type::_Timer_(_) => msg.default_receive_action(),
+            #msg_type::_Pause_(_) => msg.default_receive_action(),
+            #msg_type::_Resume_(_) => msg.default_receive_action(),
+            #msg_type::_Terminate_(_) => msg.default_receive_action(),
+            //_ => #msg_name . default_receive_action() // this would be a catch-all which would bypass the check for unmatched user messages
         }
     }.into();
     //println!("-----\n{}\n-----", new_item.to_string());
@@ -422,6 +430,7 @@ impl Parse for MsgMatch {
     }
 }
 
+// TODO - this should support default match arms
 fn parse_match_arms (input: ParseStream)->Result<Vec::<MsgMatchArm>> {
     let mut match_arms = Vec::<MsgMatchArm>::new();
     
@@ -492,7 +501,15 @@ pub fn impl_actor (item: TokenStream) -> TokenStream {
             async fn receive (&mut self, msg: #msg_type)->ReceiveAction {
                 match #msg_name {
                     #( #msg_type::#variant_names (#is_mut #msg_name) => #match_actions, )*
-                    _ => #msg_name . default_receive_action()
+
+                    // this relies on Rust allowing duplicated match patterns and ignoring all but the first
+                    #msg_type::_Start_(_) => #msg_name.default_receive_action(),
+                    #msg_type::_Ping_(_) => #msg_name.default_receive_action(),
+                    #msg_type::_Timer_(_) => #msg_name.default_receive_action(),
+                    #msg_type::_Pause_(_) => #msg_name.default_receive_action(),
+                    #msg_type::_Resume_(_) => #msg_name.default_receive_action(),
+                    #msg_type::_Terminate_(_) => #msg_name.default_receive_action(),
+                    //_ => #msg_name . default_receive_action() // this would be a catch-all which would bypass the check for unmatched user messages
                 }
             }
         }

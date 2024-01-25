@@ -103,10 +103,10 @@ async fn main ()->Result<()> {
 
     // note how we construct the action (callback) from a mix of sender/local (server, addr) and receiver/remote (data) info
     let addr = "fortytwo";
-    let action = send_msg_callback!( server <- |data: u64| SendWsMsg{ addr, data});
+    let action = msg_callback!( server, |data: u64| SendWsMsg{ addr, data});
     updater.send_msg( TriggerCallback( action)).await?;
 
-    let action = send_msg_callback!( server <- |data: u64| PublishWsMsg{data});
+    let action = msg_callback!( server, |data: u64| PublishWsMsg{data});
     updater.send_msg( AddUpdateCallback{id: "server".to_string(), action} ).await?;
 
     let action = sync_callback!( |data:u64| { println!("spooky sync action from a distance with {data}"); Ok(()) } );
