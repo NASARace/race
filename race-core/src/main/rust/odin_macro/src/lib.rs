@@ -49,6 +49,7 @@ use syn::{
     parse_macro_input,
     punctuated::{Punctuated},
     parse::{Parse,ParseStream,Result}, token, ExprMethodCall, PathSegment, Stmt, Visibility,
+    token::Mut
 };
 use std::collections::HashSet;
 
@@ -311,21 +312,37 @@ impl Parse for MsgEnum {
 /// ```
 #[proc_macro]
 pub fn match_algebraic_type (item: TokenStream) -> TokenStream {
-    let MsgMatch { msg_name, msg_type, match_arms }: MsgMatch = syn::parse(item).unwrap();
-    let variant_names: Vec<Ident> = get_variant_names_from_match_arms(&match_arms);
-    let is_mut: Vec<&Option<Token![mut]>> = match_arms.iter().map( |a| { &a.is_mut }).collect();
+    let MsgMatch { msg_name, msg_type, match_arms }: MsgMatch = match syn::parse(item) {
+        Ok(msg_match) => msg_match,
+        Err(e) => panic!( "expected \"match_algebraic_type!( 𝑣𝑎𝑟𝑖𝑎𝑏𝑙𝑒𝑛𝑎𝑚𝑒𝑁𝑎𝑚𝑒:𝐸𝑛𝑢𝑚𝑇𝑦𝑝𝑒 as 𝑉𝑎𝑟𝑖𝑎𝑛𝑡𝑇𝑦𝑝𝑒 => {{..}}, ..)\", got {:?}", e)
+    };
+
+    let match_patterns: Vec<TokenStream2> = get_match_patterns(&msg_name, &msg_type, &match_arms);
     let match_actions: Vec<&MsgMatchAction> = match_arms.iter().map( |a| { &a.match_action }).collect();
 
     let new_item: TokenStream = quote! {
         match #msg_name {
             #(
-                #msg_type::#variant_names (#is_mut #msg_name) => #match_actions
+                #match_patterns => #match_actions
             ),*
         }
     }.into();
     //println!("-----\n{}\n-----", new_item.to_string());
 
     new_item
+}
+
+fn get_match_patterns(msg_name: &Ident, msg_type: &Path, match_arms: &Vec<MsgMatchArm>)->Vec<TokenStream2> {
+    match_arms.iter().map(|a| {
+        match &a.variant_spec {
+            VariantSpec::Type(path) => {
+                let variant_name = get_variant_name_from_match_arm(a);
+                let maybe_mut = a.maybe_mut;
+                quote!( #msg_type::#variant_name (#maybe_mut #msg_name))
+            }
+            VariantSpec::Wildcard => { quote!(_) }
+        }
+    }).collect()
 }
 
 /// the odin_actor specific version of the general [`match_algebraic_type`] macro.
@@ -360,7 +377,7 @@ pub fn match_algebraic_type (item: TokenStream) -> TokenStream {
 pub fn match_actor_msg (item: TokenStream)->TokenStream {
     let MsgMatch { msg_name, msg_type, match_arms }: MsgMatch = syn::parse(item).unwrap();
     let variant_names: Vec<Ident> = get_variant_names_from_match_arms(&match_arms);
-    let is_mut: Vec<&Option<Token![mut]>> = match_arms.iter().map( |a| { &a.is_mut }).collect();
+    let is_mut: Vec<&Option<Token![mut]>> = match_arms.iter().map( |a| { &a.maybe_mut }).collect();
     let match_actions: Vec<&MsgMatchAction> = match_arms.iter().map( |a| { &a.match_action }).collect();
 
     let new_item: TokenStream = quote! {
@@ -382,12 +399,14 @@ pub fn match_actor_msg (item: TokenStream)->TokenStream {
     new_item
 }
 
+fn get_variant_name_from_match_arm (a: &MsgMatchArm)->Ident {
+    let ps = variant_spec_to_string( &a.variant_spec);
+    let ps_mangled = mangle(ps.as_str());
+    Ident::new( &ps_mangled.as_str(), Span::call_site())
+}
+
 fn get_variant_names_from_match_arms (match_arms: &Vec<MsgMatchArm>)->Vec<Ident> {
-    match_arms.iter().map( |a| {
-        let ps = path_to_string( &a.variant_type);
-        let ps_mangled = mangle(ps.as_str());
-        Ident::new( &ps_mangled.as_str(), Span::call_site())
-    }).collect()
+    match_arms.iter().map( |a| get_variant_name_from_match_arm(a)).collect()
 }
 
 struct MsgMatch {
@@ -397,8 +416,8 @@ struct MsgMatch {
 }
 
 struct MsgMatchArm {
-    variant_type: Path,
-    is_mut: Option<Token![mut]>,
+    variant_spec: VariantSpec,
+    maybe_mut: Option<Token![mut]>,
     match_action: MsgMatchAction,
 }
 
@@ -430,17 +449,25 @@ impl Parse for MsgMatch {
     }
 }
 
-// TODO - this should support default match arms
+// TODO - this should be consistent over all our ADTs
 fn parse_match_arms (input: ParseStream)->Result<Vec::<MsgMatchArm>> {
     let mut match_arms = Vec::<MsgMatchArm>::new();
     
     while !input.is_empty() {
         let lookahead = input.lookahead1();
-        let is_mut: Option<Token![mut]> = if lookahead.peek( Token![mut]) {
-            Some(input.parse()?)
-        } else { None };
-
-        let variant_type: Path = input.parse()?;
+        let (variant_spec,is_mut) = if lookahead.peek( Token![_]) {
+            let _: Token![_] = input.parse()?;
+            (VariantSpec::Wildcard,Option::<Mut>::None)
+        } else {
+            let is_mut: Option<Token![mut]> = if lookahead.peek( Token![mut]) {
+                Some(input.parse()?)
+            } else { None };
+    
+            let path: Path = input.parse()?;
+            (VariantSpec::Type(path),is_mut)
+        };
+        
+        //--- the match 
         let _: Token![=>] = input.parse()?;
         let lookahead = input.lookahead1();
         let match_action = if lookahead.peek(Ident) {
@@ -461,11 +488,17 @@ fn parse_match_arms (input: ParseStream)->Result<Vec::<MsgMatchArm>> {
             let _: Token![,] = input.parse()?;
         }
 
-        match_arms.push( MsgMatchArm { variant_type, is_mut, match_action } );
+        match_arms.push( MsgMatchArm { variant_spec, maybe_mut: is_mut, match_action } );
     }
 
     Ok(match_arms)
 }
+
+enum VariantSpec {
+    Type(Path),
+    Wildcard
+}
+
 
 /* #endregion match macros */
 
@@ -488,7 +521,7 @@ pub fn impl_actor (item: TokenStream) -> TokenStream {
     };
 
     let variant_names: Vec<Ident> = get_variant_names_from_match_arms(&match_arms);
-    let is_mut: Vec<&Option<Token![mut]>> = match_arms.iter().map( |a| { &a.is_mut }).collect();
+    let is_mut: Vec<&Option<Token![mut]>> = match_arms.iter().map( |a| { &a.maybe_mut }).collect();
     let match_actions: Vec<&MsgMatchAction> = match_arms.iter().map( |a| { &a.match_action }).collect();
 
     let typevars: Vec<&Path> = if let Some(ref wc) = where_clause { collect_typevars( wc) } else { Vec::new() }; 
@@ -680,6 +713,18 @@ fn expand_msg_match_action (ts: TokenStream, ret_val: TokenStream2)->TokenStream
     }.into();
 
     new_item
+}
+
+fn variant_spec_to_string (var_spec: &VariantSpec)->String {
+    match var_spec {
+        VariantSpec::Type(path) => {
+            let ts: TokenStream = quote! { #path }.into(); // ..a bit lazy
+            ts.to_string()
+        }
+        VariantSpec::Wildcard => {
+            "_".to_string()
+        }
+    }
 }
 
 fn path_to_string (path: &Path)->String {
