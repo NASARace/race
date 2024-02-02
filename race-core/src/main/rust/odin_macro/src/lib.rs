@@ -41,15 +41,16 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use proc_macro2::{
 	TokenStream as TokenStream2,
-    Spacing, Span, Punct
+    Spacing, Span, Punct, TokenTree
 };
 use quote::{quote,format_ident,ToTokens};
 use syn::{ 
 	self,Ident,Path,ItemStruct,ItemEnum,ItemFn,FnArg,Token,Type,TypePath,Block,ExprMacro,WhereClause,WherePredicate,PredicateType,Expr,
     parse_macro_input,
     punctuated::{Punctuated},
-    parse::{Parse,ParseStream,Result}, token, ExprMethodCall, PathSegment, Stmt, Visibility,
-    token::Mut
+    parse::{Lookahead1, Parse, ParseStream, Result}, token, ExprMethodCall, PathSegment, Stmt, Visibility,
+    token::Mut,
+    visit::{self, Visit}
 };
 use std::collections::HashSet;
 
@@ -144,37 +145,68 @@ impl Parse for ServiceComposition {
 /// macro to define algebraic types (using a Haskell'ish syntax), which are mapped into enums
 /// whose variant names are transparent (automatically generated from element types).
 /// 
-/// Note the variant names are never supposed to be presented to the user if respective 
-/// enum values are matched with the corresponding [`match_algebraic_type`] macro
+/// variant names are computed from their respective types and are implemented as simple 1-element
+/// tuple structs. The encoding uses unicode characters that resemble type tokens ('<' etc) but
+/// are not likely to be used in normal code. We choose readability over typing since the user
+/// is not supposed to enter those variant names manually and use the [`match_algebraic_type`] macro
+/// instead (which uses the same encoding of types).
 /// 
 /// Note: if message variants use path types (e.g. `std::vec::Vec`) the same notation
 /// has to be used in both [`define_algebraic_type`] and [`match_algebraic_type`] 
 /// 
+/// The macro supports an optional derive clause
+/// ```
+///     define_algebraic_type! { MyEnum: Trait1,... = ... }
+/// ```
+/// that is expanded into a respective `#[derive(Trait1,..)` macro for the resulting enum.
+/// 
+/// As a convenience feature it also supports optional method definitions that are expanded for
+/// all variants if their bodies include `__` (double underscore) as variable names. If present these
+/// methods are turned into an inherent impl for the enum. 
+/// 
 /// Example:
 /// ```
+/// struct A { id: u64 }
+/// struct B<T> { id: u64, v: T }
+/// 
 /// define_algebraic_type! {
-///     pub MyMsg = A | B<std::vec::Vec<(u32,&'static str)>>
+///     pub MyMsg: Clone = A | B<std::vec::Vec<(u32,&'static str)>>
+///     pub fn id(&self)->u64 { __.id }
+///     pub fn description()->'static str { "my message enum" }
 /// }
 /// ```
 /// This is expanded into
 /// ```
 /// #[derive(Debug)]
+/// #[derive(Clone)]
 /// pub enum MyMsg {
 ///     A (A),
-///     BʕstdːːvecːːVecʕʃu32ˎᴿʽstaticˑstrʅʔʔ (B<std::vec::Vec<(u32,&'static str)>>),
+///     BᐸstdːːvecːːVecᐸ𛰙u32ˎᴿʽstaticˑstr𛰚ᐳᐳ (B<std::vec::Vec<(u32,&'static str)>>),
+/// }
+/// impl MyMsg {
+///     pub fn id(&self)->u64 {
+///         match self {
+///             Self::A (__) => { __.id }
+///             Self::BᐸstdːːvecːːVecᐸ𛰙u32ˎᴿʽstaticˑstr𛰚ᐳᐳ (__) => { _.id }
+///         }
+///     }
 /// }
 /// impl From<A> for MyMsg {...}
 /// impl From<B<std::vec::Vec<(u32,&'static str)>>> for MyMsg {...}
 /// ```
 #[proc_macro]
 pub fn define_algebraic_type (item: TokenStream) -> TokenStream {
-    let MsgEnum {visibility, name, variant_types }= syn::parse(item).unwrap();
+    let AdtEnum {visibility, name, derives, variant_types, mut methods }= syn::parse(item).unwrap();
     let mut variant_names = get_variant_names_from_types(&variant_types);
+    let derive_clause = if derives.is_empty() { quote!{} } else { quote! { #[derive( #( #derives ),* )] } };
+    let inherent_impl = if methods.is_empty() { quote!{} } else { build_inherent_impl( &name, &variant_names, &mut methods) };
 
     let new_item: TokenStream = quote! {
+        #derive_clause
         #visibility enum #name {
             #( #variant_names ( #variant_types ) ),*
         }
+        #inherent_impl
         #(
             impl From<#variant_types> for #name {
                 fn from (v: #variant_types)->Self { #name::#variant_names(v) }
@@ -183,13 +215,65 @@ pub fn define_algebraic_type (item: TokenStream) -> TokenStream {
         impl std::fmt::Debug for #name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
-                    #( #name::#variant_names (msg) => write!(f, "{:?}", msg), )*
+                    #( Self::#variant_names (msg) => write!(f, "{:?}", msg), )*
                 }
             }
         }
     }.into();
     //println!("-----\n{}\n-----", new_item.to_string());
     new_item
+}
+
+fn build_inherent_impl (enum_name: &Ident, variant_names: &Vec<Ident>, methods: &Vec<ItemFn>)->TokenStream2 {
+    let mthds: Vec<TokenStream2> = methods.iter().map( |m| build_enum_method( variant_names, m)).collect();
+
+    quote! {
+        impl #enum_name {
+            #( #mthds )*
+        }
+    }
+}
+
+fn build_enum_method (variant_names: &Vec<Ident>, method: &ItemFn)->TokenStream2 {
+    let vis = &method.vis;
+    let sig = &method.sig;
+    let blk = &method.block;
+
+    let mut block_analyzer = BlockAnalyzer::new();
+    block_analyzer.visit_block(blk);
+
+    if block_analyzer.uses_variant { // expand for all variants
+        // variant name placeholders:
+        // unfortunately we cannot use a single '_' wildcard since it is not a normal ident and cannot be replaced easily
+        // we also might use normal wildcards in the function body.
+        // the next best choice is '__', which is actually a valid ident and rarely used 
+
+        quote! {
+            #vis #sig {
+                match self {
+                    #( Self::#variant_names ( __ ) => #blk )*
+                }
+            }
+        }
+    } else { // expand verbatim
+        quote! {
+            #vis #sig #blk
+        }
+    }
+}
+
+struct BlockAnalyzer { uses_variant: bool }
+impl BlockAnalyzer {
+    fn new()->Self { BlockAnalyzer { uses_variant: false } }
+}
+
+impl<'a> Visit<'a> for BlockAnalyzer {
+    fn visit_ident(&mut self, ident: &'a Ident) {
+        if ident.to_string() == "__" { 
+            self.uses_variant = true;
+        }
+        visit::visit_ident(self, ident)
+    }
 }
 
 /* #endregion define_algebraic_type */
@@ -219,7 +303,7 @@ pub fn define_algebraic_type (item: TokenStream) -> TokenStream {
 /// 
 #[proc_macro]
 pub fn define_actor_msg_type (item: TokenStream) -> TokenStream {
-    let MsgEnum {visibility, name, mut variant_types }= syn::parse(item).unwrap();
+    let AdtEnum {visibility, name, derives, mut variant_types, methods }= syn::parse(item).unwrap();
     for var_type in get_sys_msg_types() {
         variant_types.push(var_type)
     }
@@ -229,7 +313,10 @@ pub fn define_actor_msg_type (item: TokenStream) -> TokenStream {
         variant_names.push(var_name)
     }
 
+    let derive_clause = if derives.is_empty() { quote!{} } else { quote! { #[derive( #( #derives ),* )] } };
+
     let new_item: TokenStream = quote! {
+        #derive_clause
         #visibility enum #name {
             #( #variant_names ( #variant_types ) ),*
         }
@@ -270,27 +357,44 @@ fn get_variant_names_from_types (variant_types: &Vec<Path>)->Vec<Ident> {
 }
 
 #[derive(Debug)]
-struct MsgEnum {
+struct AdtEnum {
     visibility: Visibility,
     name: Ident,
-    variant_types: Vec<Path>
+    derives: Vec<Path>,
+    variant_types: Vec<Path>,
+    methods: Vec<ItemFn>
 }
 
-impl Parse for MsgEnum {
+impl Parse for AdtEnum {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let visibility: Visibility = parse_visibility(input);
         let name: Ident = input.parse()?;
+        let mut derives: Vec<Path> = Vec::new();
 
-        let lookahead = input.lookahead1();
+        let mut lookahead = input.lookahead1();
+        if lookahead.peek(Token![:]) {
+            input.parse::<Token![:]>()?;
+            derives = Punctuated::<Path,Token![,]>::parse_separated_nonempty(input)?.into_iter().collect();
+            lookahead = input.lookahead1();
+        }
+
         let variant_types: Vec<Path> = if lookahead.peek(Token![=]) {
-            let _: Token![=] = input.parse()?;
-            let variant_types = Punctuated::<Path,Token![|]>::parse_terminated(input)?;
+            input.parse::<Token![=]>()?;
+            let variant_types = Punctuated::<Path,Token![|]>::parse_separated_nonempty(input)?;
             variant_types.into_iter().collect()
         } else {
             Vec::new()
         };
         
-        Ok( MsgEnum { visibility, name, variant_types })
+        let mut methods: Vec<ItemFn> = Vec::new();
+        lookahead = input.lookahead1();
+        while !input.is_empty() && (lookahead.peek(Token![fn]) || lookahead.peek(Token![pub])) {
+            let mth: ItemFn = input.parse()?;
+            methods.push(mth);
+            lookahead = input.lookahead1()
+        }
+
+        Ok( AdtEnum { visibility, name, derives, variant_types, methods })
     }
 }
 
@@ -532,6 +636,7 @@ pub fn impl_actor (item: TokenStream) -> TokenStream {
     let new_item: TokenStream = quote! {
         impl #typevar_tokens ActorReceiver<#msg_type> for Actor<#state_type,#msg_type> #where_clause {
             async fn receive (&mut self, msg: #msg_type)->ReceiveAction {
+                #[allow(unused_variables)] // some match arms might not use msg_name
                 match #msg_name {
                     #( #msg_type::#variant_names (#is_mut #msg_name) => #match_actions, )*
 
@@ -738,6 +843,16 @@ fn path_to_string (path: &Path)->String {
 /// The mapping only needs to be locally unique, i.e. it should not collide with a user-provided
 /// type. For that reason the mapping should not use any commonly used chars but still produce
 /// reasonably readable Debug output. 
+/// symmetric candidates:
+///     Ͼ \u{03fe} , Ͽ \u{03ff}
+///     ᄼ \u{113c} , ᄾ \u{113e}
+///     ᐊ \u{140a} , ᐅ \u{1405} 
+///     ᐸ \u{1438} , ᐳ \u{1433}
+///     ᑕ \u{1455} , ᑐ \u{1450}
+///     ʕ \u{0295} , ʔ \u{0294}
+///     ʃ \u{0283} , ʅ \u{0285}
+///     𐅁 \u{10141} ,  𐅀 \u{10140}
+///     𛰙 \u{1bc19} ,  𛰚 \u{1bc1a}
 /// Candidates from https://util.unicode.org/UnicodeJsps/list-unicodeset.jsp?a=[:XID_Continue=Yes:]
 fn mangle (s: &str)->String {
     let mut r = String::with_capacity(s.len());
@@ -745,11 +860,11 @@ fn mangle (s: &str)->String {
     for c in s.chars() {
         match c {
             ':' => r.push('\u{02d0}'), // 'ː'
-            '<' => r.push('\u{0295}'), // 'ʕ' 
-            '>' => r.push('\u{0294}'), // 'ʔ'
+            '<' => r.push('\u{1438}'), // 'ᐸ' 
+            '>' => r.push('\u{1433}'), // 'ᐳ'
             ',' => r.push('\u{02ce}'), // 'ˎ'
-            '(' => r.push('\u{0283}'), // 'ʃ'
-            ')' => r.push('\u{0285}'), // 'ʅ'
+            '(' => r.push('\u{1bc19}'), // '𛰙'
+            ')' => r.push('\u{1bc1a}'), // '𛰚'
             '&' => r.push('\u{1d3f}'), // 'ᴿ'
             '\'' => { lifetime = true; r.push('\u{02bd}') }, // 'ʽ'
             ' ' => if lifetime { lifetime = false; r.push('\u{02d1}') }, // 'ˑ'

@@ -16,9 +16,6 @@
  */
 #![allow(unused)]
 
-//! TODO - still need to support vault (encrypted config with HashMap), plus vaultable deserializers and string accessors
-//! (the latter one being more secure since they don't copy the sensitive data)
-
 pub mod errors;
 use crate::errors::{OdinConfigError,Result as ConfigResult};
 
@@ -31,6 +28,7 @@ use serde::{
 };
 use parse_duration::parse;
 use directories::ProjectDirs;
+use odin_common::fs::ensure_dir;
 
 #[derive(Debug)]
 pub struct AppMetaData {
@@ -38,46 +36,92 @@ pub struct AppMetaData {
     organization: String,
     application: String,
 
-    project_dirs: ProjectDirs
+    config_dir: PathBuf,
+    cache_dir: PathBuf,
+    data_dir: PathBuf,
 }
 
 static APP_METADATA: OnceLock<AppMetaData> = OnceLock::new();
 
-pub fn initialize (qualifier: &str, organization: &str, application: Option<&str>)->ConfigResult<()> {
+pub fn init_from_os (qualifier: &str, organization: &str, application: Option<&str>)->ConfigResult<()> {
     let qualifier = String::from(qualifier);
     let organization = String::from(organization);
-    let application = if let Some(app) = application {
-        String::from(app)
-    } else {
-        if let Ok(pb) = std::env::current_exe() {
-            if let Some(fname) = pb.as_path().file_name().and_then(|oss| oss.to_str()) {
-                String::from(fname)
-            } else {
-                return Err( OdinConfigError::ConfigInitError(format!("executable filename cannot be converted: {:?}",pb)))
-            }
-        } else {
-            return Err( OdinConfigError::ConfigInitError("no executable filename".to_string()))
-        }
-    };
+    let application = if let Some(app) = application { String::from(app) } else { app_from_env()? };
 
     if let Some(project_dirs) = ProjectDirs::from(qualifier.as_str(), organization.as_str(), application.as_str()) {
-        let app_metadata = AppMetaData { qualifier, organization, application, project_dirs };
+        let config_dir = project_dirs.config_dir().to_path_buf();
+        let data_dir = project_dirs.data_dir().to_path_buf();
+        let cache_dir = project_dirs.cache_dir().to_path_buf();
+
+        let app_metadata = AppMetaData { qualifier, organization, application, config_dir, cache_dir, data_dir };
         APP_METADATA.set( app_metadata).map_err(|e| OdinConfigError::ConfigInitError(format!("application metadata already set")))
     } else {
         Err( OdinConfigError::ConfigInitError(format!("no home dir for {}.{}.{}", qualifier,organization,application)))
     }
 }
 
+/// watch out - this overrides XDG and should only be used for testing or special installations
+pub fn init_from_project_root_dir (path: impl Into<PathBuf>, qualifier: &str, organization: &str, application: Option<&str>)->ConfigResult<()> {
+    let qualifier = String::from(qualifier);
+    let organization = String::from(organization);
+    let application = if let Some(app) = application { String::from(app) } else { app_from_env()? };
+    let project_dir = path.into().join(&application);
+
+    let config_dir = project_dir.join("config");
+    let data_dir = project_dir.join("data");
+    let cache_dir = project_dir.join("cache");
+
+    let app_metadata = AppMetaData { qualifier, organization, application, config_dir, cache_dir, data_dir };
+    APP_METADATA.set( app_metadata).map_err(|e| OdinConfigError::ConfigInitError(format!("application metadata already set")))
+}
+
+fn app_from_env ()->ConfigResult<String> {
+    if let Ok(pb) = std::env::current_exe() {
+        if let Some(fname) = pb.as_path().file_name().and_then(|oss| oss.to_str()) {
+            Ok(String::from(fname))
+        } else {
+            Err( OdinConfigError::ConfigInitError(format!("executable filename cannot be converted: {:?}",pb)))
+        }
+    } else {
+        Err( OdinConfigError::ConfigInitError("no executable filename".to_string()))
+    }
+}
+
 pub fn get_app_metadata ()->Option<&'static AppMetaData> { APP_METADATA.get() }
 
-pub fn ensure_config_dir ()->ConfigResult<String> {
+pub fn ensure_dirs ()->ConfigResult<()> {
     if let Some(md) = APP_METADATA.get() {
-        let path = md.project_dirs.config_dir();
-        if !path.is_dir() {
-            std::fs::create_dir(path)?;
-        }
-        Ok(path.as_os_str().to_string_lossy().to_string())
+        ensure_dir( &md.cache_dir)?;
+        ensure_dir( &md.data_dir)?;
+        ensure_dir( &md.cache_dir)?;
+        Ok(())
+    } else {
+        Err(OdinConfigError::ConfigNotInitialized)
+    }
+}
 
+pub fn config_dir()->ConfigResult<&'static PathBuf> {
+    if let Some(md) = APP_METADATA.get() {
+        ensure_dir( &md.config_dir)?;
+        Ok(&md.config_dir)
+    } else {
+        Err(OdinConfigError::ConfigNotInitialized)
+    }
+}
+
+pub fn data_dir()->ConfigResult<&'static PathBuf> {
+    if let Some(md) = APP_METADATA.get() {
+        ensure_dir( &md.data_dir)?;
+        Ok(&md.data_dir)
+    } else {
+        Err(OdinConfigError::ConfigNotInitialized)
+    }
+}
+
+pub fn cache_dir()->ConfigResult<&'static PathBuf> {
+    if let Some(md) = APP_METADATA.get() {
+        ensure_dir( &md.cache_dir)?;
+        Ok(&md.cache_dir)
     } else {
         Err(OdinConfigError::ConfigNotInitialized)
     }
@@ -100,7 +144,7 @@ pub fn load_config <C:DeserializeOwned> (pathname: impl AsRef<Path>)->ConfigResu
 
 pub fn load_from_config_dir <C:DeserializeOwned> (fname: impl AsRef<Path>)->ConfigResult<C> {
     if let Some(md) = APP_METADATA.get() {
-        let dir = md.project_dirs.config_dir();
+        let dir = &md.config_dir;
         if !dir.is_dir() {
            Err( OdinConfigError::ConfigDirNotFound(dir.as_os_str().to_string_lossy().to_string()) )
         } else {
@@ -137,32 +181,3 @@ pub fn store_config <S: Serialize> (conf: &S, dir: impl AsRef<Path>, fname: impl
 
     Ok(pathname)
 }
-
-/* #region serde support for types not directly supported by RON ***********************************************/
-/*
- * Note: don't change the Result type / map errors since the #[derive(Deserialize,Serialize)] macros would fail
- * error mapping has to occur in the function that calls serialization/deserialization 
- */
-
- pub fn deserialize_duration <'a,D>(deserializer: D) -> std::result::Result<Duration,D::Error>
- where D: Deserializer<'a>
-{
- String::deserialize(deserializer).and_then( |string| {
-     parse(string.as_str()).map_err( |e| serde::de::Error::custom(format!("{:?}",e)))
- })
-}
-
-pub fn serialize_duration <S: Serializer> (dur: &Duration, s: S) -> std::result::Result<S::Ok, S::Error>  {
-    let dfm = format!("{:?}", dur); // let Duration choose the time unit
-    s.serialize_str(&dfm)
-}
-
-pub fn serialize_duration_secs <S: Serializer> (dur: &Duration, s: S) -> std::result::Result<S::Ok, S::Error>  {
- let dfm = format!("{}sec", dur.as_secs());
- s.serialize_str(&dfm)
-}
-//... add millis, minutes, hours
-
-//... and more to follow (DateTime, LatLon, bounding boxes etc)
-
-/* #endregion serde support */

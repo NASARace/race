@@ -64,9 +64,31 @@ pub fn deserialize_duration <'a,D>(deserializer: D) -> Result<Duration,D::Error>
     })
 }
 
+pub fn deserialize_optional_duration <'a,D>(deserializer: D) -> Result<Option<Duration>,D::Error> 
+    where D: Deserializer<'a>
+{
+    let s: Option<String> = Option::deserialize(deserializer)?;
+    if let Some(s) = s {
+        let d =  parse(s.as_str()).map_err( |e| serde::de::Error::custom(format!("{:?}",e)))?;
+        return Ok( Some(d) )
+    }
+
+    Ok(None)
+}
+
 pub fn serialize_duration<S: Serializer> (dur: &Duration, s: S) -> Result<S::Ok, S::Error>  {
     let dfm = format!("{:?}", dur);
     s.serialize_str(&dfm)
+}
+
+pub fn serialize_optional_duration<S>(dur: &Option<Duration>, s: S) -> Result<S::Ok, S::Error>
+    where S: Serializer,
+{
+    if let Some(ref d) = *dur {
+        let dfm = format!("{:?}", dur);
+        return s.serialize_str(&dfm);
+    }
+    s.serialize_none()
 }
 
 //--- support for structopt parsers

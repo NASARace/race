@@ -12,3 +12,5 @@ serde = { version = "*", features = ["derive"] }
 parse_duration = "*"
 thiserror = "*"
 directories = "*"
+
+odin_common = { workspace = true }

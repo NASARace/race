@@ -18,18 +18,24 @@
 use std::io;
 use std::fs;
 use std::io::{Read, Write};
+use std::time::{SystemTime,Duration};
 use io::ErrorKind::*;
 use std::fs::File;
 use std::path::{Path,PathBuf};
 
-use crate::macros::{io_error};
+use crate::macros::io_error;
 
 type Result<T> = std::result::Result<T,std::io::Error>;
 
-/// check if dir pathname exists and is writable, try to create dir otherwise
-pub fn ensure_writable_dir (dir: &str) -> io::Result<()> {
-    let path = Path::new(dir);
+pub fn ensure_dir (path: &Path)->io::Result<()> {
+    if !path.is_dir() {
+        std::fs::create_dir_all(path)?;
+    }
+    Ok(())
+}
 
+/// check if dir pathname exists and is writable, try to create dir otherwise
+pub fn ensure_writable_dir (path: &Path) -> io::Result<()> {
     if path.is_dir() {
         let md = fs::metadata(&path)?;
         if md.permissions().readonly() {
@@ -39,7 +45,7 @@ pub fn ensure_writable_dir (dir: &str) -> io::Result<()> {
         }
 
     } else {
-        fs::create_dir(&path)
+        fs::create_dir_all(path)
     }
 }
 
@@ -152,10 +158,31 @@ pub fn get_filename_extension<'a> (filename: &'a str) -> Option<&'a str> {
     path.extension().and_then( |ostr| ostr.to_str())
 }
 
-pub fn ensure_dir <P: AsRef<Path>> (p: P) -> Result<()> {
-    if !p.as_ref().is_dir() {
-        std::fs::create_dir(p)
+
+pub fn remove_old_files<T> (dir: &T, max_age: Duration)->Result<usize> where T: AsRef<Path> {
+    let dir: &Path = dir.as_ref();
+
+    if dir.is_dir() {
+        let now = SystemTime::now();
+        let mut n_removed = 0;
+
+        for e in fs::read_dir(dir)? {
+            let e = e?;
+            let path = e.path();
+            if path.is_file() {
+                let meta = fs::metadata(&path)?;
+                if let Ok(last_mod) = meta.modified() {
+                    if let Ok(age) = now.duration_since(last_mod) {
+                        if age > max_age {
+                            if fs::remove_file(&path).is_ok() { n_removed += 1 }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(n_removed)
     } else {
-        Ok(())
+        Err( io_error!(NotFound, "dir {:?}", dir))
     }
 }
