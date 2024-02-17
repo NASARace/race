@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 chrono = "*"
-serde = "*"
+serde = { version="*", features = ["derive"] }
 num = "*"
 thiserror = "*"
 parse_duration = "*"

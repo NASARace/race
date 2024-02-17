@@ -29,10 +29,10 @@
 /// let q: Option<i64> = None;
 /// fn foo (i: i64) -> Result<String,SomeError> {..}
 /// ...
-/// // purely for side effects
+/// // purely for side effects if all matches succeed
 /// if_let! {
 ///     Some(a) = p;         // binds 'a'
-///     Ok(b) = foo(a) => {  // not evaluated of first match clause fails
+///     Ok(b) = foo(a) => {  // not evaluated if first match clause fails
 ///         println!("a={}, b={}", a,b);
 ///     }
 /// };

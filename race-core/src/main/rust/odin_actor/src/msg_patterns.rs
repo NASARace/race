@@ -17,13 +17,9 @@
 
 #![allow(unused)]
 
- use std::{future::Future,fmt::Debug,time::Duration, pin::Pin, ops::Fn};
- use crate::{DynMsgReceiver, MsgReceiver,errors::{Result, OdinActorError}};
+use std::{future::{Future,Ready,ready}, fmt::Debug, time::Duration, pin::Pin, ops::Fn};
+use crate::{DynMsgReceiver, MsgReceiver,errors::{Result, OdinActorError}};
 
-/// common interface between Query and OneshotQuery
-pub trait Respondable<R> where R: Debug + Send {
-    fn respond(self, r:R)->impl Future<Output=Result<()>>;
-}
 
 /* #region MsgSubscriber *******************************************************************************/
 
@@ -79,149 +75,158 @@ impl<M> MsgSubscriptions<M>
 
 /* #endregion MsgSubscriber */
 
-/* #region callback *********************************************************************/
+/* #region callbacks ***********************************************************************************/
 
-#[derive(Debug)]
-pub enum Callback<T> where T: Clone + Send + Sync {
+pub enum Callback<T> {
     Sync(SyncCallback<T>),
-    Async(AsyncCallback<T>)
+    Async(AsyncCallback<T>),
 }
 
-impl <T> Callback<T> where T: Clone + Send + Sync {
-    pub async fn trigger (&self, data: T)->Result<()> {
+impl<T> Callback<T> {
+    pub async fn execute (&self, v: &T)->Result<()> {
         match self {
-            Callback::Sync(cb) => (cb.action)(data),
-            Callback::Async(cb) => (cb.action)(data).await
+            Callback::Sync(cb) => (cb.action)(v),
+            Callback::Async(cb) => (cb.action)(v).await,
         }
     }
 }
 
-//--- Async
-
-pub type CallbackFuture = Pin<Box<dyn Future<Output = Result<()>> + Send>>;
-pub type AsyncCallbackFn<T> = dyn (Fn(T)->CallbackFuture) + Send + Sync;
-
-pub struct AsyncCallback<T> where T: Clone + Send + Sync {
-    action: Box<AsyncCallbackFn<T>>
+impl <T> From<AsyncCallback<T>> for Callback<T> {
+    fn from (cb: AsyncCallback<T>)->Self { Callback::Async(cb) }
 }
-impl <T> AsyncCallback<T> where T: Clone + Send + Sync {
-    pub fn new<F> (action: F)->Self where F: (Fn(T)->CallbackFuture) + Send + Sync + 'static {
-        AsyncCallback { action: Box::new(action) }
+impl <T> From<SyncCallback<T>> for Callback<T> {
+    fn from (cb: SyncCallback<T>)->Self { Callback::Sync(cb) }
+}
+
+impl<T> Debug for Callback<T> {
+    fn fmt (&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Callback::Sync(cb) => write!(f, "SyncCallback<{}>(..)", std::any::type_name::<T>()),
+            Callback::Async(cb) => write!(f, "AsyncCallback<{}>(..)", std::any::type_name::<T>())
+        }
     }
 }
 
-/// this is a specialized async callback with an action that sends a message back to
-/// some (possibly 3rd) actor. The Fn(T)->M argument returns the message that is sent 
-/// ```
-///   let htracks = spawn_actor!(...)
-///   let hserver = spawn_actor!(...);
-///   ...
-///   htracks.send_msg( Execute( msg_callback!( hserver, |tracks: Vec<Track>| TrackList(tracks)).await?;
-/// ```
+//--- async callbacks
+
+pub type AsyncCallbackFuture = Pin<Box<dyn Future<Output = Result<()>> + Send>>;
+pub trait AsyncCallbackFn<T> = (Fn(T)->AsyncCallbackFuture) + Send + Sync;
+
+pub struct AsyncCallback<T> {
+    pub action: Box<dyn for<'a> AsyncCallbackFn<&'a T>>
+}
+
+impl <T> AsyncCallback<T> {
+    pub async fn execute (&self, data: &T)->Result<()> {
+        (&self.action)(data).await
+    }
+}
+
 #[macro_export]
-macro_rules! msg_callback {
-    { $tgt:expr, | $d:ident : $t_d:ty | $e:expr } =>  {
-        {
-            let recipient = $tgt.clone();
-            Callback::Async( AsyncCallback::new (
-                move | $d : $t_d | {
-                    let recipient = recipient.clone(); // this is called multiple times
-                    Box::pin( recipient.move_send_msg( $e) )
-                }
-            ))
-        }
-    };
-    { $tgt:expr, $e:expr } => {
-        {
-            let recipient = $tgt.clone();
-            Callback::Async( AsyncCallback::new (
-                move |()| {
-                    let recipient = recipient.clone(); // this is called multiple times
-                    Box::pin( recipient.move_send_msg( $e) )
-                }
-            ))
-        }
-    };
+macro_rules! async_action {
+    ($b: block) => { Box::pin( async move $b ) };
+    ($e: expr) => { Box::pin( async move { $e }) };
 }
 
 #[macro_export]
 macro_rules! async_callback {
-    { |$v:ident : $t:ty| $e:expr } => { 
-        Callback::Async( AsyncCallback::new( |$v : $t| Box::pin( async move { $e.await } )) ) 
+    ( |$v:ident $(: $t:ty)?| $b:block ) => {
+        AsyncCallback { action: Box::new( move |$v $(: $t )?| $b ) }
     };
+    ( |$v:ident $(: $t:ty)?| $e:expr ) => {
+        AsyncCallback { action: Box::new( move |$v $(: $t )?| async_action!( $e ) ) }
+    };
+}
 
-    { || $e:expr } => {
-        Callback::Async( AsyncCallback::new( |()| Box::pin( async move { $e.await } )) ) 
+#[macro_export]
+macro_rules! send_msg_callback {
+    ( $rcv:ident, |$v:ident $(: $t:ty)?| $e:expr ) => {
+        {
+            let rcv = $rcv.clone();
+            AsyncCallback{ action: 
+                Box::new( move |$v $(: $t)?| {
+                    let msg = $e; 
+                    let rcv = rcv.clone();
+                    async_action!( rcv.send_msg( msg).await)
+                })
+            }
+        }
     }
 }
 
+//--- sync callbacks (try_send_msg, logging etc.)
 
-// we need a Debug impl so that we can have messages that have Callback objects as payloads
-impl<T> Debug for AsyncCallback<T> where T: Clone + Send + Sync {
-    fn fmt (&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "AsyncCallback<{}>(..)", std::any::type_name::<T>())
-    }
-}
+pub trait SyncCallbackFn<T> = (Fn(T)->Result<()>) + Send + Sync;
 
-//--- Sync
-
-pub type SyncCallbackFn<T> = dyn (Fn(T)->Result<()>) + Send + Sync;
-
-pub struct SyncCallback<T> where T: Clone + Send {
-    action: Box<SyncCallbackFn<T>>
-}
-impl <T> SyncCallback<T> where T: Clone + Send {
-    pub fn new<F> (action: F)->Self where F: (Fn(T) -> Result<()>) + Send + Sync + 'static {
-        SyncCallback { action: Box::new(action) }
-    }
-}
-
-impl<T> Debug for SyncCallback<T> where T: Clone + Send + Sync {
-    fn fmt (&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SyncCallback<{}>(..)", std::any::type_name::<T>())
-    }
+pub struct SyncCallback<T>{
+    pub action: Box<dyn for<'a> SyncCallbackFn<&'a T>>
 }
 
 #[macro_export]
 macro_rules! sync_callback {
-    ( |$v:ident : $t:ty| $blk:block ) =>
-    { Callback::Sync(SyncCallback::new( |$v : $t| $blk)) }
+    ( |$v:ident $(: $t:ty)?| $b:block ) => {
+        SyncCallback::new( Box::new( move |$v $(: $t )?| $b ))
+    };
+    ( |$v:ident $(: $t:ty)?| $e:expr ) => {
+        SyncCallback::new( Box::new( move |$v $(: $t )?| { $e } ))
+    };
 }
 
-
-pub struct CallbackList<T> where T: Clone + Send + Sync {
-    list: Vec<(String,Callback<T>)>
+#[macro_export]
+macro_rules! try_send_msg_callback {
+    ( $rcv:ident, |$v:ident $(: $t:ty)?| $e:expr) => {
+        {
+            let rcv = $rcv.clone();
+            SyncCallback{ action: 
+                Box::new( move |$v $(: $t)?| {
+                    let msg = $e; 
+                    rcv.try_send_msg( msg)
+                })
+            }
+        }
+    }
 }
 
-impl <T> CallbackList<T> where T: Clone + Send + Sync {
-    pub fn new()->Self {
-        CallbackList { list: Vec::new() }
+//--- callback list
+
+/// the field to store actions in. Note that we need to store trait objects here so that the owner does not
+/// have to know action specifics, only its own associated input data type T 
+pub struct CallbackList<T> { 
+    entries: Vec<Callback<T>> 
+}
+
+impl <T> CallbackList<T> {
+    pub fn new()->Self { 
+        CallbackList{ entries: Vec::new() } 
     }
 
     pub fn is_empty (&self)->bool {
-        self.list.is_empty()
+        self.entries.is_empty()
+    }
+    
+    pub fn push (&mut self, cb: Callback<T>) { 
+        self.entries.push( cb)
     }
 
-    pub fn add (&mut self, id: String, cb: Callback<T>) {
-        self.list.push( (id,cb));
-    }
-
-    pub async fn trigger (&self, data: T)->Result<()> {
+    pub async fn execute (&self, v: &T)->Result<()> {
         let mut failed = 0;
 
-        for (_,cb) in &self.list {
-            match cb.trigger( data.clone()).await {
-                Ok(()) => {}
-                Err(e) => failed += 1
-            }
+        for cb in &self.entries {
+            let res: Result<()> = match cb {
+                Callback::Async(cb) => (cb.action)(v).await,
+                Callback::Sync(cb) => (cb.action)(v),
+                //Callback::TryMsgSend(cb) => cb.execute(v),
+            };
+
+            if res.is_err() { failed += 1 }
         }
 
         if failed > 0 {
-            Err( OdinActorError::AllOpFailed { op: "trigger callbacks".to_string(), all: self.list.len(), failed })
+            Err( OdinActorError::IterOpFailed { op: "callback execution".to_string(), all: self.entries.len(), failed })
         } else {
             Ok(())
         }
     }
 }
 
-/* #endregion callback */
+/* #endregion callbacks */

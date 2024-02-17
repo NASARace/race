@@ -40,7 +40,7 @@ use std::{
 use crate::{
     Identifiable, ObjSafeFuture, SendableFutureCreator, ActorSystemRequest, create_sfc,
     errors::{Result,OdinActorError, all_op_result, poisoned_lock},
-    MsgReceiver,DynMsgReceiver,ReceiveAction, DefaultReceiveAction,  Respondable,
+    MsgReceiver,DynMsgReceiver,ReceiveAction, DefaultReceiveAction,
     secs,millis,micros,nanos,
     ActorReceiver, SysMsgReceiver, FromSysMsg, _Start_, _Ping_, _Timer_, _Pause_, _Resume_, _Terminate_,
 };
@@ -747,12 +747,6 @@ pub fn block_on_timeout_send_msg<Msg> (tgt: impl MsgReceiver<Msg>, msg: Msg, to:
  pub struct Query<T,R> where T: Send + Debug, R: Send + Debug {
      pub topic: T,
      tx: MpscSender<R>
- }
- 
- impl <T,R> Respondable<R> for Query<T,R> where T: Send + Debug, R: Send + Debug {
-     async fn respond (self, r: R)->Result<()> {
-         self.tx.send(r).await.map_err(|_| OdinActorError::ReceiverClosed)
-     }
  }
  
  impl<T,R> Debug for Query<T,R>  where T: Send + Debug, R: Send + Debug {

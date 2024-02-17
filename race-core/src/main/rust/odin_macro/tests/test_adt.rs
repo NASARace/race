@@ -1,8 +1,10 @@
 #![allow(unused)]
 
 use std::error::Error;
-use odin_macro::{define_algebraic_type, match_algebraic_type};
+use std::fmt::Debug;
+use odin_macro::{define_algebraic_type, define_struct, match_algebraic_type};
 
+use serde::Serialize; // for attribute testing
 
 #[derive(Debug,Clone)] struct GpsData { lat: f64, lon: f64 }
 #[derive(Debug,Clone)] struct ThermoData { temp: f64 }
@@ -78,4 +80,69 @@ fn test_match()->Result<(),Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+define_struct! {
+    pub MyStruct: Debug+Clone =
+      a: String,
+      b: u64 = 0,
+      c: usize = a.len()
+}
+
+#[test]
+fn test_simple_struct()->Result<(),Box<dyn Error>> {
+    let o = MyStruct::new( "blah".to_string());
+    println!("{:?}", o);   
+
+    Ok(())
+}
+
+
+
+trait MaybeAnswer {
+    fn is_answer(&self)->bool;
+}
+
+#[derive(Debug,Clone)] struct Foo(u64);
+impl MaybeAnswer for Foo { fn is_answer(&self)->bool { self.0 == 42 } }
+
+define_struct! {
+    pub MyOtherStruct<'a,A>: Debug + Clone where A: MaybeAnswer + Debug + Clone = 
+        data: A,
+        some_ref: &'a str,
+        is_answer: bool = data.is_answer()
+}
+
+/*
+#[derive(Debug,Clone)]
+struct MyOtherStruct<'a,A> where A: MaybeAnswer + Debug + Clone {
+    data: A,
+    some_ref: &'a str,
+    is_answer: bool
+}
+impl<'a,A> MyOtherStruct<'a,A> where A: MaybeAnswer + Debug + Clone {
+    fn new (data: A, some_ref: &'a str)->Self {
+        let is_answer: bool = data.is_answer();
+        MyOtherStruct { data, some_ref, is_answer }
+    }
+}
+*/
+
+
+#[test]
+fn test_struct()->Result<(),Box<dyn Error>> {
+    let s = "blarr";
+
+    let o = MyOtherStruct::new( Foo(42), &s);
+    println!("{:?}", o);   
+
+    Ok(())
+}
+
+
+define_struct! {
+    #[serde(rename_all="camelCase")]
+    SomeStruct: Serialize = 
+        #[serde(skip)]
+        some_field: String
 }

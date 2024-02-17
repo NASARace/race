@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 #![allow(unused_imports)]
+#![feature(trait_alias)]
 
 use std::{
     pin::{Pin,pin}, 
@@ -100,12 +101,15 @@ pub enum ReceiveAction {
 
 /// single message type receiver trait to abstract concrete ActorHandle<MsgSet> instances that would
 /// force the client to know all messages the receiver understands, which reduces re-usability of the
-/// receiver. Note this trait is not object-safe (use [`DynMsgReceiver`] for dynamic subscription)
+/// receiver user. Note this trait is not object-safe (use [`DynMsgReceiver`] for dynamic subscription).
+/// 
+/// If we could turn the `impl Future...` returns into a concrete type (say MsgSendFuture) we could
+/// avoid having a separate (and less efficient) `DynMsgReceiver`. Two of the channel crates (flume
+/// and kanal) actually use SendFuture<'_,T> structs but we can't use them since hiding their `T` (message)
+/// type parameter is the whole point of MsgReceiver (which is only parametric in the actor message variant type) 
 pub trait MsgReceiver<MsgType>: Identifiable + Debug + Send + Clone {
     fn send_msg (&self, msg: MsgType)->impl Future<Output = Result<()>> + Send;
-    fn move_send_msg (self, msg: MsgType)->impl Future<Output = Result<()>> + Send;
     fn timeout_send_msg (&self, msg: MsgType, to: Duration)->impl Future<Output = Result<()>> + Send;
-    fn timeout_move_send_msg (self, msg: MsgType, to: Duration)->impl Future<Output = Result<()>> + Send;
     fn try_send_msg (&self, msg:MsgType)->Result<()>;
 }
 
@@ -202,6 +206,6 @@ pub trait DefaultReceiveAction {
 
 // a message set that only contains our system messages
 define_actor_msg_type! {
-    pub SysMsg = // only the automatically added system message variants
+    pub SysMsg // only the automatically added system message variants
 }
 

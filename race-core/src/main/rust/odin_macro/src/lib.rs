@@ -43,16 +43,20 @@ use proc_macro2::{
 	TokenStream as TokenStream2,
     Spacing, Span, Punct, TokenTree
 };
-use quote::{quote,format_ident,ToTokens};
+use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use syn::{ 
-	self,Ident,Path,ItemStruct,ItemEnum,ItemFn,FnArg,Token,Type,TypePath,Block,ExprMacro,WhereClause,WherePredicate,PredicateType,Expr,
-    parse_macro_input,
-    punctuated::{Punctuated},
-    parse::{Lookahead1, Parse, ParseStream, Result}, token, ExprMethodCall, PathSegment, Stmt, Visibility,
-    token::Mut,
-    visit::{self, Visit}
+	self, parse::{Lookahead1, Parse, ParseStream, Result}, 
+    parse_macro_input, punctuated::{Punctuated}, token, token::{Mut, Where, Colon, Gt, Lt, Comma, PathSep}, visit::{self, Visit}, 
+    Attribute, Block, Expr, ExprLit, ExprCall, ExprBlock, ExprMacro, ExprMethodCall, FnArg, Ident, ItemEnum, ItemFn, ItemStruct, Path, PathSegment, 
+    PredicateType, Stmt, Token, Type, TypePath, Visibility, WhereClause, WherePredicate, GenericParam, PathArguments,
 };
 use std::collections::HashSet;
+
+macro_rules! stringify_path {
+    ( $path:path ) => {
+        stringify!($path)
+    }
+}
 
 /* #region define_service_type ***************************************************/
 
@@ -140,6 +144,215 @@ impl Parse for ServiceComposition {
 
 /* #endregion define_service_type */
 
+/* #region define_struct **************************************************************/
+
+///
+/// define_struct! {
+///     pub MyStruct<A>: Debug + Clone where A: Foo + Debug + Cone =
+///         field_1: A,
+///         field_2: Vec<String>   = Vec::new(),  // func call init
+///         field_3: &'static str  = "blah",     // literal init
+///         field_4: usize         = { field_3.len() }  // block init (with back-ref)
+/// }
+/// 
+/// expanded into:
+/// 
+/// #[derive(Debug)]
+/// pub struct MyStruct<A> where A: Foo + Debug {
+///     field_1: A,
+///     ...
+/// }
+/// impl <A> MyStruct<A> where A: Foo + Debug {
+///     pub fn new (field_1: A)->Self {
+///         let field_2: Vec<String> = Vec::new();
+///         let field_3: &'static str = "blah";
+///         let field_4: usize = { field_3.len() };
+///         MyStruct { field_1, field_2, field_3, field_4 }
+///     } 
+/// }
+/// 
+#[proc_macro]
+pub fn define_struct (item: TokenStream) -> TokenStream {
+    let StructSpec{ attrs, visibility, name, generic_params, derives, where_clause, field_specs } = match syn::parse(item) {
+        Ok(struct_spec) => struct_spec,
+        Err(e) => panic!( "expected \"structName [: Trait,..] = fieldSpec, ..\" got error: {:?}", e)
+    };
+    let generics = if generic_params.is_empty() { quote!{} } else { quote! { < #( #generic_params ),* > } };
+    let derive_clause = if derives.is_empty() { quote!{} } else { quote! { #[derive( #( #derives ),* )] } };
+    let inherent_impl = get_inherent_impl( &visibility, &name, &generic_params, &where_clause,  &field_specs);
+
+    let new_item: TokenStream = quote! {
+        #derive_clause
+        #( #attrs )*
+        #visibility struct #name #generics #where_clause {
+            #( #field_specs ),*
+        }
+        #inherent_impl
+    }.into();
+    //println!("-----\n{}\n-----", new_item.to_string());
+    new_item
+}
+
+fn get_inherent_impl (visibility: &Visibility, name: &Ident, generic_params: &Vec<GenericParam>, where_clause: &Option<WhereClause>, field_specs: &Vec<FieldSpec>)->TokenStream2 {
+    let ctor_arg_list: TokenStream2 = get_ctor_arg_list( field_specs);
+    let mut generic_names = get_generic_names(generic_params);
+    let generics = if generic_params.is_empty() { quote!{} } else { quote! { < #( #generic_params ),* > } };
+    let field_names: Vec<&Ident> = field_specs.iter().map( |f| &f.name).collect();
+    let init_stmts: TokenStream2 = get_ctor_init_stmts( field_specs);
+
+    quote!{
+        impl #generic_names #name #generics #where_clause {
+            #visibility fn new ( #ctor_arg_list )->Self {
+                #init_stmts
+                #name { #( #field_names ),* }
+            }
+        }
+    }
+}
+
+fn get_generic_names (generic_params: &Vec<GenericParam>)->TokenStream2 {
+    let mut ts = TokenStream2::new();
+
+    if !generic_params.is_empty() {
+        let mut is_first = true;
+        ts.append( Punct::new('<', Spacing::Alone));
+        for g in generic_params.iter() {
+            if !is_first {
+                ts.append( Punct::new(',', Spacing::Alone));
+            } else { 
+                is_first = false;
+            }
+
+            match g {
+                GenericParam::Type(g) => ts.append( g.ident.clone()),
+                GenericParam::Lifetime(g) => {
+                    ts.append( Punct::new('\'', Spacing::Joint));
+                    ts.append( g.lifetime.ident.clone());
+                }
+                GenericParam::Const(g) => ts.append( g.ident.clone())
+            }
+        }
+        ts.append( Punct::new('>', Spacing::Alone));
+    }
+
+    ts
+}
+
+fn get_ctor_arg_list (field_specs: &Vec<FieldSpec>)->TokenStream2 {
+    let no_init_args: Vec<TokenStream2> = field_specs.iter().filter(|f| f.init_expr.is_none()).map(|f|{
+        let ident = &f.name;
+        let field_type = &f.field_type;
+        quote! { #ident : #field_type }
+    }).collect();
+
+    if !field_specs.is_empty() {
+        quote!{ #( #no_init_args ),* }
+    } else {
+        quote!{}
+    }
+}
+
+fn get_ctor_init_stmts (field_specs: &Vec<FieldSpec>)->TokenStream2 {
+    let mut ts = TokenStream2::new();
+    for f in field_specs {
+        if let Some(init) = &f.init_expr {
+            let name = &f.name;
+            let ftype = &f.field_type;
+            ts.append_all( quote!{ let #name : #ftype = #init; } );
+        }
+    }
+    ts
+}
+
+struct StructSpec {
+    attrs: Vec<Attribute>,
+    visibility: Visibility,
+    name: Ident,
+    generic_params:Vec<GenericParam>,
+    derives: Vec<Path>,
+    where_clause: Option<WhereClause>,
+    field_specs: Vec<FieldSpec>,
+}
+
+impl Parse for StructSpec {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let attrs: Vec<Attribute> = input.call(Attribute::parse_outer)?;
+        let visibility: Visibility = parse_visibility(input);
+        let name: Ident = input.parse()?;
+
+        let mut generic_params: Vec<GenericParam> = Vec::new();
+        let mut lookahead = input.lookahead1();
+        if !input.is_empty() && lookahead.peek(Token![<]) {
+            input.parse::<Token![<]>()?;
+            generic_params = Punctuated::<GenericParam,Token![,]>::parse_separated_nonempty(input)?.into_iter().collect();
+            input.parse::<Token![>]>()?;
+            lookahead = input.lookahead1();
+        }
+
+        let mut derives: Vec<Path> = Vec::new();
+        if !input.is_empty() && lookahead.peek(Token![:]) {
+            input.parse::<Token![:]>()?;
+            derives = Punctuated::<Path,Token![+]>::parse_separated_nonempty(input)?.into_iter().collect();
+            lookahead = input.lookahead1();
+        }
+
+        let mut where_clause: Option<WhereClause> = None;
+        if !input.is_empty() && lookahead.peek(Token![where]) {
+            where_clause = Some(input.parse::<WhereClause>()?);
+            lookahead = input.lookahead1();
+        }
+
+        let mut field_specs: Vec<FieldSpec> = Vec::new();
+        if !input.is_empty() && lookahead.peek(Token![=]) {
+            input.parse::<Token![=]>()?;
+            field_specs = Punctuated::<FieldSpec,Token![,]>::parse_separated_nonempty(input)?.into_iter().collect();
+        }
+
+        Ok(StructSpec { attrs, visibility, name, generic_params, derives, where_clause, field_specs })
+    }
+}
+
+
+struct FieldSpec {
+    attrs: Vec<Attribute>,
+    visibility: Visibility,
+    name: Ident,
+    colon_token: Colon,
+    field_type: Type,
+    init_expr: Option<Expr>,
+}
+
+impl Parse for FieldSpec {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let attrs: Vec<Attribute> = input.call(Attribute::parse_outer)?;
+        let visibility: Visibility = parse_visibility(input);
+        let name: Ident = input.parse()?;
+        let colon_token: Colon = input.parse::<Token![:]>()?;
+        let field_type: Type = input.parse::<Type>()?;
+
+        let mut lookahead = input.lookahead1();
+        let mut init_spec: Option<Expr> = None;
+        if !input.is_empty() && lookahead.peek(Token![=]) {
+            input.parse::<Token![=]>()?;
+            init_spec = Some(input.parse::<Expr>()?);
+        }
+
+        Ok( FieldSpec{ attrs, visibility, name, colon_token, field_type, init_expr: init_spec })
+    }
+}
+
+impl ToTokens for FieldSpec {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        for a in &self.attrs { a.to_tokens(tokens); }
+        self.visibility.to_tokens(tokens);
+        self.name.to_tokens(tokens);
+        self.colon_token.to_tokens(tokens);
+        self.field_type.to_tokens(tokens);
+    }
+}
+
+/* #endregion define_struct */
+
 /* #region define_algebraic_type ******************************************************/
 
 /// macro to define algebraic types (using a Haskell'ish syntax), which are mapped into enums
@@ -196,10 +409,14 @@ impl Parse for ServiceComposition {
 /// ```
 #[proc_macro]
 pub fn define_algebraic_type (item: TokenStream) -> TokenStream {
-    let AdtEnum {visibility, name, derives, variant_types, mut methods }= syn::parse(item).unwrap();
+    let AdtEnum {visibility, name, derives, variant_types, methods }= match syn::parse(item) {
+        Ok(adt) => adt,
+        Err(e) => panic!( "expected \"adtName [: Trait,..] = variantType | ..  [ func ... ]\" got error: {:?}", e)
+    };
+
     let mut variant_names = get_variant_names_from_types(&variant_types);
     let derive_clause = if derives.is_empty() { quote!{} } else { quote! { #[derive( #( #derives ),* )] } };
-    let inherent_impl = if methods.is_empty() { quote!{} } else { build_inherent_impl( &name, &variant_names, &mut methods) };
+    let inherent_impl = if methods.is_empty() { quote!{} } else { build_inherent_impl( &name, &variant_names, &methods) };
 
     let new_item: TokenStream = quote! {
         #derive_clause
@@ -215,7 +432,7 @@ pub fn define_algebraic_type (item: TokenStream) -> TokenStream {
         impl std::fmt::Debug for #name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
-                    #( Self::#variant_names (msg) => write!(f, "{:?}", msg), )*
+                    #( Self::#variant_names (msg) => write!(f, concat!( stringify!(#name), "::", stringify!(#variant_names))) ),*
                 }
             }
         }
@@ -314,12 +531,14 @@ pub fn define_actor_msg_type (item: TokenStream) -> TokenStream {
     }
 
     let derive_clause = if derives.is_empty() { quote!{} } else { quote! { #[derive( #( #derives ),* )] } };
+    let inherent_impl = if methods.is_empty() { quote!{} } else { build_inherent_impl( &name, &variant_names, &methods) };
 
     let new_item: TokenStream = quote! {
         #derive_clause
         #visibility enum #name {
             #( #variant_names ( #variant_types ) ),*
         }
+        #inherent_impl
         impl FromSysMsg for #name {}
         #(
             impl From<#variant_types> for #name {
@@ -372,13 +591,13 @@ impl Parse for AdtEnum {
         let mut derives: Vec<Path> = Vec::new();
 
         let mut lookahead = input.lookahead1();
-        if lookahead.peek(Token![:]) {
+        if !input.is_empty() && lookahead.peek(Token![:]) {
             input.parse::<Token![:]>()?;
-            derives = Punctuated::<Path,Token![,]>::parse_separated_nonempty(input)?.into_iter().collect();
+            derives = Punctuated::<Path,Token![+]>::parse_separated_nonempty(input)?.into_iter().collect();
             lookahead = input.lookahead1();
         }
 
-        let variant_types: Vec<Path> = if lookahead.peek(Token![=]) {
+        let variant_types: Vec<Path> = if !input.is_empty() && lookahead.peek(Token![=]) {
             input.parse::<Token![=]>()?;
             let variant_types = Punctuated::<Path,Token![|]>::parse_separated_nonempty(input)?;
             variant_types.into_iter().collect()
@@ -472,7 +691,7 @@ fn get_match_patterns(msg_name: &Ident, msg_type: &Path, match_arms: &Vec<MsgMat
 /// ```
 ///     match msg {
 ///        xːːA(msg) => { {println!("actor received an A = {:?}", msg)}; ReceiveAction::Continue }
-///        _Terminate_(msg) => { {println!("actor terminated", msg)}; ReceiveAction::Stop }
+///        _Terminate_(msg) => { {println!("actor terminated {:?}", msg)}; ReceiveAction::Stop }
 ///        _ => msg.default_receive_action()
 ///     }
 /// ```
@@ -513,6 +732,46 @@ fn get_variant_names_from_match_arms (match_arms: &Vec<MsgMatchArm>)->Vec<Ident>
     match_arms.iter().map( |a| get_variant_name_from_match_arm(a)).collect()
 }
 
+fn get_variant_types_from_match_arms (match_arms: &Vec<MsgMatchArm>)->Vec<Path> {
+    let mut var_types: Vec<Path> = Vec::new();
+
+    for a in match_arms {
+        match &a.variant_spec {
+            VariantSpec::Type(path) => {
+                if let Some(last_seg) = path.segments.last() {
+                    let name = last_seg.ident.to_string();
+                    if !(name.starts_with("_") && name.ends_with("_")) {
+                        var_types.push(path.clone())
+                    }
+                }
+            }
+            _ => {} // we are not interested in wildcards
+        }
+    }
+
+    /* here we could add system messages but those should only be sent through the SysMsgReceiver trait, i.e. from the ActorSystem
+    var_types.push( sys_msg_path("_Start_"));
+    var_types.push( sys_msg_path("_Ping_"));
+    var_types.push( sys_msg_path("_Timer_"));
+    var_types.push( sys_msg_path("_Pause_"));
+    var_types.push( sys_msg_path("_Resume_"));
+    var_types.push( sys_msg_path("_Terminate_"));
+    */
+
+    var_types
+
+}
+
+fn sys_msg_path (name: &'static str)->Path {
+    let crate_ident = Ident::new("odin_actor", Span::call_site());
+    let ident = Ident::new( name, Span::call_site());
+    let mut segments: Punctuated<PathSegment,PathSep> = Punctuated::new();
+    segments.push( PathSegment { ident: crate_ident, arguments: PathArguments::None });
+    segments.push( PathSegment{ ident, arguments: PathArguments::None });
+
+    Path{ leading_colon: None, segments }
+}
+
 struct MsgMatch {
     msg_name: Ident, // the msg variable name to bind
     msg_type: Path, // the msg type to match
@@ -523,6 +782,11 @@ struct MsgMatchArm {
     variant_spec: VariantSpec,
     maybe_mut: Option<Token![mut]>,
     match_action: MsgMatchAction,
+}
+
+enum VariantSpec {
+    Type(Path),
+    Wildcard
 }
 
 enum MsgMatchAction {
@@ -598,11 +862,6 @@ fn parse_match_arms (input: ParseStream)->Result<Vec::<MsgMatchArm>> {
     Ok(match_arms)
 }
 
-enum VariantSpec {
-    Type(Path),
-    Wildcard
-}
-
 
 /* #endregion match macros */
 
@@ -625,6 +884,7 @@ pub fn impl_actor (item: TokenStream) -> TokenStream {
     };
 
     let variant_names: Vec<Ident> = get_variant_names_from_match_arms(&match_arms);
+    //let variant_types: Vec<Path> = get_variant_types_from_match_arms(&match_arms); // if we need to do explicit trait impls for variant types
     let is_mut: Vec<&Option<Token![mut]>> = match_arms.iter().map( |a| { &a.maybe_mut }).collect();
     let match_actions: Vec<&MsgMatchAction> = match_arms.iter().map( |a| { &a.match_action }).collect();
 
@@ -640,17 +900,28 @@ pub fn impl_actor (item: TokenStream) -> TokenStream {
                 match #msg_name {
                     #( #msg_type::#variant_names (#is_mut #msg_name) => #match_actions, )*
 
-                    // this relies on Rust allowing duplicated match patterns and ignoring all but the first
+                    // this relies on Rust allowing duplicated match patterns and ignoring all but the first matching arm
                     #msg_type::_Start_(_) => #msg_name.default_receive_action(),
                     #msg_type::_Ping_(_) => #msg_name.default_receive_action(),
                     #msg_type::_Timer_(_) => #msg_name.default_receive_action(),
                     #msg_type::_Pause_(_) => #msg_name.default_receive_action(),
                     #msg_type::_Resume_(_) => #msg_name.default_receive_action(),
                     #msg_type::_Terminate_(_) => #msg_name.default_receive_action(),
-                    //_ => #msg_name . default_receive_action() // this would be a catch-all which would bypass the check for unmatched user messages
+                    //_ => #msg_name . default_receive_action() // this would be a catch-all which would cut off the check for unmatched user messages
                 }
             }
         }
+        /* explicit trait impl for variant types would go here 
+        #( 
+            impl MsgReceiver< #variant_types > for ActorHandle< #msg_type > {
+                fn send_msg<'a> (&'a self, m: #variant_types)->SendMsgFuture<'a> { self.send_actor_msg(m.into()) }
+                fn move_send_msg (self, m: MsgType)->MoveSendMsgFuture { self.move_send_msg(m.into()) }
+                fn timeout_send_msg<'a> (&self, m: MsgType, to: Duration)->TimeoutSendMsgFuture<'a> { self.timeout_send_actor_msg( m.into(), to) }
+                fn timeout_move_send_msg (self, m: MsgType, to: Duration)->TimeoutMoveSendMsgFuture { self.timeout_move_send_msg( m, to) }
+                fn try_send_msg (&self, m:MsgType)->Result<()> { self.try_send_actor_msg(m) }
+            }
+        )*
+        */
     }.into();
     //println!("-----\n{}\n-----", new_item.to_string());
 
@@ -853,6 +1124,9 @@ fn path_to_string (path: &Path)->String {
 ///     ʃ \u{0283} , ʅ \u{0285}
 ///     𐅁 \u{10141} ,  𐅀 \u{10140}
 ///     𛰙 \u{1bc19} ,  𛰚 \u{1bc1a}
+///     𑄼 \u{1113c}
+///     𖫫 \u{16aeb}
+///     
 /// Candidates from https://util.unicode.org/UnicodeJsps/list-unicodeset.jsp?a=[:XID_Continue=Yes:]
 fn mangle (s: &str)->String {
     let mut r = String::with_capacity(s.len());
@@ -865,7 +1139,7 @@ fn mangle (s: &str)->String {
             ',' => r.push('\u{02ce}'), // 'ˎ'
             '(' => r.push('\u{1bc19}'), // '𛰙'
             ')' => r.push('\u{1bc1a}'), // '𛰚'
-            '&' => r.push('\u{1d3f}'), // 'ᴿ'
+            '&' => r.push('\u{1113c}'), // '𑄼'
             '\'' => { lifetime = true; r.push('\u{02bd}') }, // 'ʽ'
             ' ' => if lifetime { lifetime = false; r.push('\u{02d1}') }, // 'ˑ'
             _ => r.push(c)

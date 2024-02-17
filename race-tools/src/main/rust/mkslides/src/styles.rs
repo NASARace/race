@@ -177,6 +177,7 @@ pre {
 }
 
 code {
+    font-size: 80%;
     color: DarkBlue;
 }
 
@@ -242,6 +243,55 @@ li.nav_item {
 li.nav_item:hover {
     background: rgb(64, 64, 200);
 }
+
+
+table {
+    border-collapse: collapse;
+    overflow: hidden;
+}
+
+td {
+    padding: 0.3rem 1rem 0.3rem 1rem;
+    border: 1px solid;
+    position: relative;
+}
+
+th {
+    background-color: #e0e0e0; 
+    padding: 0.3rem 1rem 0.3rem 1rem;
+    border-top: 1px solid;
+    border-bottom: 2px solid;
+    border-left: 1px solid;
+    border-right: 1px solid;
+    position: relative;
+}
+
+td:hover::before { 
+    background-color: #ffa;
+    content: '';  
+    height: 100%;
+    left: -5000px;
+    position: absolute;  
+    top: 0;
+    width: 10000px;   
+    z-index: -2;        
+}
+
+th:hover::after { 
+    background-color: #ffa;
+    content: '';  
+    height: 10000px;    
+    left: 0;
+    position: absolute;  
+    top: -5000px;
+    width: 100%;
+    z-index: -1;        
+}
+
+td:hover {
+    background-color: #00ffff;
+}
+
 
 /*---------------------------- content image classes -----------------------------*/
 

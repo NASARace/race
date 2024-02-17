@@ -40,8 +40,8 @@ use std::{
 };
 use crate::{
     Identifiable, ObjSafeFuture, SendableFutureCreator, ActorSystemRequest, create_sfc,
-    errors::{Result,OdinActorError, all_op_result, poisoned_lock},
-    ActorReceiver,MsgReceiver,DynMsgReceiver,ReceiveAction, DefaultReceiveAction, Respondable,
+    errors::{Result,OdinActorError, iter_op_result, poisoned_lock},
+    ActorReceiver,MsgReceiver,DynMsgReceiver,ReceiveAction, DefaultReceiveAction,
     secs,millis,micros,nanos,
     SysMsgReceiver, FromSysMsg, _Start_, _Ping_, _Timer_, _Pause_, _Resume_, _Terminate_,
 };
@@ -364,18 +364,8 @@ impl <M,MsgType> MsgReceiver <M> for ActorHandle <MsgType>
         self.send_actor_msg( msg.into())
     }
 
-    /// for use in closures that capture the MsgReceiver - see [`ActorHandle::move_send_msg`]
-    fn move_send_msg (self, msg: M) -> impl Future<Output = Result<()>> + Send {
-        self.move_send_msg( msg)
-    }
-
     fn timeout_send_msg (&self, msg: M, to: Duration) -> impl Future<Output = Result<()>> + Send {
         self.timeout_send_actor_msg( msg.into(), to)
-    }
-
-    /// for use in closures that capture the MsgReceiver - see [`ActorHandle::move_send_msg`]
-    fn timeout_move_send_msg (self, msg: M, to: Duration) -> impl Future<Output = Result<()>> + Send {
-        self.timeout_move_send_msg( msg, to)
     }
 
     fn try_send_msg (&self, msg: M) -> Result<()> {
@@ -384,6 +374,8 @@ impl <M,MsgType> MsgReceiver <M> for ActorHandle <MsgType>
 }
 
 /// blanket impl of object safe trait that can send anything that can be turned into a MsgType 
+/// Note - this has to pin-box futures upon every send and hence is less efficient than [`MsgReceiver`]
+/// hence this should only be used where we need sendable MsgReceivers
 impl <M,MsgType> DynMsgReceiver <M> for ActorHandle <MsgType>
     where 
         M: Send + Debug + 'static,
@@ -575,7 +567,7 @@ impl ActorSystem {
             closed += 1;
         }
         
-        all_op_result("start_all", len, len-closed)   
+        iter_op_result("start_all", len, len-closed)   
     }
 
 
@@ -603,7 +595,7 @@ impl ActorSystem {
             if actor_entry.receiver.send_start(_Start_{}, to).await.is_err() { failed += 1 }
         }
         // TODO - do we need to wait until everybody has processed _Start_ ?
-        all_op_result("start_all", actor_entries.len(), failed)
+        iter_op_result("start_all", actor_entries.len(), failed)
     }
 
     pub async fn terminate_all (&self, to: Duration)->Result<()>  {
@@ -617,7 +609,7 @@ impl ActorSystem {
         }
 
         // no need to wait for responses since we use the join_set to sync
-        all_op_result("terminate_all", len, failed)
+        iter_op_result("terminate_all", len, failed)
     }
 
     pub async fn terminate_and_wait (&mut self, to: Duration)->Result<()> {
@@ -750,8 +742,8 @@ pub struct Query<T,R> where T: Send + Debug, R: Send + Debug {
     tx: MpscSender<R>
 }
 
-impl <T,R> Respondable<R> for Query<T,R> where T: Send + Debug, R: Send + Debug {
-    async fn respond (self, r: R)->Result<()> {
+impl <T,R> Query<T,R> where T: Send + Debug, R: Send + Debug {
+    pub async fn respond (self, r: R)->Result<()> {
         self.tx.send(r).await.map_err(|_| OdinActorError::ReceiverClosed)
     }
 }

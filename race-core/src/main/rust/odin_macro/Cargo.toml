@@ -16,3 +16,5 @@ quote = "*"
 syn = { version = "*", features = ["full","extra-traits","visit"] }
 proc-macro2 = { version = "*" }
 
+[dev-dependencies]
+serde = { version = "*", features = ["derive"] }

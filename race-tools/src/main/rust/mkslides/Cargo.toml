@@ -9,7 +9,7 @@ edition = "2021"
 odin_common = { workspace = true }
 
 lazy_static = "*"
-markdown = "1.0.0-alpha.14"
+markdown = "1.0.0-alpha.16"
 structopt = "*"
 anyhow = "*"
 regex = "*"
