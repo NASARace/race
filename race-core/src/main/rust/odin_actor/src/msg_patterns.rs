@@ -140,9 +140,9 @@ macro_rules! async_callback {
 
 #[macro_export]
 macro_rules! send_msg_callback {
-    ( $rcv:ident, |$v:ident $(: $t:ty)?| $e:expr ) => {
+    ( $rcv:expr, |$v:ident $(: $t:ty)?| $e:expr ) => {
         {
-            let rcv = $rcv.clone();
+            let rcv = ($rcv).clone();
             AsyncCallback{ action: 
                 Box::new( move |$v $(: $t)?| {
                     let msg = $e; 
@@ -174,7 +174,7 @@ macro_rules! sync_callback {
 
 #[macro_export]
 macro_rules! try_send_msg_callback {
-    ( $rcv:ident, |$v:ident $(: $t:ty)?| $e:expr) => {
+    ( $rcv:expr, |$v:ident $(: $t:ty)?| $e:expr) => {
         {
             let rcv = $rcv.clone();
             SyncCallback{ action: 
