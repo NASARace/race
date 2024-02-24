@@ -21,6 +21,7 @@ parse_duration = "*"
 
 odin_macro = { workspace = true }
 odin_config = { workspace = true }
+odin_job = { workspace = true }
 
 [features]
 default = ["tokio_kanal"]

@@ -49,6 +49,9 @@ pub use odin_macro::{
     spawn_actor, spawn_pre_actor, define_actor_send_msg_list, define_actor_action_list, define_actor_action2_list
 };
 
+#[inline] pub fn days (n: u64)->Duration { Duration::from_secs(n*60*60*24) }
+#[inline] pub fn hours (n: u64)->Duration { Duration::from_secs(n*60*60) }
+#[inline] pub fn minutes (n: u64)->Duration { Duration::from_secs(n*60) }
 #[inline] pub fn secs (n: u64)->Duration { Duration::from_secs(n) }
 #[inline] pub fn millis (n: u64)->Duration { Duration::from_millis(n) }
 #[inline] pub fn micros (n: u64)->Duration { Duration::from_micros(n) }
