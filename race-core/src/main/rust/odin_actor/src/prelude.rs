@@ -16,11 +16,12 @@
  */
 
 pub use crate::{
-    ActorReceiver, ReceiveAction, MsgReceiver, SysMsgReceiver, SysMsg, DefaultReceiveAction, FromSysMsg, Identifiable,
-    MsgSubscriptions, MsgSubscriber, Callback, CallbackList, SyncCallback, AsyncCallback,
-    _Start_, _Ping_, _Timer_, _Pause_, _Resume_, _Terminate_,
+    ActorReceiver, ReceiveAction, MsgReceiver, DynMsgReceiver, TryMsgReceiver, SysMsgReceiver, SysMsg, DefaultReceiveAction, FromSysMsg, 
+    Identifiable, ActorSendMsgList, ActorActionList, ActorAction2List, MsgSubscriptions, MsgSubscriber, Callback, CallbackList, SyncCallback, AsyncCallback,
+    _Start_, _Ping_, _Timer_, _Exec_, _Pause_, _Resume_, _Terminate_,
     secs,millis,micros,nanos,
     DEFAULT_CHANNEL_BOUNDS,
-    define_actor_msg_type, match_actor_msg, cont, stop, term, impl_actor, spawn_actor,
+    define_actor_msg_type, match_actor_msg, cont, stop, term, impl_actor, spawn_actor, spawn_pre_actor,
+    define_actor_action_list, define_actor_action2_list, define_actor_send_msg_list,
     msg_subscriber,sync_callback,async_callback,send_msg_callback,async_action,try_send_msg_callback
 };

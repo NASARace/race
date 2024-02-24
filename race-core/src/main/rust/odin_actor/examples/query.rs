@@ -72,7 +72,7 @@ struct Responder;
 
 impl_actor! { match msg for Actor<Responder,ResponderMsg> as
     Query<Question,Answer> => cont! {
-        println!("{} got question: \"{:?}\", thinking..", self.hself.id(), msg.topic);
+        println!("{} got question: \"{:?}\", thinking..", self.hself.id(), msg.question);
         sleep( millis(500)).await;
         //sleep( millis(1500)).await; // this will cause a timeout
         match msg.respond(Answer("42".to_string())).await {

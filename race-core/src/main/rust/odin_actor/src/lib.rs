@@ -37,14 +37,17 @@ pub mod tokio_kanal;
 pub mod tokio_channel;
 
 pub mod errors;
-use errors::Result;
+pub use errors::Result;
 
 mod msg_patterns;
 pub use msg_patterns::*;
 
 extern crate odin_macro;
 #[doc(hidden)]
-pub use odin_macro::{define_actor_msg_type, match_actor_msg, cont, stop, term, impl_actor, spawn_actor};
+pub use odin_macro::{
+    define_actor_msg_type, match_actor_msg, cont, stop, term, impl_actor, 
+    spawn_actor, spawn_pre_actor, define_actor_send_msg_list, define_actor_action_list, define_actor_action2_list
+};
 
 #[inline] pub fn secs (n: u64)->Duration { Duration::from_secs(n) }
 #[inline] pub fn millis (n: u64)->Duration { Duration::from_millis(n) }
@@ -54,9 +57,12 @@ pub use odin_macro::{define_actor_msg_type, match_actor_msg, cont, stop, term, i
 
 /// type that can be used for returning futures in object-safe (async) traits
 pub type ObjSafeFuture<'a, T> = Pin<Box<dyn Future<Output=T> + Send + 'a>>;
+pub type MsgSendFuture<'a> = ObjSafeFuture<'a,Result<()>>;
 
 /// sendable function that returns a future
 pub type SendableFutureCreator = Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync + 'static>;
+
+pub trait MsgTypeConstraints = FromSysMsg + DefaultReceiveAction + Send + Debug + 'static;
 
 // see https://stackoverflow.com/questions/74920440/how-do-i-wrap-a-closure-which-returns-a-future-without-it-being-sync
 pub fn create_sfc <F,R> (func: F) -> SendableFutureCreator
@@ -99,29 +105,65 @@ pub enum ReceiveAction {
     RequestTermination, // ask actor system to send _Terminate_ messages
 }
 
+pub trait MsgReceiverConstraints = Identifiable + Debug + Send;
+
 /// single message type receiver trait to abstract concrete ActorHandle<MsgSet> instances that would
 /// force the client to know all messages the receiver understands, which reduces re-usability of the
 /// receiver user. Note this trait is not object-safe (use [`DynMsgReceiver`] for dynamic subscription).
 /// 
 /// If we could turn the `impl Future...` returns into a concrete type (say MsgSendFuture) we could
 /// avoid having a separate (and less efficient) `DynMsgReceiver`. Two of the channel crates (flume
-/// and kanal) actually use SendFuture<'_,T> structs but we can't use them since hiding their `T` (message)
+/// and kanal) actually use SendFuture<'_,T> structs but we can't use them since hiding their message
 /// type parameter is the whole point of MsgReceiver (which is only parametric in the actor message variant type) 
-pub trait MsgReceiver<MsgType>: Identifiable + Debug + Send + Clone {
-    fn send_msg (&self, msg: MsgType)->impl Future<Output = Result<()>> + Send;
-    fn timeout_send_msg (&self, msg: MsgType, to: Duration)->impl Future<Output = Result<()>> + Send;
-    fn try_send_msg (&self, msg:MsgType)->Result<()>;
+pub trait MsgReceiver<T>: TryMsgReceiver<T> + MsgReceiverConstraints + Clone {
+    fn send_msg (&self, msg: T) -> impl Future<Output = Result<()>> + Send;
+    fn timeout_send_msg (&self, msg: T, to: Duration) -> impl Future<Output = Result<()>> + Send;
 }
 
 /// this is a single message type receiver trait that is object safe, which means its
 /// async [`send_msg`] and [`timeout_send_msg`] methods return [`ObjSafeFuture`] futures
 /// (`Pin<Box<dyn Future<..>>>`), hence they incur runtime cost.
-/// This trait is the basis for making actors combine through publish/subscribe messages
-/// Use the more efficient [`MsgReceiver`] if trait objects are not required
-pub trait DynMsgReceiver<MsgType>: Identifiable + Debug + Send  {
-    fn send_msg (&self, msg: MsgType) -> ObjSafeFuture<Result<()>>;
-    fn timeout_send_msg (&self, msg: MsgType, to: Duration) -> ObjSafeFuture<Result<()>>;
-    fn try_send_msg (&self, msg: MsgType) -> Result<()>;
+/// Since this trait needs to be object safe we cannot add Clone to its super-traits (which would imply Sized).
+/// This trait is used to store abstract ActorHandles in places that cannot be parameterized
+/// with concrete receiver types (e.g. if we need to store collections of potentially heterogenous receivers)
+/// TODO.- explore if we can reduce runtime cost by means of specialized allocators (e.g. one that is actor
+/// specific, i.e. only has to deal with one allocation at a time)
+pub trait DynMsgReceiver<T>: TryMsgReceiver<T> + MsgReceiverConstraints {
+    fn send_msg (&self, msg: T) -> MsgSendFuture;
+    fn timeout_send_msg (&self, msg: T, to: Duration) -> MsgSendFuture;
+}
+
+/// a MsgReceiver that only supports non-async send. This trait is object safe and does not require
+/// runtime overhead during execution (other than dynamic dispatch).
+/// Since this trait needs to be object safe we cannot add Clone to its super-traits (which would imply Sized).
+/// Note that it is up to the user to handle backpressure (upon OdinError::ReceiverFull)
+pub trait TryMsgReceiver<T>: MsgReceiverConstraints {
+    fn try_send_msg (&self, msg: T) -> Result<()>;
+}
+
+/// a list of ActorHandles implementing MsgReceiver<T> that we async send the same message to.
+/// Use this if the list owner is in control of what message to send.
+/// To create an ActorMsgList use the define_actor_msg_list!() macro
+pub trait ActorSendMsgList<T>: Send where T: Clone + Debug + Send {
+    fn send_msg (&self,m:T) -> impl Future<Output=Result<()>> + Send;
+} 
+
+/// a list of ActorHandles with associated expressions we execute with list owner provided data. Conceptually
+/// this is like a list of AsyncFn(ActorHandle,&D) if there would be such a thing.
+/// Use this if the Actor call site (e.g. main()) is in control of actions.
+/// To create an ActorActionList use the define_actor_action_list!() macro
+pub trait ActorActionList<D>: Send {
+    fn execute (&self,data: &D) -> impl Future<Output=Result<()>> + Send;
+}
+
+/// an action list that is executed with two arguments. One of them is typically is a reference to own data, the
+/// other one to external data received through the activation trigger. This is useful to implement async callbacks
+/// that have to carry over information from the request.
+/// While this could also be implemented with an ActorActionList that takes a tuple as argument type this would force us
+/// to add lifetime parameters to the ActorActionList in case we want to pass in values as references, which
+/// is the normal case for non-trivial owned data (which to maintain is the main reason for having the owner in the first place)
+pub trait ActorAction2List<A,B>: Send {
+    fn execute (&self,a: &A,b: &B) -> impl Future<Output=Result<()>> + Send;
 }
 
 /* #endregion runtime/channel agnostic traits and types */
@@ -142,6 +184,14 @@ pub struct _Start_;
 // does not make sense to derive Clone since the timer id is actor specific
 #[derive(Debug)] 
 pub struct _Timer_ { pub id: i64 }
+
+pub struct _Exec_(pub Box<dyn Fn() + Send>); // side effect executed from within actor task
+
+impl Debug for _Exec_ {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "_Exec_(dyn FnOnce)")
+    }
+}
 
 #[derive(Debug,Clone)] 
 pub struct _Pause_;
@@ -181,15 +231,15 @@ impl _Ping_ {
 }
 
 /// alias trait for something that can ge generated from system messages
-pub trait FromSysMsg: From<_Start_> + From<_Ping_> + From<_Timer_> + From<_Pause_> + From<_Resume_> + From<_Terminate_> {}  
+pub trait FromSysMsg: From<_Start_> + From<_Ping_> + From<_Timer_> + From<_Exec_> + From<_Pause_> + From<_Resume_> + From<_Terminate_> {}  
 
 /// object-safe trait for each actor handle to send system messages
 // TODO - should sent_timer() be async too?
 pub trait SysMsgReceiver where Self: Send + Sync + 'static {
-    fn send_start (&self,msg: _Start_, to: Duration) -> ObjSafeFuture<Result<()>>;
-    fn send_pause (&self, msg: _Pause_, to: Duration) -> ObjSafeFuture<Result<()>>;
-    fn send_resume (&self, msg: _Resume_, to: Duration) -> ObjSafeFuture<Result<()>>;
-    fn send_terminate (&self, msg: _Terminate_, to: Duration) -> ObjSafeFuture<Result<()>>;
+    fn send_start (&self,msg: _Start_, to: Duration) -> MsgSendFuture;
+    fn send_pause (&self, msg: _Pause_, to: Duration) -> MsgSendFuture;
+    fn send_resume (&self, msg: _Resume_, to: Duration) -> MsgSendFuture;
+    fn send_terminate (&self, msg: _Terminate_, to: Duration) -> MsgSendFuture;
 
     // the whole purpose of ping is to measure response time - if we can't even send the Ping that's obviously exceeded
     fn send_ping (&self, msg: _Ping_) -> Result<()>;
@@ -208,4 +258,3 @@ pub trait DefaultReceiveAction {
 define_actor_msg_type! {
     pub SysMsg // only the automatically added system message variants
 }
-

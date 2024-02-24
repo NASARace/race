@@ -4,32 +4,28 @@ use tokio;
 use std::time::{Instant,Duration};
 use odin_actor::prelude::*;
 use odin_actor::errors::{OdinActorError, Result};
-use odin_actor::tokio_kanal::{Actor, ActorHandle, ActorSystem};
+use odin_actor::tokio_kanal::{Actor, ActorHandle, ActorSystem, PreActorHandle};
 
 mod provider {
-    use odin_actor::prelude::*;
+    use odin_actor::{prelude::*, ActorActionList};
     use odin_actor::tokio_kanal::{Actor, ActorHandle};
 
-    #[derive(Debug)] pub struct TriggerCb{}
-    #[derive(Debug)] pub struct AddCb(pub Callback<u64>);
+    #[derive(Debug)] pub struct ExecuteActions{}
 
-    define_actor_msg_type!{ pub ProviderMsg = AddCb | TriggerCb }
+    define_actor_msg_type!{ pub ProviderMsg = ExecuteActions }
 
-    pub struct Provider {
+    pub struct Provider<A> where A: ActorActionList<u64> {
         data: u64,
-        callbacks: CallbackList<u64>,
+        actions: A,
     }
-    impl Provider {
-        pub fn new()->Self { Provider{ data: 0, callbacks: CallbackList::new() } }
+    impl<A> Provider<A> where A: ActorActionList<u64> {
+        pub fn new(actions: A)->Self { Provider{ data: 0, actions } }
     }
 
-    impl_actor! { match msg for Actor<Provider,ProviderMsg> as
-        AddCb => cont! { 
-            self.callbacks.push( msg.0) 
-        }
-        TriggerCb => cont! { 
+    impl_actor! { match msg for Actor<Provider<A>,ProviderMsg> where A: ActorActionList<u64> as
+        ExecuteActions => cont! { 
             self.data += 1;
-            self.callbacks.execute(&self.data).await 
+            self.actions.execute(&self.data).await 
         }
     }
 }
@@ -38,9 +34,9 @@ mod client {
     use std::time::{Instant,Duration};
     use odin_actor::prelude::*;
     use odin_actor::tokio_kanal::{Actor, ActorHandle};
-    use crate::provider::{ProviderMsg,AddCb,TriggerCb};
+    use crate::provider::{ProviderMsg,ExecuteActions};
 
-    #[derive(Debug)] pub struct Update(u64);
+    #[derive(Debug)] pub struct Update(pub u64);
     #[derive(Debug)] pub struct PingSelf(u64);
     #[derive(Debug)] pub struct TryPingSelf(u64);
 
@@ -61,10 +57,6 @@ mod client {
 
     impl_actor! { match msg for Actor<Client,ClientMsg> as
         _Start_ => cont! {
-            //let cb = Callback::from( try_send_msg_callback!( &self.hself, |v:&u64| Update(*v) ));
-            let cb = Callback::from( send_msg_callback!( &self.hself, |v:&u64| Update(*v) ));
-
-            self.provider.send_msg( AddCb(cb)).await;
             self.start_time = Instant::now();
             self.hself.try_send_msg( TryPingSelf(0));
         }
@@ -90,12 +82,12 @@ mod client {
 
                 // done measuring raw msg roundtrip, now start callback loop
                 self.start_time = Instant::now();
-                self.provider.try_send_msg( TriggerCb{});
+                self.provider.try_send_msg( ExecuteActions{});
             }
         }
         Update => {
             if msg.0 < self.max_rounds { 
-                self.provider.try_send_msg( TriggerCb{});
+                self.provider.try_send_msg( ExecuteActions{} );
                 ReceiveAction::Continue 
             } else {
                 let elapsed = Instant::now() - self.start_time;
@@ -109,14 +101,23 @@ mod client {
     }
 }
 
+//#[tokio::main(flavor = "multi_thread", worker_threads = 3)]
+//#[tokio::main(flavor = "current_thread")]
 #[tokio::main]
 async fn main()->Result<()> {
     let max_rounds = get_max_rounds();
-    println!("-- running benchmark_cb with {} rounds", max_rounds);
+    println!("-- running benchmark_alist with {} rounds", max_rounds);
 
     let mut actor_system = ActorSystem::new("benchmark_cb");
-    let prov = spawn_actor!( actor_system, "provider", provider::Provider::new())?;
-    let cli = spawn_actor!( actor_system, "client", client::Client::new(max_rounds, prov))?;
+
+    let pre_prov = PreActorHandle::new("provider",8);
+    let cli = spawn_actor!( actor_system, "client", client::Client::new(max_rounds, ActorHandle::from(&pre_prov)))?;
+
+    define_actor_action_list!{ for actor_handle in ProviderActions (data: &u64):
+        client::ClientMsg => actor_handle.try_send_msg( client::Update(*data))
+    }
+    let prov = spawn_pre_actor!( actor_system, pre_prov, provider::Provider::new( ProviderActions(cli)))?;
+
 
     actor_system.start_all(millis(20)).await?;
     actor_system.process_requests().await?;

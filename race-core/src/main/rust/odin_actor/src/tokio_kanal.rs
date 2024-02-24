@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 #![allow(unused)]
+#![feature(trait_alias)]
 // #![cfg(feature="tokio_channel")]
 
 use tokio::{
@@ -39,9 +40,9 @@ use std::{
     ops::{Deref,DerefMut}
 };
 use crate::{
-    Identifiable, ObjSafeFuture, SendableFutureCreator, ActorSystemRequest, create_sfc,
+    Identifiable, ObjSafeFuture, MsgSendFuture, MsgTypeConstraints, SendableFutureCreator, ActorSystemRequest, create_sfc,
     errors::{Result,OdinActorError, iter_op_result, poisoned_lock},
-    ActorReceiver,MsgReceiver,DynMsgReceiver,ReceiveAction, DefaultReceiveAction,
+    ActorReceiver,MsgReceiver,MsgReceiverConstraints,DynMsgReceiver,TryMsgReceiver,ReceiveAction, DefaultReceiveAction,
     secs,millis,micros,nanos,
     SysMsgReceiver, FromSysMsg, _Start_, _Ping_, _Timer_, _Pause_, _Resume_, _Terminate_,
 };
@@ -155,21 +156,14 @@ pub fn block_on_timeout_send_msg<Msg> (tgt: impl MsgReceiver<Msg>, msg: Msg, to:
  * The real optimization we would like is to avoid MsgReceiver trait objects but those seem necessary for dynamic (msg based) subscription 
  */
 
-pub struct Actor <StateType,MsgType> 
-where 
-    StateType: Send + 'static, 
-    MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
-{
-    pub state: StateType,
-    pub hself: ActorHandle<MsgType>,
+/// S represents the actor state type, M the message type (enum)
+pub struct Actor <S,M> where S: Send + 'static, M: MsgTypeConstraints {
+    pub state: S,
+    pub hself: ActorHandle<M>,
     pub hsys: ActorSystemHandle
 }
 
-impl <StateType,MsgType> Actor <StateType,MsgType> 
-where 
-    StateType: Send + 'static, 
-    MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
-{
+impl <S,M> Actor <S,M> where S: Send + 'static, M: MsgTypeConstraints {
     //--- unfortunately we can only have one Deref so we forward these explicitly
 
     #[inline(always)]
@@ -178,17 +172,17 @@ where
     }
 
     #[inline(always)]
-    pub fn send_msg<M:Into<MsgType>> (&self, msg: M)->impl Future<Output=Result<()>> + '_ {
+    pub fn send_msg<T> (&self, msg: T)->impl Future<Output=Result<()>> + '_  where T: Into<M> {
         self.hself.send_actor_msg( msg.into())
     }
 
     #[inline(always)]
-    pub fn timeout_send_msg<M:Into<MsgType>> (&self, msg: M, to: Duration)->impl Future<Output=Result<()>> + '_ {
+    pub fn timeout_send_msg<T> (&self, msg: T, to: Duration)->impl Future<Output=Result<()>> + '_  where T: Into<M> {
         self.hself.timeout_send_actor_msg( msg.into(), to)
     }
 
     #[inline(always)]
-    pub fn try_send_msg<M: Into<MsgType>> (&self, msg:M)->Result<()> {
+    pub fn try_send_msg<T> (&self, msg:T)->Result<()> where T: Into<M> {
         self.hself.try_send_actor_msg(msg.into())
     }
 
@@ -209,76 +203,84 @@ where
 }
 
 
-impl <StateType,MsgType> Deref for Actor<StateType,MsgType>
-where 
-    StateType: Send + 'static, 
-    MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
-{
-    type Target = StateType;
+impl <S,M> Deref for Actor<S,M> where S: Send + 'static, M: MsgTypeConstraints {
+    type Target = S;
 
     fn deref(&self) -> &Self::Target {
         &self.state
     }
 }
 
-impl <StateType,MsgType> DerefMut for Actor<StateType,MsgType>
-where 
-    StateType: Send + 'static, 
-    MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
-{
+impl <S,M> DerefMut for Actor<S,M> where S: Send + 'static, M: MsgTypeConstraints {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.state
     }
 }
 
-
-// partly opaque struct
-pub struct ActorHandle <MsgType> 
-    where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
-{
-    pub id: Arc<String>,
-    tx: MpscSender<MsgType> // internal - this is channel specific
+/// a surrogate for an actor that hasn't been spawned yet. This is useful to break cyclic dependencies.
+/// The only purpose of PreActorHandles is to pre-allocate the channel sender/receiver and to initialize
+/// ActorHandles and MsgReceivers from it. No messages can be sent through PreActorHandle
+/// We cannot directly pre-alloc ActorHandles since most channel crates do not have cloneable Receivers
+pub struct PreActorHandle <M> where M: MsgTypeConstraints {
+    id: Arc<String>,
+    tx: MpscSender<M>,
+    rx: MpscReceiver<M>
 }
 
-impl <MsgType> ActorHandle <MsgType> 
-    where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static,
+impl <MsgType> PreActorHandle <MsgType> 
+    where MsgType: MsgTypeConstraints,
 {
+    pub fn new (id: impl ToString, bound: usize)->Self {
+        let actor_id = Arc::new(id.to_string());
+        let (tx, rx) = create_mpsc_sender_receiver::<MsgType>( bound);
+        PreActorHandle { id: actor_id, tx, rx }
+    }
+}
+
+/// this is a wrapper for the minimal data we need to send messages of type M to the respective actor
+/// Note this is a partially opaque type
+pub struct ActorHandle <M> where M: MsgTypeConstraints {
+    pub id: Arc<String>,
+    tx: MpscSender<M> // internal - this is channel specific
+}
+
+impl <M> ActorHandle <M> where M: MsgTypeConstraints {
     fn is_running(&self) -> bool {
         !self.tx.is_closed()
     }
 
     /// this waits indefinitely until the message can be send or the receiver got closed
-    pub async fn send_actor_msg (&self, msg: MsgType)->Result<()> {
+    pub async fn send_actor_msg (&self, msg: M)->Result<()> {
         self.tx.send(msg).await.map_err(|_| OdinActorError::ReceiverClosed)
     }
 
-    pub async fn send_msg<M:Into<MsgType>> (&self, msg: M)->Result<()> {
+    pub async fn send_msg<T> (&self, msg: T)->Result<()> where T: Into<M> {
         self.send_actor_msg( msg.into()).await
     }
 
     /// this version consumes self, which is handy if we send from within a closure that
     /// did capture the ActorHandle. Without it the borrow checker would complain that we
     /// borrow self within a future from our closure context
-    pub async fn move_send_msg<M:Into<MsgType>> (self, msg: M)->Result<()> {
+    pub async fn move_send_msg<T> (self, msg: T)->Result<()> where T: Into<M> {
         self.send_actor_msg( msg.into()).await
     }
 
     /// this waits for a given timeout duration until the message can be send or the receiver got closed
-    pub async fn timeout_send_actor_msg (&self, msg: MsgType, to: Duration)->Result<()> {
+    pub async fn timeout_send_actor_msg (&self, msg: M, to: Duration)->Result<()> {
         timeout( to, self.send_actor_msg(msg)).await
     }
 
-    pub async fn timeout_send_msg<M:Into<MsgType>> (&self, msg: M, to: Duration)->Result<()> {
+    pub async fn timeout_send_msg<T> (&self, msg: T, to: Duration)->Result<()> where T: Into<M> {
         self.timeout_send_actor_msg( msg.into(), to).await
     }
 
     /// for use in closures that capture the actor handle - see [`move_send_msg`]
-    pub async fn timeout_move_send_msg<M:Into<MsgType>> (self, msg: M, to: Duration)->Result<()> {
+    pub async fn timeout_move_send_msg<T> (self, msg: T, to: Duration)->Result<()> where T: Into<M> {
         self.timeout_send_msg( msg, to).await
     }
 
     /// this returns immediately but the caller has to check if the message got sent
-    pub fn try_send_actor_msg (&self, msg: MsgType)->Result<()> {
+    pub fn try_send_actor_msg (&self, msg: M)->Result<()> {
         match self.tx.try_send(msg) {
             Ok(true) => Ok(()),
             Ok((false)) => Err(OdinActorError::ReceiverFull),
@@ -286,7 +288,7 @@ impl <MsgType> ActorHandle <MsgType>
         }
     }
 
-    pub fn try_send_msg<M: Into<MsgType>> (&self, msg:M)->Result<()> {
+    pub fn try_send_msg<T> (&self, msg:T)->Result<()> where T: Into<M> {
         self.try_send_actor_msg(msg.into())
     }
 
@@ -302,10 +304,16 @@ impl <MsgType> ActorHandle <MsgType>
     }
 }
 
+impl <M> From<PreActorHandle<M>> for ActorHandle<M> where M: MsgTypeConstraints {
+    fn from (dh: PreActorHandle<M>)->Self { ActorHandle{ id: dh.id.clone(), tx: dh.tx.clone() } }
+}
+
+impl <M> From<& PreActorHandle<M>> for ActorHandle<M> where M: MsgTypeConstraints {
+    fn from (dh: &PreActorHandle<M>)->Self { ActorHandle{ id: dh.id.clone(), tx: dh.tx.clone() } }
+}
+
 // note this consumed the ActorHandle since we have to move it into a Future
-fn oneshot_timer_for<MsgType> (ah: ActorHandle<MsgType>, id: i64, delay: Duration)->AbortHandle
-where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
-{
+fn oneshot_timer_for<M> (ah: ActorHandle<M>, id: i64, delay: Duration)->AbortHandle where M: MsgTypeConstraints {
     let th = spawn( async move {
         sleep(delay).await;
         ah.try_send_actor_msg( _Timer_{id}.into() );
@@ -313,9 +321,7 @@ where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
     th.abort_handle()
 }
 
-fn repeat_timer_for<MsgType> (ah: ActorHandle<MsgType>, id: i64, timer_interval: Duration)->AbortHandle
-where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
-{
+fn repeat_timer_for<M> (ah: ActorHandle<M>, id: i64, timer_interval: Duration)->AbortHandle where M: MsgTypeConstraints {
     let mut interval = interval(timer_interval);
 
     let th = spawn( async move {
@@ -329,85 +335,73 @@ where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
     th.abort_handle()
 }
 
-
-
-impl <MsgType> Identifiable for ActorHandle<MsgType> 
-where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
-{
+impl <M> Identifiable for ActorHandle<M> where M: MsgTypeConstraints {
     fn id (&self) -> &str { self.id.as_str() }
 }
 
-impl <MsgType> Debug for ActorHandle<MsgType>
-where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
-{
+impl <M> Debug for ActorHandle<M> where M: MsgTypeConstraints {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "ActorHandle(\"{}\")", self.id)
     }
 }
 
-impl <MsgType> Clone for ActorHandle <MsgType>
-    where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
-{
+impl <M> Clone for ActorHandle <M> where M: MsgTypeConstraints {
     fn clone(&self)->Self {
-        ActorHandle::<MsgType> { id: self.id.clone(), tx: self.tx.clone() }
+        ActorHandle::<M> { id: self.id.clone(), tx: self.tx.clone() }
     }
 }
 
 /// blanket impl of non-object-safe trait that can send anything that can be turned into a MsgType
 /// (use [`DynMsgReceiver`] if this needs to be sent/stored as trait object)
-impl <M,MsgType> MsgReceiver <M> for ActorHandle <MsgType>
-    where 
-        M: Send + Debug + 'static,
-        MsgType: From<M> + FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
+impl <T,M> MsgReceiver <T> for ActorHandle <M>
+    where  T: Send + Debug + 'static,  M: From<T> + MsgTypeConstraints
 {
-    fn send_msg (&self, msg: M) -> impl Future<Output = Result<()>> + Send {
+    fn send_msg (&self, msg: T) -> impl Future<Output = Result<()>> + Send {
         self.send_actor_msg( msg.into())
     }
 
-    fn timeout_send_msg (&self, msg: M, to: Duration) -> impl Future<Output = Result<()>> + Send {
+    fn timeout_send_msg (&self, msg: T, to: Duration) -> impl Future<Output = Result<()>> + Send {
         self.timeout_send_actor_msg( msg.into(), to)
-    }
-
-    fn try_send_msg (&self, msg: M) -> Result<()> {
-        self.try_send_actor_msg( msg.into())
     }
 }
 
 /// blanket impl of object safe trait that can send anything that can be turned into a MsgType 
 /// Note - this has to pin-box futures upon every send and hence is less efficient than [`MsgReceiver`]
 /// hence this should only be used where we need sendable MsgReceivers
-impl <M,MsgType> DynMsgReceiver <M> for ActorHandle <MsgType>
-    where 
-        M: Send + Debug + 'static,
-        MsgType: From<M> + FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
+impl <T,M> DynMsgReceiver <T> for ActorHandle <M>
+    where T: Send + Debug + 'static,  M: From<T> + MsgTypeConstraints
 {
-    fn send_msg (&self, msg: M) -> ObjSafeFuture<Result<()>> {
+    // TODO - explore if we can use special allocators to mitigate runtime costs
+
+    fn send_msg (&self, msg: T) -> MsgSendFuture {
         Box::pin( self.send_actor_msg( msg.into()))
     }
 
-    fn timeout_send_msg (&self, msg: M, to: Duration) -> ObjSafeFuture<Result<()>> {
+    fn timeout_send_msg (&self, msg: T, to: Duration) -> MsgSendFuture {
         Box::pin( self.timeout_send_actor_msg( msg.into(), to))
     }
+}
 
-    fn try_send_msg (&self, msg: M) -> Result<()> {
+impl <T,M> TryMsgReceiver <T> for ActorHandle <M>
+    where T: Send + Debug + 'static,  M: From<T> + MsgTypeConstraints
+{
+    fn try_send_msg (&self, msg: T) -> Result<()> {
         self.try_send_actor_msg( msg.into())
     }
 }
 
-
-impl <MsgType> SysMsgReceiver for ActorHandle<MsgType>
-    where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
+impl <M> SysMsgReceiver for ActorHandle<M> where M: MsgTypeConstraints 
 {
-    fn send_start (&self,msg: _Start_, to: Duration)->ObjSafeFuture<Result<()>> {
+    fn send_start (&self,msg: _Start_, to: Duration)->MsgSendFuture {
         Box::pin(self.timeout_send_actor_msg(msg.into(),to)) 
     }
-    fn send_pause (&self, msg: _Pause_, to: Duration)->ObjSafeFuture<Result<()>> {
+    fn send_pause (&self, msg: _Pause_, to: Duration)->MsgSendFuture {
         Box::pin(self.timeout_send_actor_msg(msg.into(),to)) 
     }
-    fn send_resume (&self, msg: _Resume_, to: Duration)->ObjSafeFuture<Result<()>> {
+    fn send_resume (&self, msg: _Resume_, to: Duration)->MsgSendFuture {
         Box::pin(self.timeout_send_actor_msg(msg.into(),to)) 
     }
-    fn send_terminate (&self, msg: _Terminate_, to: Duration)->ObjSafeFuture<Result<()>> {
+    fn send_terminate (&self, msg: _Terminate_, to: Duration)->MsgSendFuture {
         Box::pin(self.timeout_send_actor_msg(msg.into(),to)) 
     }
     fn send_ping (&self, msg: _Ping_)->Result<()> {
@@ -444,19 +438,19 @@ impl ActorSystemHandle {
             -> (Actor<T,MsgType>, ActorHandle<MsgType>, MpscReceiver<MsgType>)
     where 
         T: Send + 'static,
-        MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
+        MsgType: MsgTypeConstraints
     {
-        actor_tuple_for( self.clone(), id, state, bound)
+        actor_tuple( self.clone(), id, state, bound)
     }
 
-    pub async fn spawn_actor<MsgType,ReceiverType> (&self, act: (ReceiverType, ActorHandle<MsgType>, MpscReceiver<MsgType>))->Result<ActorHandle<MsgType>> 
+    pub async fn spawn_actor<M,R> (&self, act: (R, ActorHandle<M>, MpscReceiver<M>))->Result<ActorHandle<M>> 
     where
-        MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static,
-        ReceiverType: ActorReceiver<MsgType> + Send + Sync + 'static
+        M: MsgTypeConstraints,
+        R: ActorReceiver<M> + Send + Sync + 'static
     {
         let (mut receiver, actor_handle, rx) = act;
         let id = actor_handle.id.clone();
-        let type_name = std::any::type_name::<ReceiverType>();
+        let type_name = std::any::type_name::<R>();
         let sys_msg_receiver = Box::new(actor_handle.clone());
         let hsys = self.clone();
         let func = move || { run_actor(rx, receiver, hsys) };
@@ -498,8 +492,8 @@ impl ActorSystem {
     }
 
     // these two functions need to be called at the user code level. The separation is required to guarantee that
-    // there is a Receiver<MsgType> impl for the respective Actor<T,MsgType> - the new_(..) returns the concrete Actor<T,MsgType>
-    // and the spawn_(..) expects a Receiver<MsgType> and hence fails if there is none in scope. The ugliness comes in form
+    // there is a Receiver<M> impl for the respective Actor<S,M> - the new_(..) returns the concrete Actor<S,M>
+    // and the spawn_(..) expects a Receiver<M> and hence fails if there is none in scope. The ugliness comes in form
     // of all the ActorSystem internal data we create in new_(..) but need in spawn_(..) and unfortunately we can't even use
     // the Actor hself field since spawn_(..) doesn't even see that it's an Actor (it consumes the Receiver).
     // We can't bypass Receiver by providing receive() through a fn()->impl Future<..> since impl-in-return-pos is not 
@@ -507,22 +501,24 @@ impl ActorSystem {
     // We also can't use a default blanket Receive impl for Actor and min_specialization - apart from that it isn't stable yet
     // it does not support async traits
 
-    pub fn new_actor<StateType,MsgType> (&self, id: impl ToString, state: StateType, bound: usize) 
-            -> (Actor<StateType,MsgType>, ActorHandle<MsgType>, MpscReceiver<MsgType>)
-        where 
-            StateType: Send + 'static,
-            MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
+    pub fn new_actor<S,M> (&self, id: impl ToString, state: S, bound: usize)->(Actor<S,M>, ActorHandle<M>, MpscReceiver<M>)
+        where S: Send + 'static, M: MsgTypeConstraints
     {
-        actor_tuple_for( ActorSystemHandle { sender: self.request_sender.clone() }, id, state, bound)
+        actor_tuple( ActorSystemHandle { sender: self.request_sender.clone() }, id, state, bound)
+    }
+
+    pub fn new_pre_actor<S,M> (&self, h_pre: PreActorHandle<M>, state: S)->(Actor<S,M>, ActorHandle<M>, MpscReceiver<M>)
+        where S: Send + 'static, M: MsgTypeConstraints
+    {
+        pre_actor_tuple(ActorSystemHandle { sender: self.request_sender.clone() }, state, h_pre)
     }
 
     /// although this implementation is infallible others (e.g. through an [`ActorHandle`] or using different
     /// channel types) are not. To keep it consistent we return a `Result<ActorHandle>``
-    pub fn spawn_actor <MsgType,ReceiverType> (&mut self, act: (ReceiverType, ActorHandle<MsgType>, MpscReceiver<MsgType>))
-            ->Result<ActorHandle<MsgType>>
+    pub fn spawn_actor <M,R> (&mut self, act: (R, ActorHandle<M>, MpscReceiver<M>))->Result<ActorHandle<M>>
         where
-            MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static,
-            ReceiverType: ActorReceiver<MsgType> + Send + 'static
+            M: MsgTypeConstraints,
+            R: ActorReceiver<M> + Send + 'static
     {
         let (mut receiver, actor_handle, rx) = act;
         let hsys = ActorSystemHandle { sender: self.request_sender.clone()};
@@ -531,7 +527,7 @@ impl ActorSystem {
 
         let actor_entry = ActorEntry {
             id: actor_handle.id.clone(),
-            type_name: type_name::<ReceiverType>(),
+            type_name: type_name::<R>(),
             abortable: abort_handle,
             receiver: Box::new(actor_handle.clone()), // stores it as a SysMsgReceiver trait object
             ping_response: Arc::new(AtomicU64::new(0))
@@ -540,7 +536,6 @@ impl ActorSystem {
 
         Ok(actor_handle)
     }
-
 
     // this is used from spawned actors sending us RequestActorOf messages
     fn spawn_actor_request (&mut self, actor_id: Arc<String>, type_name: &'static str, sys_msg_receiver: Box<dyn SysMsgReceiver>, sfc: SendableFutureCreator) {
@@ -648,14 +643,11 @@ impl ActorSystem {
 
 }
 
-fn actor_tuple_for<StateType,MsgType> (hsys: ActorSystemHandle, id: impl ToString, state: StateType, bound: usize)
-           -> (Actor<StateType,MsgType>, ActorHandle<MsgType>, MpscReceiver<MsgType>)
-where 
-    StateType: Send + 'static,
-    MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static
+fn actor_tuple<S,M> (hsys: ActorSystemHandle, id: impl ToString, state: S, bound: usize)->(Actor<S,M>, ActorHandle<M>, MpscReceiver<M>)
+    where S: Send + 'static, M: MsgTypeConstraints
 {
     let actor_id = Arc::new(id.to_string());
-    let (tx, rx) = create_mpsc_sender_receiver::<MsgType>( bound);
+    let (tx, rx) = create_mpsc_sender_receiver::<M>( bound);
     let actor_handle = ActorHandle { id: actor_id, tx };
     let hself = actor_handle.clone();
     let actor = Actor{ state, hself, hsys };
@@ -663,10 +655,22 @@ where
     (actor, actor_handle, rx)
 }
 
-async fn run_actor <MsgType,ReceiverType> (mut rx: MpscReceiver<MsgType>, mut receiver: ReceiverType, hsys: ActorSystemHandle)
-where
-    MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug + 'static,
-    ReceiverType: ActorReceiver<MsgType> + Send + 'static
+fn pre_actor_tuple<S,M> (hsys: ActorSystemHandle, state: S, pre_h: PreActorHandle<M>)->(Actor<S,M>, ActorHandle<M>, MpscReceiver<M>)
+    where S: Send + 'static, M: MsgTypeConstraints
+{
+    let actor_id = pre_h.id.clone();
+    let rx = pre_h.rx;
+    let actor_handle = ActorHandle{ id: actor_id, tx: pre_h.tx };
+    let hself = actor_handle.clone();
+    let actor = Actor{ state, hself, hsys };
+
+    (actor, actor_handle, rx)
+}
+
+async fn run_actor <M,R> (mut rx: MpscReceiver<M>, mut receiver: R, hsys: ActorSystemHandle)
+    where
+        M: MsgTypeConstraints,
+        R: ActorReceiver<M> + Send + 'static
 {
     loop {
         match rx.recv().await {
@@ -695,92 +699,93 @@ where
 
 /// QueryBuilder avoids the extra cost of a per-request channel allocation and is therefore slightly faster
 /// compared to a per-query Oneshot channel
-pub struct QueryBuilder<R>  where R: Send + Debug {
-    tx: MpscSender<R>,
-    rx: MpscReceiver<R>,
+pub struct QueryBuilder<A>  where A: Send + Debug {
+    tx: MpscSender<A>,
+    rx: MpscReceiver<A>,
 }
 
-impl <R> QueryBuilder<R> where R: Send + Debug {
+impl <A> QueryBuilder<A> where A: Send + Debug {
     pub fn new ()->Self {
-        let (tx,rx) = create_mpsc_sender_receiver::<R>(1);
+        let (tx,rx) = create_mpsc_sender_receiver::<A>(1);
         QueryBuilder { tx, rx }
     }
 
-    pub async fn query <M,T> (&self, responder: M, topic: T)->Result<R> 
-    where T: Send + Debug, M: MsgReceiver<Query<T,R>>
+    pub async fn query <Q,R> (&self, responder: R, topic: Q)->Result<A> 
+        where Q: Send + Debug, R: MsgReceiver<Query<Q,A>>
     {
-        let msg = Query { topic, tx: self.tx.clone() };
+        let msg = Query { question: topic, tx: self.tx.clone() };
         responder.send_msg(msg).await;
         self.rx.recv().await.map_err(|_| OdinActorError::SendersDropped)
     }
 
     /// if we use this version `M` has to be `Send` + `Sync` but we save the cost of cloning the responder on each query
-    pub async fn query_ref <M,T> (&self, responder: &M, topic: T)->Result<R> 
-    where T: Send + Debug, M: MsgReceiver<Query<T,R>> + Sync
+    pub async fn query_ref <Q,R> (&self, responder: &R, topic: Q)->Result<A> 
+        where Q: Send + Debug, R: MsgReceiver<Query<Q,A>> + Sync
     {
-        let msg = Query { topic, tx: self.tx.clone() };
+        let msg = Query { question: topic, tx: self.tx.clone() };
         responder.send_msg(msg).await;
         self.rx.recv().await.map_err(|_| OdinActorError::SendersDropped)
     }
 
-    pub async fn timeout_query <M,T> (&self, responder: M, topic: T, to: Duration)->Result<R> 
-    where T: Send + Debug, M: MsgReceiver<Query<T,R>>
+    pub async fn timeout_query <Q,R> (&self, responder: R, topic: Q, to: Duration)->Result<A> 
+        where Q: Send + Debug, R: MsgReceiver<Query<Q,A>>
     {
         timeout( to, self.query( responder, topic)).await
     }
 
     /// if we use this version `M` has to be `Send` + `Sync` but we save the cost of cloning the responder on each query
-    pub async fn timeout_query_ref <M,T> (&self, responder: &M, topic: T, to: Duration)->Result<R> 
-    where T: Send + Debug, M: MsgReceiver<Query<T,R>> + Sync
+    pub async fn timeout_query_ref <Q,R> (&self, responder: &R, topic: Q, to: Duration)->Result<A> 
+        where Q: Send + Debug, R: MsgReceiver<Query<Q,A>> + Sync
     {
         timeout( to, self.query_ref( responder, topic)).await
     }
 }
 
-pub struct Query<T,R> where T: Send + Debug, R: Send + Debug {
-    pub topic: T,
-    tx: MpscSender<R>
+///
+pub struct Query<Q,A> where Q: Send + Debug, A: Send + Debug {
+    pub question: Q,
+    tx: MpscSender<A>
 }
 
-impl <T,R> Query<T,R> where T: Send + Debug, R: Send + Debug {
-    pub async fn respond (self, r: R)->Result<()> {
-        self.tx.send(r).await.map_err(|_| OdinActorError::ReceiverClosed)
+impl <Q,A> Query<Q,A> where Q: Send + Debug, A: Send + Debug {
+    pub async fn respond (self, answer: A)->Result<()> {
+        self.tx.send(answer).await.map_err(|_| OdinActorError::ReceiverClosed)
     }
 }
 
-impl<T,R> Debug for Query<T,R>  where T: Send + Debug, R: Send + Debug {
+impl<Q,A> Debug for Query<Q,A>  where Q: Send + Debug, A: Send + Debug {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Request<{},{}>{:?})", type_name::<T>(), type_name::<R>(), self.topic)
+        write!(f, "Request<{},{}>{:?})", type_name::<Q>(), type_name::<A>(), self.question)
     }
 }
 
 /// oneshot query
-pub async fn query<T,R,M> (responder: M, topic: T)->Result<R> 
-where T: Send + Debug, R: Send + Debug, M: MsgReceiver<Query<T,R>>
+pub async fn query<Q,A,R> (responder: R, topic: Q)->Result<A> 
+    where Q: Send + Debug, A: Send + Debug, R: MsgReceiver<Query<Q,A>>
 {
-    let qb = QueryBuilder::<R>::new();
+    let qb = QueryBuilder::<A>::new();
     qb.query( responder, topic).await
 }
 
-pub async fn query_ref<T,R,M> (responder: &M, topic: T)->Result<R> 
-where T: Send + Debug, R: Send + Debug, M: MsgReceiver<Query<T,R>> + Sync
+pub async fn query_ref<Q,A,R> (responder: &R, topic: Q)->Result<A> 
+    where Q: Send + Debug, A: Send + Debug, R: MsgReceiver<Query<Q,A>> + Sync
 {
-    let qb = QueryBuilder::<R>::new();
+    let qb = QueryBuilder::<A>::new();
     qb.query_ref( responder, topic).await
 }
 
 /// oneshot timeout query
-pub async fn timeout_query<T,R,M> (responder: M, topic: T, to: Duration)->Result<R> 
-where T: Send + Debug, R: Send + Debug, M: MsgReceiver<Query<T,R>>
+pub async fn timeout_query<Q,A,R> (responder: R, topic: Q, to: Duration)->Result<A> 
+    where Q: Send + Debug, A: Send + Debug, R: MsgReceiver<Query<Q,A>>
 {
-    let qb = QueryBuilder::<R>::new();
+    let qb = QueryBuilder::<A>::new();
     qb.timeout_query( responder, topic, to).await
 }
 
-pub async fn timeout_query_ref<T,R,M> (responder: &M, topic: T, to: Duration)->Result<R> 
-where T: Send + Debug, R: Send + Debug, M: MsgReceiver<Query<T,R>> + Sync
+pub async fn timeout_query_ref<Q,A,R> (responder: &R, topic: Q, to: Duration)->Result<A> 
+    where Q: Send + Debug, A: Send + Debug, R: MsgReceiver<Query<Q,A>> + Sync
 {
-    let qb = QueryBuilder::<R>::new();
+    let qb = QueryBuilder::<A>::new();
     qb.timeout_query_ref( responder, topic, to).await
 }
 
