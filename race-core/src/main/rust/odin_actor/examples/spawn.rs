@@ -18,9 +18,6 @@
 
 use odin_actor::prelude::*;
 use odin_actor::errors::Result;
-//use odin_actor::tokio_channel::{ActorSystem,Actor,ActorHandle,Abortable, sleep};
-use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,AbortHandle,JoinHandle,sleep,spawn};
-
 
 #[derive(Debug)] struct Spawn;
 #[derive(Debug)] struct DataAvailable(i64);
@@ -95,7 +92,7 @@ async fn main ()->Result<()> {
 
     let spawner = spawn_actor!( actor_system, "spawner", Spawner::new())?;
 
-    actor_system.start_all(millis(20)).await?;
+    actor_system.timeout_start_all(millis(20)).await?;
     sleep(millis(2000)).await;
     spawner.send_msg(Spawn{}).await;
 

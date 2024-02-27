@@ -18,6 +18,7 @@
 #![feature(trait_alias)]
 // #![cfg(feature="tokio_channel")]
 
+use odin_job::JobScheduler;
 use tokio::{
     time::{self,Interval,interval},
     task::{self, JoinSet, LocalSet},
@@ -27,24 +28,16 @@ use kanal::{
     bounded_async,AsyncSender,AsyncReceiver, SendError
 };
 use std::{
-    any::type_name,
-    time::{Instant,Duration},
-    sync::{Arc,Mutex,atomic::AtomicU64},
-    future::Future,
-    fmt::Debug, 
-    pin::Pin,
-    boxed::Box, 
-    cell::Cell,
-    marker::{Sync, PhantomData},
-    result::{Result as StdResult},
-    ops::{Deref,DerefMut}
+    any::type_name, boxed::Box, cell::Cell, fmt::Debug, future::Future, marker::{PhantomData, Sync}, 
+    ops::{Deref,DerefMut}, pin::Pin, result::Result as StdResult, 
+    sync::{atomic::AtomicU64, Arc, LockResult, Mutex, MutexGuard}, time::{Duration, Instant}
 };
 use crate::{
     Identifiable, ObjSafeFuture, MsgSendFuture, MsgTypeConstraints, SendableFutureCreator, ActorSystemRequest, create_sfc,
     errors::{Result,OdinActorError, iter_op_result, poisoned_lock},
     ActorReceiver,MsgReceiver,MsgReceiverConstraints,DynMsgReceiver,TryMsgReceiver,ReceiveAction, DefaultReceiveAction,
     secs,millis,micros,nanos,
-    SysMsgReceiver, FromSysMsg, _Start_, _Ping_, _Timer_, _Pause_, _Resume_, _Terminate_,
+    SysMsgReceiver, FromSysMsg, _Start_, _Ping_, _Exec_, _Timer_, _Pause_, _Resume_, _Terminate_,
 };
 
 /* #region runtime abstractions ***************************************************************************/
@@ -187,6 +180,11 @@ impl <S,M> Actor <S,M> where S: Send + 'static, M: MsgTypeConstraints {
     }
 
     #[inline(always)]
+    pub fn get_scheduler (&self)->LockResult<MutexGuard<'_,JobScheduler>> {
+        self.hsys.get_scheduler()
+    }
+
+    #[inline(always)]
     pub fn start_oneshot_timer (&self, id: i64, delay: Duration) -> AbortHandle {
         oneshot_timer_for( self.hself.clone(), id, delay)
     }
@@ -199,6 +197,10 @@ impl <S,M> Actor <S,M> where S: Send + 'static, M: MsgTypeConstraints {
     #[inline(always)]
     pub async fn request_termination (&self, to: Duration)->Result<()> {
         self.hsys.send_msg( ActorSystemRequest::RequestTermination, to).await
+    }
+
+    fn exec (&self, f: impl Fn() + Send + 'static)->Result<()> {
+        self.hself.try_send_actor_msg( _Exec_(Box::new(f)).into())
     }
 }
 
@@ -427,7 +429,8 @@ struct ActorEntry {
 
 #[derive(Clone)]
 pub struct ActorSystemHandle {
-    sender: MpscSender<ActorSystemRequest>
+    sender: MpscSender<ActorSystemRequest>,
+    job_scheduler: Arc<Mutex<JobScheduler>>
 }
 impl ActorSystemHandle {
     pub async fn send_msg (&self, msg: ActorSystemRequest, to: Duration)->Result<()> {
@@ -453,11 +456,15 @@ impl ActorSystemHandle {
         let type_name = std::any::type_name::<R>();
         let sys_msg_receiver = Box::new(actor_handle.clone());
         let hsys = self.clone();
-        let func = move || { run_actor(rx, receiver, hsys) };
+        let func = move || { run_actor(rx, receiver) };
         let sfc = create_sfc( func);
 
         self.send_msg( ActorSystemRequest::RequestActorOf { id, type_name, sys_msg_receiver, sfc }, secs(1)).await?;
         Ok(actor_handle)
+    }
+
+    pub fn get_scheduler (&self)->LockResult<MutexGuard<'_,JobScheduler>> {
+        self.job_scheduler.lock()
     }
 
     pub async fn request_termination (&self, to: Duration)->Result<()> {
@@ -472,6 +479,7 @@ pub struct ActorSystem {
     ping_cycle: u32,
     request_sender: MpscSender<ActorSystemRequest>,
     request_receiver: MpscReceiver<ActorSystemRequest>,
+    job_scheduler: Arc<Mutex<JobScheduler>>, 
     join_set: task::JoinSet<()>, 
     actor_entries: Vec<ActorEntry>
 }
@@ -480,15 +488,24 @@ impl ActorSystem {
 
     pub fn new<T: ToString> (id: T)->Self {
         let (tx,rx) = create_mpsc_sender_receiver(8);
+        let mut job_scheduler = JobScheduler::with_max_pending( 1024);
 
         ActorSystem { 
             id: id.to_string(), 
             ping_cycle: 0,
             request_sender: tx,
             request_receiver: rx,
+            job_scheduler: Arc::new( Mutex::new(job_scheduler)),
             join_set: JoinSet::new(),
             actor_entries: Vec::new()
         }
+    }
+
+    fn new_handle (&self)->ActorSystemHandle {
+        let sender = self.request_sender.clone();
+        let job_scheduler = self.job_scheduler.clone();
+
+        ActorSystemHandle{sender,job_scheduler}    
     }
 
     // these two functions need to be called at the user code level. The separation is required to guarantee that
@@ -504,26 +521,25 @@ impl ActorSystem {
     pub fn new_actor<S,M> (&self, id: impl ToString, state: S, bound: usize)->(Actor<S,M>, ActorHandle<M>, MpscReceiver<M>)
         where S: Send + 'static, M: MsgTypeConstraints
     {
-        actor_tuple( ActorSystemHandle { sender: self.request_sender.clone() }, id, state, bound)
+        actor_tuple( self.new_handle(), id, state, bound)
     }
 
     pub fn new_pre_actor<S,M> (&self, h_pre: PreActorHandle<M>, state: S)->(Actor<S,M>, ActorHandle<M>, MpscReceiver<M>)
         where S: Send + 'static, M: MsgTypeConstraints
     {
-        pre_actor_tuple(ActorSystemHandle { sender: self.request_sender.clone() }, state, h_pre)
+        pre_actor_tuple( self.new_handle(), state, h_pre)
     }
 
     /// although this implementation is infallible others (e.g. through an [`ActorHandle`] or using different
     /// channel types) are not. To keep it consistent we return a `Result<ActorHandle>``
-    pub fn spawn_actor <M,R> (&mut self, act: (R, ActorHandle<M>, MpscReceiver<M>))->Result<ActorHandle<M>>
+    pub fn spawn_actor<R,M> (&mut self, act: (R, ActorHandle<M>, MpscReceiver<M>))->Result<ActorHandle<M>>
         where
             M: MsgTypeConstraints,
             R: ActorReceiver<M> + Send + 'static
     {
         let (mut receiver, actor_handle, rx) = act;
-        let hsys = ActorSystemHandle { sender: self.request_sender.clone()};
 
-        let abort_handle = self.join_set.spawn( run_actor(rx, receiver, hsys));
+        let abort_handle = self.join_set.spawn( run_actor(rx, receiver));
 
         let actor_entry = ActorEntry {
             id: actor_handle.id.clone(),
@@ -551,6 +567,9 @@ impl ActorSystem {
         self.actor_entries.push( actor_entry);
     }
 
+    pub fn get_scheduler (&self)->LockResult<MutexGuard<'_,JobScheduler>> {
+        self.job_scheduler.lock()
+    }
 
     // this should NOT be accessible from actors, hence we require a &mut self
     pub async fn wait_all (&mut self, to: Duration) -> Result<()> {
@@ -582,10 +601,16 @@ impl ActorSystem {
         Ok(())
     }
 
-    pub async fn start_all (&self, to: Duration)->Result<()> {
-        let actor_entries = &self.actor_entries;
+    pub fn start_all(&self)->impl Future<Output=Result<()>> {
+        self.timeout_start_all(millis(100))
+    }
 
+    pub async fn timeout_start_all (&self, to: Duration)->Result<()> {
+        let actor_entries = &self.actor_entries;
         let mut failed = 0;
+
+        self.start_scheduler();
+
         for actor_entry in actor_entries {
             if actor_entry.receiver.send_start(_Start_{}, to).await.is_err() { failed += 1 }
         }
@@ -596,6 +621,8 @@ impl ActorSystem {
     pub async fn terminate_all (&self, to: Duration)->Result<()>  {
         let mut len = 0;
         let mut failed = 0;
+
+        self.stop_scheduler();
 
         //for actor_entry in self.actors.iter().rev() { // send terminations in reverse ?
         for actor_entry in self.actor_entries.iter() {
@@ -614,7 +641,20 @@ impl ActorSystem {
         if (res.is_err()) {
             self.abort_all().await
         }
+    
         res
+    }
+
+    pub fn stop_scheduler (&self) {
+        if let Ok(mut scheduler) = self.get_scheduler() { // TODO - should this be done here
+            scheduler.abort();
+        }
+    }
+
+    pub fn start_scheduler (&self) {
+        if let Ok(mut scheduler) = self.get_scheduler() { // TODO - should this be done here
+            scheduler.run();
+        }
     }
 
     pub async fn process_requests (&mut self)->Result<()> {
@@ -643,7 +683,9 @@ impl ActorSystem {
 
 }
 
-fn actor_tuple<S,M> (hsys: ActorSystemHandle, id: impl ToString, state: S, bound: usize)->(Actor<S,M>, ActorHandle<M>, MpscReceiver<M>)
+type ActorTuple<R,M> = (Actor<R,M>, ActorHandle<M>, MpscReceiver<M>);
+
+fn actor_tuple<S,M> (hsys: ActorSystemHandle, id: impl ToString, state: S, bound: usize)->ActorTuple<S,M>
     where S: Send + 'static, M: MsgTypeConstraints
 {
     let actor_id = Arc::new(id.to_string());
@@ -655,7 +697,7 @@ fn actor_tuple<S,M> (hsys: ActorSystemHandle, id: impl ToString, state: S, bound
     (actor, actor_handle, rx)
 }
 
-fn pre_actor_tuple<S,M> (hsys: ActorSystemHandle, state: S, pre_h: PreActorHandle<M>)->(Actor<S,M>, ActorHandle<M>, MpscReceiver<M>)
+fn pre_actor_tuple<S,M> (hsys: ActorSystemHandle, state: S, pre_h: PreActorHandle<M>)->ActorTuple<S,M>
     where S: Send + 'static, M: MsgTypeConstraints
 {
     let actor_id = pre_h.id.clone();
@@ -667,7 +709,7 @@ fn pre_actor_tuple<S,M> (hsys: ActorSystemHandle, state: S, pre_h: PreActorHandl
     (actor, actor_handle, rx)
 }
 
-async fn run_actor <M,R> (mut rx: MpscReceiver<M>, mut receiver: R, hsys: ActorSystemHandle)
+async fn run_actor<M,R> (mut rx: MpscReceiver<M>, mut receiver: R)
     where
         M: MsgTypeConstraints,
         R: ActorReceiver<M> + Send + 'static
@@ -682,7 +724,7 @@ async fn run_actor <M,R> (mut rx: MpscReceiver<M>, mut receiver: R, hsys: ActorS
                         break;
                     }
                     ReceiveAction::RequestTermination => {
-                        hsys.send_msg(ActorSystemRequest::RequestTermination, secs(1)).await;
+                        receiver.hsys().send_msg(ActorSystemRequest::RequestTermination, secs(1)).await;
                     }
                 }
             }

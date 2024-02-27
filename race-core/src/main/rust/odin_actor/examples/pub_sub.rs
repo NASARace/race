@@ -90,6 +90,6 @@ async fn main ()->Result<()> {
     updater.send_msg( Subscribe( msg_subscriber(client_1))).await;
     updater.send_msg( Subscribe( msg_subscriber(client_2))).await;
 
-    actor_system.start_all(millis(20)).await?;
+    actor_system.timeout_start_all(millis(20)).await?;
     actor_system.process_requests().await
 }

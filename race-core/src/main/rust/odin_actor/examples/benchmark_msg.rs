@@ -20,7 +20,6 @@
 ///! infrastructure and is not run with `cargo bench`. In general we try to avoid micro-benchmarking async code
 
 use odin_actor::prelude::*;
-use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle};
 
 use std::time::{Instant,Duration};
 use std::sync::Mutex;

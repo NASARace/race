@@ -17,8 +17,6 @@
 #![allow(unused)]
 
 use odin_actor::prelude::*;
-use odin_actor::tokio_kanal::{ActorSystem,Actor};
-
 use anyhow::{anyhow,Result};
 
 #[derive(Debug)]
@@ -31,8 +29,6 @@ struct Greeter; // look ma - no fields
 impl_actor! { match msg for Actor<Greeter,GreeterMsg> as
     Greet => cont! { println!("hello {}!", msg.0); }
 }
-
-pub struct Blah;
 
 #[tokio::main]
 async fn main() ->Result<()> {

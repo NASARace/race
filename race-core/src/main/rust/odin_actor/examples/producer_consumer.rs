@@ -17,9 +17,6 @@
 #![allow(unused)]
 
 use odin_actor::prelude::*;
-//use odin_actor::tokio_channel::{ActorSystem,Actor,ActorHandle,Abortable, sleep};
-use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,sleep};
-
 use anyhow::{anyhow,Result};
 
 /* #region producer *********************************************************************/
@@ -65,7 +62,7 @@ async fn main() ->Result<()> {
     let consumer_handle = spawn_actor!( actor_system, "consumer", Consumer{})?;
     let producer_handle = spawn_actor!( actor_system, "producer", Producer {client: consumer_handle})?;
 
-    actor_system.start_all(millis(20)).await?; // sends out _Start_ messages
+    actor_system.timeout_start_all(millis(20)).await?; // sends out _Start_ messages
     actor_system.process_requests().await?;
 
     Ok(())

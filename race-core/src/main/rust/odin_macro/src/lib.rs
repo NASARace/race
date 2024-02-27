@@ -914,6 +914,7 @@ pub fn impl_actor (item: TokenStream) -> TokenStream {
                     //_ => #msg_name . default_receive_action() // this would be a catch-all which would cut off the check for unmatched user messages
                 }
             }
+            fn hsys(&self)->&ActorSystemHandle { &self.hsys }
         }
         /* explicit trait impl for variant types would go here 
         #( 
@@ -1315,6 +1316,67 @@ impl Parse for ActorAction {
 
 /* #endergion actor lists */
 
+/* #region fnmut *****************************************************************/
+
+/// [([mut] id = expr {, ...}) =>] [| id [: type] {, ...} |] expr )
+
+#[proc_macro]
+pub fn fn_mut (item: TokenStream)->TokenStream {
+    let FnMutSpec{ var_bindings, args, body} = match syn::parse(item) {
+        Ok(spec) => spec,
+        Err(e) => panic!( "failed to parse fn_mut definition {:?}", e)
+    };
+
+    let new_item: TokenStream =quote! {
+        {
+            #( let #var_bindings ;)*
+            move | #( #args ),* | { #body }
+        }
+    }.into();
+    //println!("-----\n{}\n-----", new_item.to_string());
+
+    new_item
+}
+
+struct FnMutSpec {
+    var_bindings: Vec<VarAssign>,
+    args: Vec<OptTypedVar>,
+    body: Expr
+}
+
+impl Parse for FnMutSpec {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let mut var_bindings: Vec<VarAssign> = Vec::new();
+        let mut lookahead = input.lookahead1();
+        if lookahead.peek( Paren) {
+            let var_input;
+            let _var_paren: Paren = parenthesized!( var_input in input);
+            let mut dvars: Punctuated<VarAssign,Comma> = Punctuated::parse_separated_nonempty(&var_input)?;
+            var_bindings = dvars.into_iter().collect::<Vec<_>>().into();
+
+            let _: Token![=>] = input.parse()?;
+            lookahead = input.lookahead1();
+        }
+
+        let mut args: Vec<OptTypedVar> = Vec::new();
+        if lookahead.peek( Token![|]) {
+            let _: Token![|] = input.parse()?;
+            loop {
+                args.push( input.parse()?);
+                lookahead = input.lookahead1();
+                if !lookahead.peek(Token![,]) { break; } else { input.parse::<Token![,]>()?; }
+            }
+            input.parse::<Token![|]>()?;
+        }
+
+        let body: Expr = input.parse()?;
+
+        Ok( FnMutSpec{var_bindings, args, body} )
+    }
+}
+
+/* #endregion fnmut */
+
 /* #region support funcs *********************************************************/
 
 // just a simple "var_name: var_type" fragment that can be used in various places where the full
@@ -1339,6 +1401,65 @@ impl ToTokens for TypedVar {
         self.var_name.to_tokens(tokens);
         self.colon_token.to_tokens(tokens);
         self.var_type.to_tokens(tokens);
+    }
+}
+
+// var whose type can be inferred
+struct OptTypedVar {
+    var_name: Ident,
+    colon_token: Option<Colon>,
+    var_type: Option<Type>
+}
+
+impl Parse for OptTypedVar {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let var_name: Ident = input.parse()?;
+        let mut colon_token: Option<Colon> = None;
+        let mut var_type: Option<Type> = None;
+
+        let lookahead = input.lookahead1();
+        if lookahead.peek(Token![:]) {
+            colon_token = Some(input.parse::<Colon>()?);
+            var_type = Some(input.parse()?);
+        }
+        Ok(OptTypedVar{var_name,colon_token,var_type})
+    }
+}
+
+impl ToTokens for OptTypedVar {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        self.var_name.to_tokens(tokens);
+        self.colon_token.to_tokens(tokens);
+        self.var_type.to_tokens(tokens);
+    }
+}
+
+
+struct VarAssign {
+    maybe_mut_token: Option<Mut>,
+    var_name: Ident,
+    assign_token: Token![=],
+    init_expr: Expr
+}
+
+impl Parse for VarAssign {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let lookahead = input.lookahead1();
+        let maybe_mut_token = if lookahead.peek(Mut) { Some(input.parse::<Mut>()?) } else { None };
+        let var_name: Ident = input.parse()?;
+        let assign_token: Token![=] = input.parse()?;
+        let init_expr: Expr = input.parse()?;
+
+        Ok(VarAssign{ maybe_mut_token, var_name, assign_token, init_expr })
+    }
+}
+
+impl ToTokens for VarAssign {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        if let Some(t) = self.maybe_mut_token { t.to_tokens(tokens) }
+        self.var_name.to_tokens(tokens);
+        self.assign_token.to_tokens(tokens);
+        self.init_expr.to_tokens(tokens);
     }
 }
 

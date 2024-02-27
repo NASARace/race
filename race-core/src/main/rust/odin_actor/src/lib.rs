@@ -32,12 +32,18 @@ pub const DEFAULT_CHANNEL_BOUNDS: usize = 16;
 
 #[cfg(feature = "tokio_kanal")]
 pub mod tokio_kanal;
+#[cfg(feature = "tokio_kanal")]
+pub use tokio_kanal::{
+    ActorSystem,ActorSystemHandle,Actor,ActorHandle,PreActorHandle,JoinHandle,AbortHandle,Query,QueryBuilder,
+    sleep, timeout, yield_now, spawn, spawn_blocking, block_on, block_on_send_msg, block_on_timeout_send_msg,
+    query, query_ref, timeout_query, timeout_query_ref,
+};
 
 #[cfg(feature = "tokio_channel")]
 pub mod tokio_channel;
 
 pub mod errors;
-pub use errors::Result;
+pub use errors::{OdinActorError,Result};
 
 mod msg_patterns;
 pub use msg_patterns::*;
@@ -48,6 +54,7 @@ pub use odin_macro::{
     define_actor_msg_type, match_actor_msg, cont, stop, term, impl_actor, 
     spawn_actor, spawn_pre_actor, define_actor_send_msg_list, define_actor_action_list, define_actor_action2_list
 };
+
 
 #[inline] pub fn days (n: u64)->Duration { Duration::from_secs(n*60*60*24) }
 #[inline] pub fn hours (n: u64)->Duration { Duration::from_secs(n*60*60) }
@@ -100,6 +107,7 @@ pub trait Identifiable {
 /// while it can be used explicitly this trait is normally transparent and hidden behind the [`define_actor`] macro
 pub trait ActorReceiver <MsgType> where MsgType: FromSysMsg + DefaultReceiveAction + Send + Debug {
     fn receive (&mut self, msg: MsgType)-> impl Future<Output = ReceiveAction> + Send;
+    fn hsys (&self)->&ActorSystemHandle;
 }
 
 pub enum ReceiveAction {
@@ -188,7 +196,7 @@ pub struct _Start_;
 #[derive(Debug)] 
 pub struct _Timer_ { pub id: i64 }
 
-pub struct _Exec_(pub Box<dyn Fn() + Send>); // side effect executed from within actor task
+pub struct _Exec_(pub Box<dyn Fn() + Send + 'static>); // side effect executed from within actor task
 
 impl Debug for _Exec_ {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

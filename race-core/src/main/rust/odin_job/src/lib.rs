@@ -87,6 +87,16 @@ impl JobScheduler {
         }
     }
 
+    pub fn with_max_pending (max_pending: usize)->Self {
+        JobScheduler{ 
+            next_id: 1, // note we start at id 1 (0 means no job)
+            queue: Arc::new(Mutex::new(VecDeque::with_capacity(32))),
+            max_pending,
+            tx: None, 
+            task: None 
+        }
+    }
+
     pub fn run (&mut self)->Result<()> {
         if self.task.is_none() {
             let (tx,rx) = kanal::unbounded_async::<WakeUp>();
@@ -131,6 +141,8 @@ impl JobScheduler {
         }
     }
 
+    pub fn is_running (&self)->bool { self.task.is_some() }
+
     pub fn schedule_once (&mut self, after: Duration, mut action: impl FnMut()+Send+'static)->Result<JobHandle> {
         self.schedule( after, None, action)
     }
@@ -169,7 +181,7 @@ impl JobScheduler {
                 if after.is_zero() && interval_millis > 0 { epoch_millis += interval_millis }
 
                 let job = Job { id, epoch_millis, interval_millis, action: Box::new(action) };
-                println!("@@ scheduling {job:?}");
+                // log job creation here
 
                 if sort_in( job, &mut queue) == 0 { 
                     tx.try_send( WakeUp{});
@@ -268,16 +280,3 @@ fn now_epoch_millis()->u64 {
 #[inline] pub fn secs (n: u64)->Duration { Duration::from_secs(n) }
 #[inline] pub fn millis (n: u64)->Duration { Duration::from_millis(n) }
 
-
-#[macro_export]
-macro_rules! job {
-    ( $e:expr ) => {
-        move || $e
-    };
-    ( let $($a:ident = $x:expr),* => $e:expr ) => {
-        {
-            $( let $a = $x; )*
-            move || $e
-        }
-    }
-}

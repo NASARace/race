@@ -20,9 +20,7 @@ use tokio;
 use std::collections::VecDeque;
 use std::{future::Future,sync::Arc};
 use odin_actor::prelude::*;
-use odin_actor::errors::{OdinActorError, Result};
-use odin_actor::tokio_kanal::{create_mpsc_sender_receiver, sleep, spawn, 
-    AbortHandle, Actor, ActorHandle, ActorSystem, ActorSystemHandle, JoinHandle, MpscSender};
+use odin_actor::errors::Result;
 
 /* #region updater ***************************************************************************/
 
@@ -36,20 +34,21 @@ use odin_actor::tokio_kanal::{create_mpsc_sender_receiver, sleep, spawn,
 struct Updater {
     data: Vec<String>,
     count: usize,
-    update_callbacks: CallbackList<Vec<String>>,
+    update_callbacks: CallbackList<String>,
 }
 impl Updater {
     fn new()->Self {
         Updater { data: Vec::new(), count: 0, update_callbacks: CallbackList::new() }
     }
 
-    fn update(&mut self) {
+    fn update (&mut self)->bool {
         let new_value = format!("{} Missisippi", self.count);
         self.data.push( new_value);
+        true
     }
 }
 
-#[derive(Debug)] struct AddUpdateCallback(Callback<Vec<String>>);
+#[derive(Debug)] struct AddUpdateCallback(Callback<String>);
 
 #[derive(Debug)] struct ExecuteCallback(Arc<Callback<Vec<String>>>);
 impl ExecuteCallback {
@@ -68,20 +67,20 @@ impl_actor! { match msg for Actor<Updater,UpdaterMsg> as
     _Timer_ => {
         self.count += 1;
         println!("update cycle {}", self.count);
-        self.update();
+        if self.update() {
+            self.update_callbacks.execute( self.data.last().unwrap()).await;
+        }
 
-        if self.count < 5 {
-            self.update_callbacks.execute(&self.data).await;
-            ReceiveAction::Continue
-        } else {
+        if self.count >= 5 {
             println!("{} had enough of it, request termination.", self.hself.id); 
             ReceiveAction::RequestTermination 
+        } else {
+            ReceiveAction::Continue
         }
     }
     AddUpdateCallback => cont! {
         self.update_callbacks.push( msg.0)
     }
-    
     ExecuteCallback => cont! {
         println!("updater received {msg:?}");
         msg.execute(&self.data).await;
@@ -142,11 +141,11 @@ async fn main ()->Result<()> {
         async_action!( recipient.send_msg(PublishWsMsg{ws_msg}).await )
     });
     */
-    let update_cb = try_send_msg_callback!(server, |v: &Vec<String>| PublishWsMsg{ws_msg: format!("{{\"update\": {v:?}}}")});
+    let update_cb = try_send_msg_callback!(server, |v: &String| PublishWsMsg{ws_msg: format!("{{\"update\": {v:?}}}")});
 
     updater.send_msg( AddUpdateCallback(update_cb.into())).await?;
 
-    actor_system.start_all(millis(20)).await?;
+    actor_system.timeout_start_all(millis(20)).await?;
 
     sleep( secs(2)).await;
 

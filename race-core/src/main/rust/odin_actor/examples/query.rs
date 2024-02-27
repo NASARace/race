@@ -17,12 +17,6 @@
 #![allow(unused)]
 
 use odin_actor::prelude::*;
-use odin_actor::errors::{OdinActorError,Result as OdinResult};
-//use odin_actor::tokio_channel::{ActorSystem,Actor,ActorHandle,Abortable, sleep};
-use odin_actor::tokio_kanal::{
-    ActorSystem,ActorSystemHandle,Actor,ActorHandle,
-    sleep,Query,query_ref,timeout_query_ref,
-};
 
 use std::{sync::Arc, future::Future, time::Duration};
 use anyhow::{anyhow,Result};

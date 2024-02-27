@@ -17,9 +17,6 @@
 #![allow(unused)]
 
 use odin_actor::prelude::*;
-//use odin_actor::tokio_channel::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,sleep};
-use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,sleep};
-
 use std::{sync::Arc, future::Future};
 use anyhow::{anyhow,Result};
 
@@ -85,7 +82,7 @@ async fn main() ->Result<()> {
 
     let actor_handle = spawn_actor!( actor_system, "parent", Parent::new())?;
     
-    actor_system.start_all(millis(20)).await?; // sends out _Start_ messages
+    actor_system.timeout_start_all(millis(20)).await?; // sends out _Start_ messages
     actor_system.process_requests().await?;
 
     Ok(())

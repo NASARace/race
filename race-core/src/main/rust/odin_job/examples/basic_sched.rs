@@ -17,11 +17,11 @@
 #![allow(unused)]
 
 use std::sync::{Arc,Mutex};
-use odin_job::{JobScheduler,JobHandle,job,secs};
+use odin_job::{JobScheduler,JobHandle,secs};
 use anyhow::{Result,anyhow};
 use tokio::{self,time::sleep};
 
-/// basic example of how to use odin_job based FnMut scheduling and its [`job`] macro
+/// basic example of how to use odin_job based FnMut scheduling
 
 #[tokio::main]
 async fn main()->Result<()> {
@@ -30,10 +30,11 @@ async fn main()->Result<()> {
     let mut scheduler = JobScheduler::new();
     scheduler.run()?;
 
-    scheduler.schedule( secs(4), None, job!{ let t=trace.clone() => record(&t, 1)})?;
-    scheduler.schedule( secs(6), None, job!{ let t=trace.clone() => record(&t, 2)})?;
-    let job_handle = scheduler.schedule( secs(2), Some(secs(3)), job!{ let t=trace.clone() => record(&t, 3)})?;
-    scheduler.schedule( secs(2), None, job!{ let t=trace.clone() => record(&t, 4)})?;
+    // Note odin_macro::fn_mut!(..) provides some syntatic sugar for specifying the closures with respective captures 
+    scheduler.schedule_once( secs(4), { let t=trace.clone();  move || record(&t, 1) })?;
+    scheduler.schedule_once( secs(6), { let t=trace.clone(); move || record(&t, 2) })?;
+    let job_handle = scheduler.schedule_repeated( secs(2), secs(3), { let t=trace.clone(); move || record(&t, 3)})?;
+    scheduler.schedule_once( secs(2), { let t=trace.clone(); move || record(&t, 4)})?;
 
     sleep( secs(15)).await;
     println!("now cancelling {job_handle:?}");

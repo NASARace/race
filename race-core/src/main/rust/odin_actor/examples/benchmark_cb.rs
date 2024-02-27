@@ -3,8 +3,7 @@
 use tokio;
 use std::time::{Instant,Duration};
 use odin_actor::prelude::*;
-use odin_actor::errors::{OdinActorError, Result};
-use odin_actor::tokio_kanal::{Actor, ActorHandle, ActorSystem};
+use odin_actor::errors::Result;
 
 mod provider {
     use odin_actor::prelude::*;
@@ -118,7 +117,7 @@ async fn main()->Result<()> {
     let prov = spawn_actor!( actor_system, "provider", provider::Provider::new())?;
     let cli = spawn_actor!( actor_system, "client", client::Client::new(max_rounds, prov))?;
 
-    actor_system.start_all(millis(20)).await?;
+    actor_system.timeout_start_all(millis(20)).await?;
     actor_system.process_requests().await?;
 
     Ok(())

@@ -67,6 +67,6 @@ async fn main ()->Result<()> {
     let hping = spawn_actor!( actor_system, "pinger", Pinger{ponger: ActorHandle::from( &pre_hpong)})?;
     let hpong = spawn_pre_actor!( actor_system, pre_hpong, Ponger{pinger: hping})?;
 
-    actor_system.start_all(millis(20)).await?;
+    actor_system.timeout_start_all(millis(20)).await?;
     actor_system.process_requests().await
 }

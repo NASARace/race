@@ -17,9 +17,6 @@
 #![allow(unused)]
 
 use odin_actor::prelude::*;
-//use odin_actor::tokio_channel::{ActorSystem,Actor,ActorHandle,Abortable, sleep};
-use odin_actor::tokio_kanal::{ActorSystem,Actor,AbortHandle,sleep};
-
 use std::time::Duration;
 use anyhow::{anyhow,Result};
 
@@ -61,7 +58,7 @@ async fn main() ->Result<()> {
     let actor_handle = spawn_actor!( actor_system, "ticker", Ticker::new( secs(1)));
 
 
-    actor_system.start_all(millis(20)).await?; // sends out _Start_ messages
+    actor_system.timeout_start_all(millis(20)).await?; // sends out _Start_ messages
     sleep( secs(5)).await;
     actor_system.terminate_and_wait( millis(20)).await?;  // sends out _Terminate_ messages and waits for actor completion
 

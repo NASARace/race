@@ -17,8 +17,6 @@
 #![allow(unused)]
 
 use odin_actor::prelude::*;
-//use odin_actor::tokio_channel::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,QueryBuilder, Query,spawn};
-use odin_actor::tokio_kanal::{ActorSystem,ActorSystemHandle,Actor,ActorHandle,QueryBuilder, Query,spawn};
 
 use std::time::{Instant,Duration};
 use anyhow::{anyhow,Result};

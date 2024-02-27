@@ -1,5 +1,8 @@
 #![allow(unused)]
 
+/// example of how to execute Fn closures in own actor task without explicit message types
+/// (using the implicit _Exec_ system message)
+
 use odin_actor::prelude::*;
 use odin_actor::tokio_kanal::{ActorSystem,Actor};
 use std::fmt::Debug;
@@ -19,7 +22,7 @@ impl_actor! { match msg for Actor<Greeter,GreeterMsg> as
 
         if msg.0 != "me" {
             let myself = self.hself.clone();
-            self.try_send_msg( _Exec_( Box::new(move|| { myself.try_send_msg(Greet("me")); }) ));
+            self.exec( move|| { myself.try_send_msg(Greet("me")); })?;
         }
     }
 }
