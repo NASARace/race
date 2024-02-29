@@ -33,12 +33,9 @@ use std::{
     sync::{atomic::AtomicU64, Arc, LockResult, Mutex, MutexGuard}, time::{Duration, Instant}
 };
 use crate::{
-    Identifiable, ObjSafeFuture, MsgSendFuture, MsgTypeConstraints, SendableFutureCreator, ActorSystemRequest, create_sfc,
-    errors::{Result,OdinActorError, iter_op_result, poisoned_lock},
-    ActorReceiver,MsgReceiver,MsgReceiverConstraints,DynMsgReceiver,TryMsgReceiver,ReceiveAction, DefaultReceiveAction,
-    secs,millis,micros,nanos,
-    SysMsgReceiver, FromSysMsg, _Start_, _Ping_, _Exec_, _Timer_, _Pause_, _Resume_, _Terminate_,
+    create_sfc, errors::{iter_op_result, op_failed, poisoned_lock, OdinActorError, Result}, micros, millis, nanos, secs, ActorReceiver, ActorSystemRequest, DefaultReceiveAction, DynMsgReceiver, FromSysMsg, Identifiable, MsgReceiver, MsgReceiverConstraints, MsgSendFuture, MsgTypeConstraints, ObjSafeFuture, ReceiveAction, SendableFutureCreator, SysMsgReceiver, TryMsgReceiver, _Exec_, _Pause_, _Ping_, _Resume_, _Start_, _Terminate_, _Timer_
 };
+use odin_macro::fn_mut;
 
 /* #region runtime abstractions ***************************************************************************/
 /*
@@ -153,7 +150,6 @@ pub fn block_on_timeout_send_msg<Msg> (tgt: impl MsgReceiver<Msg>, msg: Msg, to:
 pub struct Actor <S,M> where S: Send + 'static, M: MsgTypeConstraints {
     pub state: S,
     pub hself: ActorHandle<M>,
-    pub hsys: ActorSystemHandle
 }
 
 impl <S,M> Actor <S,M> where S: Send + 'static, M: MsgTypeConstraints {
@@ -162,6 +158,10 @@ impl <S,M> Actor <S,M> where S: Send + 'static, M: MsgTypeConstraints {
     #[inline(always)]
     pub fn id (&self)->&str {
         self.hself.id()
+    }
+
+    pub fn hsys (&self)->&ActorSystemHandle {
+        self.hself.hsys()
     }
 
     #[inline(always)]
@@ -181,7 +181,7 @@ impl <S,M> Actor <S,M> where S: Send + 'static, M: MsgTypeConstraints {
 
     #[inline(always)]
     pub fn get_scheduler (&self)->LockResult<MutexGuard<'_,JobScheduler>> {
-        self.hsys.get_scheduler()
+        self.hsys().get_scheduler()
     }
 
     #[inline(always)]
@@ -196,7 +196,7 @@ impl <S,M> Actor <S,M> where S: Send + 'static, M: MsgTypeConstraints {
 
     #[inline(always)]
     pub async fn request_termination (&self, to: Duration)->Result<()> {
-        self.hsys.send_msg( ActorSystemRequest::RequestTermination, to).await
+        self.hself.hsys.send_msg( ActorSystemRequest::RequestTermination, to).await
     }
 
     fn exec (&self, f: impl Fn() + Send + 'static)->Result<()> {
@@ -237,17 +237,26 @@ impl <MsgType> PreActorHandle <MsgType>
         let (tx, rx) = create_mpsc_sender_receiver::<MsgType>( bound);
         PreActorHandle { id: actor_id, tx, rx }
     }
+
+    pub fn as_actor_handle (&self, sys: &ActorSystem)->ActorHandle<MsgType> {
+        ActorHandle{ id: self.id.clone(), hsys: Arc::new(sys.new_handle()), tx: self.tx.clone() }
+    }
 }
 
 /// this is a wrapper for the minimal data we need to send messages of type M to the respective actor
 /// Note this is a partially opaque type
 pub struct ActorHandle <M> where M: MsgTypeConstraints {
     pub id: Arc<String>,
+    hsys: Arc<ActorSystemHandle>,
     tx: MpscSender<M> // internal - this is channel specific
 }
 
 impl <M> ActorHandle <M> where M: MsgTypeConstraints {
-    fn is_running(&self) -> bool {
+    pub fn hsys(&self)->&ActorSystemHandle {
+        self.hsys.as_ref()
+    }
+
+    pub fn is_running(&self) -> bool {
         !self.tx.is_closed()
     }
 
@@ -294,6 +303,25 @@ impl <M> ActorHandle <M> where M: MsgTypeConstraints {
         self.try_send_actor_msg(msg.into())
     }
 
+    /// Note that Ok(()) just means the retry message got scheduled, not that it succeeded
+    pub fn retry_send_msg<T> (&self, max_attempts: usize, delay: Duration, msg: T)->Result<()> where T: Into<M>+Clone+Send+'static {
+        if let Ok(mut scheduler) = self.hsys().get_scheduler() {
+            scheduler.schedule_repeated( delay, delay, {
+                let mut remaining_attempts=max_attempts;
+                let actor_handle=self.clone();
+                move |ctx| {
+                    if let Err(OdinActorError::ReceiverFull) = actor_handle.try_send_msg( msg.clone()) {
+                        if remaining_attempts > 0 {
+                            remaining_attempts -= 1;
+                        } else { ctx.cancel_repeat() }
+                    } else { ctx.cancel_repeat() }
+                }
+            });
+            Ok(())
+        } else {
+            Err(op_failed("failed to schedule retry message"))
+        }
+    }
 
     // TODO - is this right to skip if we can't send? Maybe that should be an option
 
@@ -304,14 +332,7 @@ impl <M> ActorHandle <M> where M: MsgTypeConstraints {
     pub fn start_repeat_timer (&self, id: i64, timer_interval: Duration) -> AbortHandle {
         repeat_timer_for( self.clone(), id, timer_interval)
     }
-}
 
-impl <M> From<PreActorHandle<M>> for ActorHandle<M> where M: MsgTypeConstraints {
-    fn from (dh: PreActorHandle<M>)->Self { ActorHandle{ id: dh.id.clone(), tx: dh.tx.clone() } }
-}
-
-impl <M> From<& PreActorHandle<M>> for ActorHandle<M> where M: MsgTypeConstraints {
-    fn from (dh: &PreActorHandle<M>)->Self { ActorHandle{ id: dh.id.clone(), tx: dh.tx.clone() } }
 }
 
 // note this consumed the ActorHandle since we have to move it into a Future
@@ -349,7 +370,7 @@ impl <M> Debug for ActorHandle<M> where M: MsgTypeConstraints {
 
 impl <M> Clone for ActorHandle <M> where M: MsgTypeConstraints {
     fn clone(&self)->Self {
-        ActorHandle::<M> { id: self.id.clone(), tx: self.tx.clone() }
+        ActorHandle::<M> { id: self.id.clone(), hsys: self.hsys.clone(), tx: self.tx.clone() }
     }
 }
 
@@ -437,8 +458,7 @@ impl ActorSystemHandle {
         timeout( to, self.sender.send(msg)).await
     }
 
-    pub fn new_actor<T,MsgType> (&self, id: impl ToString, state: T, bound: usize) 
-            -> (Actor<T,MsgType>, ActorHandle<MsgType>, MpscReceiver<MsgType>)
+    pub fn new_actor<T,MsgType> (&self, id: impl ToString, state: T, bound: usize) -> (Actor<T,MsgType>, ActorHandle<MsgType>, MpscReceiver<MsgType>)
     where 
         T: Send + 'static,
         MsgType: MsgTypeConstraints
@@ -501,7 +521,7 @@ impl ActorSystem {
         }
     }
 
-    fn new_handle (&self)->ActorSystemHandle {
+    pub fn new_handle (&self)->ActorSystemHandle {
         let sender = self.request_sender.clone();
         let job_scheduler = self.job_scheduler.clone();
 
@@ -690,9 +710,9 @@ fn actor_tuple<S,M> (hsys: ActorSystemHandle, id: impl ToString, state: S, bound
 {
     let actor_id = Arc::new(id.to_string());
     let (tx, rx) = create_mpsc_sender_receiver::<M>( bound);
-    let actor_handle = ActorHandle { id: actor_id, tx };
+    let actor_handle = ActorHandle { id: actor_id, hsys: Arc::new(hsys), tx };
     let hself = actor_handle.clone();
-    let actor = Actor{ state, hself, hsys };
+    let actor = Actor{ state, hself };
 
     (actor, actor_handle, rx)
 }
@@ -702,9 +722,9 @@ fn pre_actor_tuple<S,M> (hsys: ActorSystemHandle, state: S, pre_h: PreActorHandl
 {
     let actor_id = pre_h.id.clone();
     let rx = pre_h.rx;
-    let actor_handle = ActorHandle{ id: actor_id, tx: pre_h.tx };
+    let actor_handle = ActorHandle{ id: actor_id, hsys: Arc::new(hsys), tx: pre_h.tx };
     let hself = actor_handle.clone();
-    let actor = Actor{ state, hself, hsys };
+    let actor = Actor{ state, hself };
 
     (actor, actor_handle, rx)
 }

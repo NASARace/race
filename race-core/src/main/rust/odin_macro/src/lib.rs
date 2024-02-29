@@ -914,7 +914,7 @@ pub fn impl_actor (item: TokenStream) -> TokenStream {
                     //_ => #msg_name . default_receive_action() // this would be a catch-all which would cut off the check for unmatched user messages
                 }
             }
-            fn hsys(&self)->&ActorSystemHandle { &self.hsys }
+            fn hsys(&self)->&ActorSystemHandle { self.hself.hsys() }
         }
         /* explicit trait impl for variant types would go here 
         #( 
@@ -1173,7 +1173,7 @@ impl Parse for ActorMsgList {
 
 /// macro to define structs that implement [`ActorActionList`]
 /// ```
-/// define_actor_action_list! { MyActionList (data:&u64) use actor_handle:
+/// define_actor_action_list! { for actor_handle in MyActionList (data:&u64):
 ///   Actor1Msg => actor_handle.send_msg( Msg1(*data)).await,
 ///   Actor2Msg => actor_handle.try_send_msg( Msg2(*data))
 /// }
@@ -1210,6 +1210,7 @@ pub fn define_actor_action_list (item: TokenStream)->TokenStream {
         struct #struct_name ( #( ActorHandle< #msg_types > ),* );
         impl ActorActionList< #v_base > for #struct_name {
             async fn execute (&self, #data_vars)->odin_actor::Result<()> {
+                let _hsys_ = &self.0; 
                 #( #stmts );*
             }
         }
@@ -1243,6 +1244,7 @@ pub fn define_actor_action2_list (item: TokenStream)->TokenStream {
         struct #struct_name ( #( ActorHandle< #msg_types > ),* );
         impl ActorAction2List< #v1_base, #v2_base > for #struct_name {
             async fn execute (&self, #data_vars)->odin_actor::Result<()> {
+                let _hsys_ = &self.0; 
                 #( #stmts );*
             }
         }
@@ -1259,7 +1261,7 @@ fn get_action_stmts (self_name: &Ident, actions: &Vec<ActorAction>)->Vec<TokenSt
         let result_expr = &a.result_expr;
         let idx_tok = Literal::usize_unsuffixed(idx); 
         if idx < max_idx { 
-            quote!{ let #self_name = &self.#idx_tok; #result_expr ? } 
+            quote!{ let #self_name = &self.#idx_tok; #result_expr; } 
         } else { 
             quote!{ let #self_name = &self.#idx_tok; #result_expr } 
         }

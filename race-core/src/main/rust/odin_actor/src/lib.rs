@@ -164,7 +164,7 @@ pub trait ActorSendMsgList<T>: Send where T: Clone + Debug + Send {
 /// Use this if the Actor call site (e.g. main()) is in control of actions.
 /// To create an ActorActionList use the define_actor_action_list!() macro
 pub trait ActorActionList<D>: Send {
-    fn execute (&self,data: &D) -> impl Future<Output=Result<()>> + Send;
+    fn execute (&self, data: &D) -> impl Future<Output=Result<()>> + Send;
 }
 
 /// an action list that is executed with two arguments. One of them is typically is a reference to own data, the
@@ -174,7 +174,7 @@ pub trait ActorActionList<D>: Send {
 /// to add lifetime parameters to the ActorActionList in case we want to pass in values as references, which
 /// is the normal case for non-trivial owned data (which to maintain is the main reason for having the owner in the first place)
 pub trait ActorAction2List<A,B>: Send {
-    fn execute (&self,a: &A,b: &B) -> impl Future<Output=Result<()>> + Send;
+    fn execute (&self, a: &A,b: &B) -> impl Future<Output=Result<()>> + Send;
 }
 
 /* #endregion runtime/channel agnostic traits and types */

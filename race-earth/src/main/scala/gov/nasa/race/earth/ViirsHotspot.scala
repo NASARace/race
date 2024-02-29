@@ -216,11 +216,15 @@ trait ViirsHotspotParser extends Utf8CsvPullParser {
 
   def getSatId(src: String): Int = {
     src match {
+      case "N21" => 54234
+      case "N20" => 43013
       case "1" => 43013
       case "N" => 37849
       case "Aqua" => 27424
       case "Terra" => 25994
-      case _ => -1
+      case _ =>
+        println(s"unknown JPSS satellite $src")
+        -1
     }
   }
 }

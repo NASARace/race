@@ -17,6 +17,7 @@ type Result<T> = odin_actor::Result<T>;
 trait MsgReceiver<T> where T: Send+Debug {
     async fn send_msg(&self, m:T)->Result<()>;
     fn try_send_msg(&self, m:T)->Result<()>;
+    fn retry_send_msg(&self, m:T)->Result<()>;
 }
 
 struct ActorHandle<M> where M: Send+Debug {
@@ -34,11 +35,16 @@ impl<M> ActorHandle<M> where M: Send+Debug {
         println!("try_sending {:?} to actor {}", m, self.id);
         Ok(())
     }
+    fn retry_send_actor_msg (&self, m:M)->Result<()> {
+        println!("retry_sending {:?} to actor {}", m, self.id);
+        Ok(())
+    }
 }
 
 impl <T,M> MsgReceiver<T> for ActorHandle<M> where T: Send+Debug, M: From<T>+Send+Debug {
     async fn send_msg(&self, m:T)->Result<()> { self.send_actor_msg( m.into()).await }
     fn try_send_msg(&self, m:T)->Result<()> { self.try_send_actor_msg( m.into()) }
+    fn retry_send_msg(&self, m:T)->Result<()> { self.retry_send_actor_msg( m.into()) }
 }
 
 pub trait ActorActionList<A> {
@@ -90,7 +96,11 @@ fn test_action2_list() {
     define_actor_action2_list!{ for actor_handle in MyActions (own: &SomeData, ext: &i64) :
         Actor1Msg => {
             let s = format!("executed with {:?} and {}", own, ext);
-            actor_handle.try_send_msg( Msg3(s))
+            let s1 = s.clone();
+            match actor_handle.try_send_msg( Msg3(s)) {
+                Err(e) => { actor_handle.retry_send_msg( Msg3(s1)) }
+                other => other
+            }
         }
     }
     let my_actions = MyActions( ah1);

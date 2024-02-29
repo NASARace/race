@@ -33,16 +33,28 @@
 
 use tokio::{self, select, spawn, task::JoinHandle, time::{sleep, Sleep}};
 use kanal::{unbounded_async,AsyncReceiver,AsyncSender};
-use std::{collections::VecDeque, fmt::Debug, sync::{atomic::{AtomicU64, Ordering}, Arc, Mutex}, 
-          time::{Duration,SystemTime}, cmp::max};
+use std::{cmp::max, collections::VecDeque, fmt::Debug, sync::{atomic::{AtomicBool, AtomicU64, Ordering}, Arc, Mutex}, time::{Duration,SystemTime}};
 use chrono::{DateTime, TimeZone};
 use anyhow::{Result,anyhow};
+
+pub struct JobContext {
+    current_id: u64,
+    cancel_repeat: bool
+}
+impl JobContext {
+    pub fn current_id(&self)->u64 {
+        self.current_id
+    }
+    pub fn cancel_repeat (&mut self) {
+        self.cancel_repeat = true
+    }
+}
 
 struct Job {
     id: u64,
     epoch_millis: u64,
     interval_millis: u64,
-    action: Box<dyn FnMut() + Send>
+    action: Box<dyn FnMut(&mut JobContext) + Send>
 }
 impl Job {
     fn deadline (&self)->Sleep {
@@ -51,8 +63,8 @@ impl Job {
         sleep( Duration::from_millis( wait_millis))
     }
 
-    fn execute (&mut self) {
-        (self.action)();
+    fn execute (&mut self, ctx: &mut JobContext) {
+        (self.action)(ctx);
     }
 }
 impl Debug for Job {
@@ -118,10 +130,12 @@ impl JobScheduler {
                             () = &mut deadline => {
                                 let mut queue = queue.lock().unwrap();
                                 if let Some(mut job) = queue.pop_front() {
-                                    job.execute();
 
-                                    if job.interval_millis > 0 {
-                                        // note we erschedule with the same id
+                                    let mut ctx = JobContext { current_id: job.id, cancel_repeat: false };
+                                    job.execute(&mut ctx);
+
+                                    if job.interval_millis > 0 && !ctx.cancel_repeat {
+                                        // note we reschedule with the same id
                                         job.epoch_millis += job.interval_millis;
                                         sort_in(job, &mut queue);
                                     }
@@ -143,15 +157,15 @@ impl JobScheduler {
 
     pub fn is_running (&self)->bool { self.task.is_some() }
 
-    pub fn schedule_once (&mut self, after: Duration, mut action: impl FnMut()+Send+'static)->Result<JobHandle> {
+    pub fn schedule_once (&mut self, after: Duration, mut action: impl FnMut(&mut JobContext)+Send+'static)->Result<JobHandle> {
         self.schedule( after, None, action)
     }
 
-    pub fn schedule_repeated (&mut self, after: Duration, interval: Duration, mut action: impl FnMut()+Send+'static)->Result<JobHandle> {
+    pub fn schedule_repeated (&mut self, after: Duration, interval: Duration, mut action: impl FnMut(&mut JobContext)+Send+'static)->Result<JobHandle> {
         self.schedule( after, Some(interval), action)
     }
 
-    pub fn schedule_at<Tz: TimeZone> (&mut self, datetime: &DateTime<Tz>, mut action: impl FnMut()+Send+'static)->Result<JobHandle> {
+    pub fn schedule_at<Tz: TimeZone> (&mut self, datetime: &DateTime<Tz>, mut action: impl FnMut(&mut JobContext)+Send+'static)->Result<JobHandle> {
         let now = now_epoch_millis();
         let dt = datetime.timestamp_millis();
         let after = if (dt < 0) || (dt as u64) < now { 0 } else { dt as u64 - now };
@@ -159,23 +173,22 @@ impl JobScheduler {
         self.schedule_once( Duration::from_millis(after), action)
     }
 
-    pub fn schedule (&mut self, after: Duration, interval: Option<Duration>, mut action: impl FnMut()+Send+'static)->Result<JobHandle> {
+    pub fn schedule (&mut self, after: Duration, interval: Option<Duration>, mut action: impl FnMut(&mut JobContext)+Send+'static)->Result<JobHandle> {
         if let Some(tx) = &self.tx {
             let mut queue = self.queue.lock().unwrap(); // before we do anything acquire the queue lock
 
+            let id = self.next_id;
+            self.next_id += 1;
+
             if after.is_zero() {
-                action(); // execute right away
-                if interval.is_none() {
-                    let id = self.next_id;
-                    self .next_id += 1;
+                let mut ctx = JobContext { current_id: id, cancel_repeat: false };
+                action(&mut ctx);
+                if interval.is_none() || ctx.cancel_repeat {
                     return Ok(JobHandle(id))
                 }
             }
 
             if queue.len() < self.max_pending {
-                let id = self.next_id;
-                self.next_id += 1;
-
                 let interval_millis = if let Some(interval) = interval { interval.as_millis() as u64 } else { 0 };
                 let mut epoch_millis = now_epoch_millis() + after.as_millis() as u64;
                 if after.is_zero() && interval_millis > 0 { epoch_millis += interval_millis }

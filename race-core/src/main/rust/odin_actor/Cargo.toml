@@ -18,6 +18,7 @@ anyhow = "*"
 ron = "*"
 serde = { version = "*", features = ["derive"] }
 parse_duration = "*"
+colored = "*"
 
 odin_macro = { workspace = true }
 odin_config = { workspace = true }

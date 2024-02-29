@@ -1,28 +1,17 @@
 #![allow(unused)]
 
-/// example of how to connect two actors that don't have to know about each others message interfaces.
-///
-/// The decoupling is achieved through construction-site defined ActionLists (set up in `main()`).
-/// ActionList<ProviderData> is triggered by state changes in the provider
-/// Action2List<ProviderData,ClientData> is triggered by the client
+#![allow(unused)]
+
+/// same example as alist.rs but this time with a retry_send_msg() if the provider cannot
+/// send to the client because it's queue is full.
 /// 
-/// The underlying model is an async updated data source actor as the provider (e.g. for tracking objects)
-/// that implements two abstract interaction points:
-///   - update actions when its internal data model changes
-///   - snapshot actions triggered by clients, passing in additional client request data
+/// the main change is that the client 'SimulateNewRequest' and associated action list ('new_request_action')
+/// now become regular functional features, i.e. the client provides a 'ExecNewRequest' method that
+/// triggers a new (configured) provider request. This message is what we send from the provider snapshot_action
+/// instance if the receiver (client) queue is full. This kills two birds with one stone: 
 ///
-/// Note the provider implementation does not need to know the specific ActorHandles/messages of clients
-/// and hence also does not need to know about potential data transformation to create such action messages. The
-/// only thing it needs to know is when to trigger respective actions and what data to pass into respective
-/// `execute(..}` invocations for these actions.
-///
-/// The client models a web server that receives external connection requests, upon which it
-/// needs to send snapshot data that is created through provider callback actions.
-/// Once a new connection is established the web server then sends whatever it receives through the provider
-/// update actions to all live connections.
-/// Note there is nothing in the client that needs to know the concrete provider message interface or its
-/// update/snapshot data types. All this information is encapsulated in `ActionList` instances at the
-/// system construction site (`main()`)
+///   (a) we make sure that if a ExecSnapshotAction finally succeeds it sends the client the up-to-date data, and 
+///   (b) the retry does not have to clone a potentially large message (ExecNewRequest instead of SendSnapshot)
 
 use tokio;
 use odin_actor::prelude::*;
@@ -106,14 +95,13 @@ impl <A> WsServer<A> where A: ActorActionList<TAddr> {
 
 #[derive(Debug)] struct SendSnapshot { addr: TAddr, ws_msg: String }
 
-#[derive(Debug)] struct SimulateNewRequest { addr: TAddr }
+#[derive(Debug,Clone)] struct ExecNewRequest { addr: TAddr }
 
-define_actor_msg_type! { WsServerMsg = PublishUpdate | SendSnapshot | SimulateNewRequest }
+define_actor_msg_type! { WsServerMsg = PublishUpdate | SendSnapshot | ExecNewRequest }
 
 impl_actor! { match msg for Actor<WsServer<A>,WsServerMsg> where A: ActorActionList<TAddr> as
-    SimulateNewRequest => cont! { // mockup simulating a new external connection event from 'addr'
-        // note we don't add msg.addr to connections yet since that could cause sending updates before init snapshots
-        println!("{} got new connection request from {:?}", self.id().yellow(), msg.addr);
+    ExecNewRequest => cont! { // mockup simulating a new external connection event from 'addr'
+        println!("{} send connection request for {:?}", self.id().yellow(), msg.addr);
         self.new_request_action.execute( &msg.addr).await;
     }
     PublishUpdate => cont! {
@@ -139,7 +127,7 @@ async fn main ()->Result<()> {
     //--- 1: set up the client (WsServer)
     define_actor_action_list! { for actor_handle in NewRequestAction (addr: &TAddr) :
         ProviderMsg => {
-            let client_data = addr.clone(); // transform TAddr into TClientRequest should the two not be the same
+            let client_data = addr.clone(); 
             actor_handle.try_send_msg( ExecSnapshotAction{client_data})
         }
     }
@@ -152,7 +140,22 @@ async fn main ()->Result<()> {
         WsServerMsg =>  actor_handle.try_send_msg( PublishUpdate{ws_msg: format!("{{\"update\": \"{v}\"}}")})
     }
     define_actor_action2_list! { for actor_handle in SnapshotAction (v: &TProviderSnapshot, addr: &TClientRequest):
-        WsServerMsg => actor_handle.try_send_msg( SendSnapshot{ addr: addr.clone(), ws_msg: format!("{v:?}")} )
+        WsServerMsg => {
+            ///////////////// this is the main change compared to alist.rs
+            match actor_handle.try_send_msg( SendSnapshot{ addr: addr.clone(), ws_msg: format!("{v:?}")}) {
+                //Err(OdinActorError::ReceiverFull) => {
+                Err(e) => {
+                    // this is a critical msg - retry if it failed. While we could directly resend the SendSnapshot()
+                    // to the client this would be suboptimal since the provider data has most likely changed
+                    // at the time this will succeed, which means all updates in-between original request and success
+                    // would be lost. Just sending a control message to the client also means we don't have to clone
+                    // a potentially huge message
+                    actor_handle.retry_send_msg( 5, millis(300), ExecNewRequest{addr: addr.clone()})
+                }
+                other => other
+            }
+            ///////////////// end change
+        }
     }
     let provider = spawn_pre_actor!( actor_system, pre_provider, 
         Provider::new( UpdateAction(client.clone()), SnapshotAction(client.clone()))
@@ -163,9 +166,9 @@ async fn main ()->Result<()> {
 
     //--- 3: actor system running - now simulate external requests
     sleep( secs(2)).await;
-    client.send_msg( SimulateNewRequest{addr: "42".to_string()}).await?;
+    client.send_msg( ExecNewRequest{addr: "42".to_string()}).await?;
     sleep( secs(3)).await;
-    client.send_msg( SimulateNewRequest{addr: "43".to_string()}).await?;
+    client.send_msg( ExecNewRequest{addr: "43".to_string()}).await?;
 
     actor_system.process_requests().await?;
 

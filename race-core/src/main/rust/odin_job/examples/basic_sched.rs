@@ -31,16 +31,29 @@ async fn main()->Result<()> {
     scheduler.run()?;
 
     // Note odin_macro::fn_mut!(..) provides some syntatic sugar for specifying the closures with respective captures 
-    scheduler.schedule_once( secs(4), { let t=trace.clone();  move || record(&t, 1) })?;
-    scheduler.schedule_once( secs(6), { let t=trace.clone(); move || record(&t, 2) })?;
-    let job_handle = scheduler.schedule_repeated( secs(2), secs(3), { let t=trace.clone(); move || record(&t, 3)})?;
-    scheduler.schedule_once( secs(2), { let t=trace.clone(); move || record(&t, 4)})?;
+    scheduler.schedule_once( secs(4), { let t=trace.clone();  move |_ctx| record(&t, 1) })?;
+    scheduler.schedule_once( secs(6), { let t=trace.clone(); move |_ctx| record(&t, 2) })?;
+    let job_handle = scheduler.schedule_repeated( secs(2), secs(3), { let t=trace.clone(); move |_ctx| record(&t, 3)})?;
+    scheduler.schedule_once( secs(2), { let t=trace.clone(); move |_ctx| record(&t, 4)})?;
 
     sleep( secs(15)).await;
     println!("now cancelling {job_handle:?}");
     scheduler.abort_job(job_handle);
 
-    sleep( secs(6)).await;
+    println!("immediate-scheduling self-canceling 1-sec repeat job..");
+    scheduler.schedule_repeated(secs(0), secs(1), {
+        let mut n_remaining=3;
+        move |ctx| {
+            println!(". repeat job #{} n_remaining={}", ctx.current_id(), n_remaining);
+            n_remaining -= 1;
+            if n_remaining == 0 {
+                println!(". repeat job #{} now cancelling itself", ctx.current_id());
+                ctx.cancel_repeat();
+            }
+        }    
+    });
+
+    sleep( secs(4)).await;
     println!("shutting down scheduler");
     scheduler.abort();
 
