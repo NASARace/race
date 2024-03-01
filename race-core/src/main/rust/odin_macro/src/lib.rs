@@ -1021,14 +1021,14 @@ pub fn term (ts: TokenStream)->TokenStream {
 
 #[proc_macro]
 pub fn spawn_actor (item: TokenStream)->TokenStream {
-    let SpawnActor { asys_name, aname_expr, astate_expr, channel_bounds } = match syn::parse(item) {
+    let SpawnActor { spawner, aname_expr, astate_expr, channel_bounds } = match syn::parse(item) {
         Ok(actor_receive) => actor_receive,
-        Err(e) => panic!( "expected \"spawn_actor!( 𝑎𝑐𝑡𝑜𝑟𝑆𝑦𝑠𝑡𝑒𝑚, 𝑎𝑐𝑡𝑜𝑟𝑁𝑎𝑚𝑒, 𝑎𝑐𝑡𝑜𝑟𝑆𝑡𝑎𝑡𝑒 [,𝑐ℎ𝑎𝑛𝑒𝑙𝐵𝑜𝑢𝑛𝑑𝑠])\", got {:?}", e)
+        Err(e) => panic!( "expected \"spawn_actor!( «actorSystem», «actorName», «actorState» [,«channelBounds»])\", got {:?}", e)
     };
     let cbounds = if let Some(channel_bounds) = channel_bounds { quote!{#channel_bounds} } else { quote!{ DEFAULT_CHANNEL_BOUNDS} };
     
     let new_item: TokenStream = quote! { 
-        #asys_name.spawn_actor( #asys_name.new_actor( #aname_expr, #astate_expr, #cbounds)) 
+        #spawner.spawn_actor( #spawner.new_actor( #aname_expr, #astate_expr, #cbounds)) 
     }.into();
     //println!("-----\n{}\n-----", new_item.to_string());
 
@@ -1036,15 +1036,14 @@ pub fn spawn_actor (item: TokenStream)->TokenStream {
 }
 
 struct SpawnActor {
-    asys_name: Ident,
+    spawner: Expr,
     aname_expr: Expr,
     astate_expr: Expr,
     channel_bounds: Option<Expr>
 }
-
 impl Parse for SpawnActor {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        let asys_name: Ident = input.parse()?;
+        let spawner: Expr = input.parse()?;
         let _: Token![,] = input.parse()?;
         let aname_expr: Expr = input.parse()?;
         let _: Token![,] = input.parse()?;
@@ -1059,19 +1058,36 @@ impl Parse for SpawnActor {
             None
         };
 
-        Ok( SpawnActor { asys_name, aname_expr, astate_expr, channel_bounds } )
+        Ok( SpawnActor { spawner, aname_expr, astate_expr, channel_bounds } )
     }
 }
 
 #[proc_macro]
-pub fn spawn_pre_actor (item: TokenStream)->TokenStream {
-    let SpawnPreActor { asys_name, h_pre_expr, astate_expr } = match syn::parse(item) {
+pub fn spawn_dyn_actor (item: TokenStream)->TokenStream {
+    let SpawnActor { spawner, aname_expr, astate_expr, channel_bounds } = match syn::parse(item) {
         Ok(actor_receive) => actor_receive,
-        Err(e) => panic!( "expected \"spawn_pre_actor!( 𝑎𝑐𝑡𝑜𝑟𝑆𝑦𝑠𝑡𝑒𝑚, 𝑝𝑟𝑒𝐴𝑐𝑡𝑜𝑟𝐻𝑎𝑛𝑑𝚤𝑒, 𝑎𝑐𝑡𝑜𝑟𝑆𝑡𝑎𝑡𝑒)\", got {:?}", e)
+        Err(e) => panic!( "expected \"spawn_dyn_actor!( «actorHandle», «actorName», «actorState» [,«channelBounds»])\", got {:?}", e)
+    };
+
+    let cbounds = if let Some(channel_bounds) = channel_bounds { quote!{#channel_bounds} } else { quote!{ DEFAULT_CHANNEL_BOUNDS} };
+
+    let new_item: TokenStream = quote! {
+        #spawner.hsys().spawn_actor( #spawner.new_actor( #aname_expr, #astate_expr, #cbounds))
+    }.into();
+    //println!("-----\n{}\n-----", new_item.to_string());
+
+    new_item
+}
+
+#[proc_macro]
+pub fn spawn_pre_actor (item: TokenStream)->TokenStream {
+    let SpawnPreActor { spawner, h_pre_expr, astate_expr } = match syn::parse(item) {
+        Ok(actor_receive) => actor_receive,
+        Err(e) => panic!( "expected \"spawn_pre_actor!( «actorSystem», «actorName», «actorState»)\", got {:?}", e)
     };
 
     let new_item: TokenStream = quote! {
-        #asys_name.spawn_actor( #asys_name.new_pre_actor( #h_pre_expr, #astate_expr))
+        #spawner.spawn_actor( #spawner.new_pre_actor( #h_pre_expr, #astate_expr))
     }.into();
     //println!("-----\n{}\n-----", new_item.to_string());
 
@@ -1079,20 +1095,19 @@ pub fn spawn_pre_actor (item: TokenStream)->TokenStream {
 }
 
 struct SpawnPreActor {
-    asys_name: Ident,
+    spawner: Expr,
     h_pre_expr: Expr,
     astate_expr: Expr,
 }
-
 impl Parse for SpawnPreActor {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        let asys_name: Ident = input.parse()?;
+        let spawner: Expr = input.parse()?;
         let _: Token![,] = input.parse()?;
         let h_pre_expr: Expr = input.parse()?;
         let _: Token![,] = input.parse()?;
         let astate_expr: Expr = input.parse()?;
 
-        Ok( SpawnPreActor { asys_name, h_pre_expr, astate_expr})
+        Ok( SpawnPreActor { spawner, h_pre_expr, astate_expr})
     }
 }
 
@@ -1117,8 +1132,8 @@ impl Parse for SpawnPreActor {
 ///  }
 ///  ```
 #[proc_macro]
-pub fn define_actor_send_msg_list (item: TokenStream)->TokenStream {
-    let ActorMsgList{ name, data_type, msg_types} = match syn::parse(item) {
+pub fn define_actor_msg_action_type (item: TokenStream)->TokenStream {
+    let ActorMsgActionSpec{ name, data_type, msg_types} = match syn::parse(item) {
         Ok(msg_list) => msg_list,
         Err(e) => panic!( "failed to parse ActorSendMsgList definition {:?}", e)
     };
@@ -1142,21 +1157,18 @@ pub fn define_actor_send_msg_list (item: TokenStream)->TokenStream {
     new_item
 }
 
-struct ActorMsgList {
+struct ActorMsgActionSpec {
     name: Ident,
-    data_type: Path,
+    data_type: Path,  // the message variant that is sent to all actor handles
     msg_types: Vec<Path>
 }
 
-impl Parse for ActorMsgList {
+impl Parse for ActorMsgActionSpec {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let name: Ident = input.parse()?;
-
-        let arg_content;
-        let _data_paren: Paren = parenthesized!( arg_content in input);
-        let data_type: Path = arg_content.parse()?;
-
-        let _ : Token![:] = input.parse()?;
+        let _ : Token![=] = input.parse()?;
+        let data_type: Path = input.parse()?;
+        let _: For = input.parse()?;
 
         let mut msg_types: Vec<Path> = Vec::new();
         while !input.is_empty() {
@@ -1167,7 +1179,7 @@ impl Parse for ActorMsgList {
             if lookahead.peek( Comma) { let _: Comma = input.parse()?; }
         }
 
-        Ok( ActorMsgList{ name, data_type, msg_types } )
+        Ok( ActorMsgActionSpec{ name, data_type, msg_types } )
     }
 }
 
@@ -1194,8 +1206,8 @@ impl Parse for ActorMsgList {
 /// (no slices such as `&'static str` allowed) since we don't want to add explicit
 /// lifetimes to the definition
 #[proc_macro]
-pub fn define_actor_action_list (item: TokenStream)->TokenStream {
-    let ActorActionList{ struct_name, data_vars, self_name, actions} = match syn::parse(item) {
+pub fn define_actor_action_type (item: TokenStream)->TokenStream {
+    let ActorActionSpec{ struct_name, handle_name, data_vars, actions} = match syn::parse(item) {
         Ok(action_list) => action_list,
         Err(e) => panic!( "failed to parse ActorActionList definition {:?}", e)
     };
@@ -1204,11 +1216,11 @@ pub fn define_actor_action_list (item: TokenStream)->TokenStream {
     let v_base = get_type_base( &data_vars.first().unwrap().var_type);
 
     let msg_types: Vec<&Path> = actions.iter().map(|a| &a.msg_type).collect();
-    let stmts = get_action_stmts( &self_name, &actions);
+    let stmts = get_action_stmts( &handle_name, &actions);
 
     let new_item: TokenStream = quote! {
         struct #struct_name ( #( ActorHandle< #msg_types > ),* );
-        impl ActorActionList< #v_base > for #struct_name {
+        impl ActorAction< #v_base > for #struct_name {
             async fn execute (&self, #data_vars)->odin_actor::Result<()> {
                 let _hsys_ = &self.0; 
                 #( #stmts );*
@@ -1227,8 +1239,8 @@ pub fn define_actor_action_list (item: TokenStream)->TokenStream {
 /// the other one provided by the trigger (message). It is up to the concrete receiver
 /// to decide which one is which.
 #[proc_macro]
-pub fn define_actor_action2_list (item: TokenStream)->TokenStream {
-    let ActorActionList{ struct_name, data_vars, self_name, actions} = match syn::parse(item) {
+pub fn define_actor_action2_type (item: TokenStream)->TokenStream {
+    let ActorActionSpec{ struct_name, handle_name, data_vars, actions} = match syn::parse(item) {
         Ok(action_list) => action_list,
         Err(e) => panic!( "failed to parse ActorActionList definition {:?}", e)
     };
@@ -1238,11 +1250,11 @@ pub fn define_actor_action2_list (item: TokenStream)->TokenStream {
     let v2_base = get_type_base(&data_vars.last().unwrap().var_type);
 
     let msg_types: Vec<&Path> = actions.iter().map(|a| &a.msg_type).collect();
-    let stmts = get_action_stmts( &self_name, &actions);
+    let stmts = get_action_stmts( &handle_name, &actions);
 
     let new_item: TokenStream = quote! {
         struct #struct_name ( #( ActorHandle< #msg_types > ),* );
-        impl ActorAction2List< #v1_base, #v2_base > for #struct_name {
+        impl ActorAction2< #v1_base, #v2_base > for #struct_name {
             async fn execute (&self, #data_vars)->odin_actor::Result<()> {
                 let _hsys_ = &self.0; 
                 #( #stmts );*
@@ -1254,65 +1266,64 @@ pub fn define_actor_action2_list (item: TokenStream)->TokenStream {
     new_item
 }
 
-fn get_action_stmts (self_name: &Ident, actions: &Vec<ActorAction>)->Vec<TokenStream2> {
+fn get_action_stmts (handle_name: &Ident, actions: &Vec<ActorActionArm>)->Vec<TokenStream2> {
     let max_idx = actions.len()-1;
 
     actions.iter().enumerate().map(|(idx,a)| {
         let result_expr = &a.result_expr;
         let idx_tok = Literal::usize_unsuffixed(idx); 
         if idx < max_idx { 
-            quote!{ let #self_name = &self.#idx_tok; #result_expr; } 
+            quote!{ let #handle_name = &self.#idx_tok; #result_expr; } 
         } else { 
-            quote!{ let #self_name = &self.#idx_tok; #result_expr } 
+            quote!{ let #handle_name = &self.#idx_tok; #result_expr } 
         }
     }).collect()
 }
 
-struct ActorActionList {
+struct ActorActionSpec {
     struct_name: Ident,
+    handle_name: Ident,
     data_vars: Punctuated<TypedVar,Comma>,
-    self_name: Ident,
-    actions: Vec<ActorAction>
+    actions: Vec<ActorActionArm>
 }
 
-impl Parse for ActorActionList {
+impl Parse for ActorActionSpec {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        let _: For = input.parse()?;
-        let self_name: Ident = input.parse()?;
-
-        let _: In = input.parse()?;
         let struct_name: Ident = input.parse()?;
+        let _ : Token![=] = input.parse()?;
+        let handle_name: Ident = input.parse()?;
+        let _ : Token![<-] = input.parse()?;
+        let data_vars: Punctuated<TypedVar,Comma> = {
+            let arg_input;
+            let _data_paren: Paren = parenthesized!( arg_input in input);
+            Punctuated::parse_separated_nonempty(&arg_input)?
+        };
+        let _: For = input.parse()?;
 
-        let arg_input;
-        let _data_paren: Paren = parenthesized!( arg_input in input);
-        let data_vars: Punctuated<TypedVar,Comma> = Punctuated::parse_separated_nonempty(&arg_input)?;
-
-        let _ : Token![:] = input.parse()?;
-
-        let mut actions = Vec::<ActorAction>::new();
+        let mut actions = Vec::<ActorActionArm>::new();
         while !input.is_empty() {
-            let a: ActorAction = input.parse()?;
+            let a: ActorActionArm = input.parse()?;
             actions.push(a);
     
             let lookahead = input.lookahead1();
             if lookahead.peek( Comma) { let _: Comma = input.parse()?; }
         }
     
-        Ok( ActorActionList{struct_name, data_vars, self_name, actions} )
+        Ok( ActorActionSpec{struct_name, handle_name, data_vars, actions} )
     }
 }
 
-struct ActorAction {
+struct ActorActionArm {
     msg_type: Path,
     result_expr: Expr
 }
-impl Parse for ActorAction {
+impl Parse for ActorActionArm {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let msg_type: Path = input.parse()?;
         let _: Token![=>] = input.parse()?;
         let result_expr: Expr = input.parse()?;
         // TODO - should check here if expr type is Result<(),OdinActorError>
-        Ok(ActorAction{ msg_type, result_expr })
+        Ok(ActorActionArm{ msg_type, result_expr })
     }
 }
 

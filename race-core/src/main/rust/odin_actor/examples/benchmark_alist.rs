@@ -6,22 +6,22 @@ use odin_actor::prelude::*;
 use odin_actor::errors::Result;
 
 mod provider {
-    use odin_actor::{prelude::*, ActorActionList};
+    use odin_actor::{prelude::*, ActorAction};
     use odin_actor::tokio_kanal::{Actor, ActorHandle};
 
     #[derive(Debug)] pub struct ExecuteActions{}
 
     define_actor_msg_type!{ pub ProviderMsg = ExecuteActions }
 
-    pub struct Provider<A> where A: ActorActionList<u64> {
+    pub struct Provider<A> where A: ActorAction<u64> {
         data: u64,
         actions: A,
     }
-    impl<A> Provider<A> where A: ActorActionList<u64> {
+    impl<A> Provider<A> where A: ActorAction<u64> {
         pub fn new(actions: A)->Self { Provider{ data: 0, actions } }
     }
 
-    impl_actor! { match msg for Actor<Provider<A>,ProviderMsg> where A: ActorActionList<u64> as
+    impl_actor! { match msg for Actor<Provider<A>,ProviderMsg> where A: ActorAction<u64> as
         ExecuteActions => cont! { 
             self.data += 1;
             self.actions.execute(&self.data).await 
@@ -109,10 +109,10 @@ async fn main()->Result<()> {
 
     let mut actor_system = ActorSystem::new("benchmark_cb");
 
-    let pre_prov = PreActorHandle::new("provider",8);
-    let cli = spawn_actor!( actor_system, "client", client::Client::new(max_rounds, pre_prov.as_actor_handle(&actor_system)))?;
+    let pre_prov = PreActorHandle::new(&actor_system, "provider",8);
+    let cli = spawn_actor!( actor_system, "client", client::Client::new(max_rounds, pre_prov.as_actor_handle()))?;
 
-    define_actor_action_list!{ for actor_handle in ProviderActions (data: &u64):
+    define_actor_action_type!{ ProviderActions = actor_handle <-  (data: &u64) for
         client::ClientMsg => actor_handle.try_send_msg( client::Update(*data))
     }
     let prov = spawn_pre_actor!( actor_system, pre_prov, provider::Provider::new( ProviderActions(cli)))?;

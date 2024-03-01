@@ -4,7 +4,7 @@ use std::{error::Error, marker::PhantomData};
 use std::fmt::Debug;
 use std::future::Future;
 
-use odin_macro::{define_actor_send_msg_list, define_actor_action_list, define_actor_action2_list};
+use odin_macro::{define_actor_msg_action_type, define_actor_action_type, define_actor_action2_type};
 
 /* #region framework mockup ***************************************************************************/
 
@@ -77,23 +77,24 @@ impl From<Msg2> for Actor2Msg { fn from(m:Msg2)->Actor2Msg {Actor2Msg::Msg2(m)} 
 #[derive(Debug)] struct SomeData(u64);
 
 #[test]
-fn test_action_list() {
+fn test_action() {
     let ah1 = ActorHandle::<Actor1Msg>::new("actor-1");
     let ah2 = ActorHandle::<Actor2Msg>::new("actor-2");
 
-    define_actor_action_list!{ for actor_handle in MyActions (data: &SomeData) :
+    define_actor_action_type!{ MyActions = actor_handle <- (data: &SomeData) for
         Actor1Msg => actor_handle.send_msg( Msg1(data.0)).await,
         Actor2Msg => actor_handle.try_send_msg( Msg2(data.0))
     }
+
     let my_actions = MyActions( ah1, ah2);
     println!("got my actions."); // this is needed if we want to print debug output (--nocapture)
 }
 
 #[test]
-fn test_action2_list() {
+fn test_action2() {
     let ah1 = ActorHandle::<Actor1Msg>::new("actor-1");
 
-    define_actor_action2_list!{ for actor_handle in MyActions (own: &SomeData, ext: &i64) :
+    define_actor_action2_type!{ MyActions = actor_handle <- (own: &SomeData, ext: &i64) for
         Actor1Msg => {
             let s = format!("executed with {:?} and {}", own, ext);
             let s1 = s.clone();
@@ -104,15 +105,16 @@ fn test_action2_list() {
         }
     }
     let my_actions = MyActions( ah1);
-    println!("got my actions."); // this is needed if we want to print debug output (--nocapture)
+    println!("got my actions-2."); // this is needed if we want to print debug output (--nocapture)
 }
 
 #[test]
-fn test_send_msg_list() {
+fn test_msg_action() {
     let ah1 = ActorHandle::<Actor1Msg>::new("actor-1");
     let ah2 = ActorHandle::<Actor2Msg>::new("actor-2");
 
-    define_actor_send_msg_list!{ MySends (Msg1) : Actor1Msg, Actor2Msg }
+    define_actor_msg_action_type!{ MySends = Msg1 for Actor1Msg, Actor2Msg }
+    //define_actor_msg_list!{ MySends (Msg1) : Actor1Msg, Actor2Msg }
     let my_sends = MySends( ah1, ah2);
     println!("got my sends."); // this is needed if we want to print debug output (--nocapture)
 }

@@ -63,8 +63,8 @@ impl_actor! { match msg for Actor<Ponger<P>,PongerMsg> where P: MsgReceiver<Pong
 async fn main ()->Result<()> {
     let mut actor_system = ActorSystem::new("main");
 
-    let pre_hpong = PreActorHandle::new( "ponger", 8);
-    let hping = spawn_actor!( actor_system, "pinger", Pinger{ponger: pre_hpong.as_actor_handle(&actor_system)})?;
+    let pre_hpong = PreActorHandle::new( &actor_system, "ponger", 8);
+    let hping = spawn_actor!( actor_system, "pinger", Pinger{ponger: pre_hpong.as_actor_handle()})?;
     let hpong = spawn_pre_actor!( actor_system, pre_hpong, Ponger{pinger: hping})?;
 
     actor_system.timeout_start_all(millis(20)).await?;

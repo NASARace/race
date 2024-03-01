@@ -19,16 +19,21 @@
 use odin_actor::prelude::*;
 use anyhow::{anyhow,Result};
 
-#[derive(Debug)]
-pub struct Greet (&'static str);
-//... define any other message struct our actor would process here
-define_actor_msg_type! { GreeterMsg = Greet }
+//--- the actor implementation
 
-struct Greeter; // look ma - no fields
+#[derive(Debug)]
+pub struct Greet (pub &'static str);
+//... define any other message struct our actor would process here
+
+define_actor_msg_type! { pub GreeterMsg = Greet }
+
+pub struct Greeter; // look ma - no fields
 
 impl_actor! { match msg for Actor<Greeter,GreeterMsg> as
     Greet => cont! { println!("hello {}!", msg.0); }
 }
+
+//--- the application using the actor
 
 #[tokio::main]
 async fn main() ->Result<()> {

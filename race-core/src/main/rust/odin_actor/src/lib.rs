@@ -52,7 +52,8 @@ extern crate odin_macro;
 #[doc(hidden)]
 pub use odin_macro::{
     define_actor_msg_type, match_actor_msg, cont, stop, term, impl_actor, 
-    spawn_actor, spawn_pre_actor, define_actor_send_msg_list, define_actor_action_list, define_actor_action2_list
+    spawn_actor, spawn_dyn_actor, spawn_pre_actor, 
+    define_actor_msg_action_type, define_actor_action_type, define_actor_action2_type
 };
 
 
@@ -155,15 +156,15 @@ pub trait TryMsgReceiver<T>: MsgReceiverConstraints {
 /// a list of ActorHandles implementing MsgReceiver<T> that we async send the same message to.
 /// Use this if the list owner is in control of what message to send.
 /// To create an ActorMsgList use the define_actor_msg_list!() macro
-pub trait ActorSendMsgList<T>: Send where T: Clone + Debug + Send {
-    fn send_msg (&self,m:T) -> impl Future<Output=Result<()>> + Send;
+pub trait ActorSendMsgAction<T>: Send where T: Clone + Debug + Send {
+    fn execute (&self,m:T) -> impl Future<Output=Result<()>> + Send;
 } 
 
 /// a list of ActorHandles with associated expressions we execute with list owner provided data. Conceptually
 /// this is like a list of AsyncFn(ActorHandle,&D) if there would be such a thing.
 /// Use this if the Actor call site (e.g. main()) is in control of actions.
 /// To create an ActorActionList use the define_actor_action_list!() macro
-pub trait ActorActionList<D>: Send {
+pub trait ActorAction<D>: Send {
     fn execute (&self, data: &D) -> impl Future<Output=Result<()>> + Send;
 }
 
@@ -173,7 +174,7 @@ pub trait ActorActionList<D>: Send {
 /// While this could also be implemented with an ActorActionList that takes a tuple as argument type this would force us
 /// to add lifetime parameters to the ActorActionList in case we want to pass in values as references, which
 /// is the normal case for non-trivial owned data (which to maintain is the main reason for having the owner in the first place)
-pub trait ActorAction2List<A,B>: Send {
+pub trait ActorAction2<A,B>: Send {
     fn execute (&self, a: &A,b: &B) -> impl Future<Output=Result<()>> + Send;
 }
 

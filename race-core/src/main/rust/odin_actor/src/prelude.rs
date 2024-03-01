@@ -20,12 +20,12 @@ pub use crate::{
     sleep, timeout, yield_now, spawn, spawn_blocking, block_on, block_on_send_msg, block_on_timeout_send_msg, // from respective cfg module
     query, query_ref, timeout_query, timeout_query_ref,
     ActorReceiver, ReceiveAction, MsgReceiver, DynMsgReceiver, TryMsgReceiver, SysMsgReceiver, SysMsg, DefaultReceiveAction, FromSysMsg, 
-    Identifiable, ActorSendMsgList, ActorActionList, ActorAction2List, MsgSubscriptions, MsgSubscriber, Callback, CallbackList, SyncCallback, AsyncCallback,
+    Identifiable, ActorSendMsgAction, ActorAction, ActorAction2, MsgSubscriptions, MsgSubscriber, Callback, CallbackList, SyncCallback, AsyncCallback,
     _Start_, _Ping_, _Timer_, _Exec_, _Pause_, _Resume_, _Terminate_,
     OdinActorError,
     secs,millis,micros,nanos,
     DEFAULT_CHANNEL_BOUNDS,
-    define_actor_msg_type, match_actor_msg, cont, stop, term, impl_actor, spawn_actor, spawn_pre_actor,
-    define_actor_action_list, define_actor_action2_list, define_actor_send_msg_list,
+    define_actor_msg_type, match_actor_msg, cont, stop, term, impl_actor, spawn_actor, spawn_pre_actor, spawn_dyn_actor,
+    define_actor_action_type, define_actor_action2_type, define_actor_msg_action_type,
     msg_subscriber,sync_callback,async_callback,send_msg_callback,async_action,try_send_msg_callback
 };

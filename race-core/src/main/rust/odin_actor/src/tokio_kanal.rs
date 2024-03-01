@@ -224,22 +224,22 @@ impl <S,M> DerefMut for Actor<S,M> where S: Send + 'static, M: MsgTypeConstraint
 /// ActorHandles and MsgReceivers from it. No messages can be sent through PreActorHandle
 /// We cannot directly pre-alloc ActorHandles since most channel crates do not have cloneable Receivers
 pub struct PreActorHandle <M> where M: MsgTypeConstraints {
+    hsys: Arc<ActorSystemHandle>,
     id: Arc<String>,
     tx: MpscSender<M>,
     rx: MpscReceiver<M>
 }
 
-impl <MsgType> PreActorHandle <MsgType> 
-    where MsgType: MsgTypeConstraints,
-{
-    pub fn new (id: impl ToString, bound: usize)->Self {
-        let actor_id = Arc::new(id.to_string());
-        let (tx, rx) = create_mpsc_sender_receiver::<MsgType>( bound);
-        PreActorHandle { id: actor_id, tx, rx }
+impl <M> PreActorHandle <M>  where M: MsgTypeConstraints {
+    pub fn new (sys: &ActorSystem, id: impl ToString, bound: usize)->Self {
+        let hsys = sys.clone_handle();
+        let id = Arc::new(id.to_string());
+        let (tx, rx) = create_mpsc_sender_receiver::<M>( bound);
+        PreActorHandle { hsys, id, tx, rx }
     }
 
-    pub fn as_actor_handle (&self, sys: &ActorSystem)->ActorHandle<MsgType> {
-        ActorHandle{ id: self.id.clone(), hsys: Arc::new(sys.new_handle()), tx: self.tx.clone() }
+    pub fn as_actor_handle (&self)->ActorHandle<M> {
+        ActorHandle{ id: self.id.clone(), hsys: self.hsys.clone(), tx: self.tx.clone() }
     }
 }
 
@@ -337,6 +337,11 @@ impl <M> ActorHandle <M> where M: MsgTypeConstraints {
         self.try_send_actor_msg( _Exec_(Box::new(f)).into())
     }
 
+    pub fn new_actor<S,U> (&self, id: impl ToString, state: S, bound: usize)->(Actor<S,U>, ActorHandle<U>, MpscReceiver<U>)
+        where S: Send + 'static, U: MsgTypeConstraints
+    {
+        actor_tuple( self.hsys.clone(), id, state, bound)
+    }
 }
 
 // note this consumed the ActorHandle since we have to move it into a Future
@@ -375,6 +380,12 @@ impl <M> Debug for ActorHandle<M> where M: MsgTypeConstraints {
 impl <M> Clone for ActorHandle <M> where M: MsgTypeConstraints {
     fn clone(&self)->Self {
         ActorHandle::<M> { id: self.id.clone(), hsys: self.hsys.clone(), tx: self.tx.clone() }
+    }
+}
+
+impl<M> From<&PreActorHandle<M>> for ActorHandle<M> where M: MsgTypeConstraints {
+    fn from (pre: &PreActorHandle<M>)->Self {
+        ActorHandle{ id: pre.id.clone(), hsys: pre.hsys.clone(), tx: pre.tx.clone() }
     }
 }
 
@@ -462,14 +473,6 @@ impl ActorSystemHandle {
         timeout( to, self.sender.send(msg)).await
     }
 
-    pub fn new_actor<T,MsgType> (&self, id: impl ToString, state: T, bound: usize) -> (Actor<T,MsgType>, ActorHandle<MsgType>, MpscReceiver<MsgType>)
-    where 
-        T: Send + 'static,
-        MsgType: MsgTypeConstraints
-    {
-        actor_tuple( self.clone(), id, state, bound)
-    }
-
     pub async fn spawn_actor<M,R> (&self, act: (R, ActorHandle<M>, MpscReceiver<M>))->Result<ActorHandle<M>> 
     where
         M: MsgTypeConstraints,
@@ -479,7 +482,6 @@ impl ActorSystemHandle {
         let id = actor_handle.id.clone();
         let type_name = std::any::type_name::<R>();
         let sys_msg_receiver = Box::new(actor_handle.clone());
-        let hsys = self.clone();
         let func = move || { run_actor(rx, receiver) };
         let sfc = create_sfc( func);
 
@@ -505,31 +507,35 @@ pub struct ActorSystem {
     request_receiver: MpscReceiver<ActorSystemRequest>,
     job_scheduler: Arc<Mutex<JobScheduler>>, 
     join_set: task::JoinSet<()>, 
-    actor_entries: Vec<ActorEntry>
+    actor_entries: Vec<ActorEntry>,
+    hsys: Arc<ActorSystemHandle>
 }
 
 impl ActorSystem {
 
     pub fn new<T: ToString> (id: T)->Self {
         let (tx,rx) = create_mpsc_sender_receiver(8);
-        let mut job_scheduler = JobScheduler::with_max_pending( 1024);
+        let mut job_scheduler = Arc::new( Mutex::new( JobScheduler::with_max_pending( 1024)));
+        let hsys = Arc::new( ActorSystemHandle{sender: tx.clone(), job_scheduler: job_scheduler.clone()});
 
         ActorSystem { 
             id: id.to_string(), 
             ping_cycle: 0,
             request_sender: tx,
             request_receiver: rx,
-            job_scheduler: Arc::new( Mutex::new(job_scheduler)),
+            job_scheduler,
             join_set: JoinSet::new(),
-            actor_entries: Vec::new()
+            actor_entries: Vec::new(),
+            hsys
         }
     }
 
-    pub fn new_handle (&self)->ActorSystemHandle {
-        let sender = self.request_sender.clone();
-        let job_scheduler = self.job_scheduler.clone();
+    pub fn handle (&self)->&ActorSystemHandle {
+        self.hsys.as_ref()
+    }
 
-        ActorSystemHandle{sender,job_scheduler}    
+    pub fn clone_handle (&self)->Arc<ActorSystemHandle> {
+        self.hsys.clone()
     }
 
     // these two functions need to be called at the user code level. The separation is required to guarantee that
@@ -545,13 +551,13 @@ impl ActorSystem {
     pub fn new_actor<S,M> (&self, id: impl ToString, state: S, bound: usize)->(Actor<S,M>, ActorHandle<M>, MpscReceiver<M>)
         where S: Send + 'static, M: MsgTypeConstraints
     {
-        actor_tuple( self.new_handle(), id, state, bound)
+        actor_tuple( self.hsys.clone(), id, state, bound)
     }
 
     pub fn new_pre_actor<S,M> (&self, h_pre: PreActorHandle<M>, state: S)->(Actor<S,M>, ActorHandle<M>, MpscReceiver<M>)
         where S: Send + 'static, M: MsgTypeConstraints
     {
-        pre_actor_tuple( self.new_handle(), state, h_pre)
+        pre_actor_tuple( self.hsys.clone(), state, h_pre)
     }
 
     /// although this implementation is infallible others (e.g. through an [`ActorHandle`] or using different
@@ -707,26 +713,26 @@ impl ActorSystem {
 
 }
 
-type ActorTuple<R,M> = (Actor<R,M>, ActorHandle<M>, MpscReceiver<M>);
+type ActorTuple<S,M> = (Actor<S,M>, ActorHandle<M>, MpscReceiver<M>);
 
-fn actor_tuple<S,M> (hsys: ActorSystemHandle, id: impl ToString, state: S, bound: usize)->ActorTuple<S,M>
+fn actor_tuple<S,M> (hsys: Arc<ActorSystemHandle>, id: impl ToString, state: S, bound: usize)->ActorTuple<S,M>
     where S: Send + 'static, M: MsgTypeConstraints
 {
     let actor_id = Arc::new(id.to_string());
     let (tx, rx) = create_mpsc_sender_receiver::<M>( bound);
-    let actor_handle = ActorHandle { id: actor_id, hsys: Arc::new(hsys), tx };
+    let actor_handle = ActorHandle { id: actor_id, hsys, tx };
     let hself = actor_handle.clone();
     let actor = Actor{ state, hself };
 
     (actor, actor_handle, rx)
 }
 
-fn pre_actor_tuple<S,M> (hsys: ActorSystemHandle, state: S, pre_h: PreActorHandle<M>)->ActorTuple<S,M>
+fn pre_actor_tuple<S,M> (hsys: Arc<ActorSystemHandle>, state: S, pre_h: PreActorHandle<M>)->ActorTuple<S,M>
     where S: Send + 'static, M: MsgTypeConstraints
 {
     let actor_id = pre_h.id.clone();
     let rx = pre_h.rx;
-    let actor_handle = ActorHandle{ id: actor_id, hsys: Arc::new(hsys), tx: pre_h.tx };
+    let actor_handle = ActorHandle{ id: actor_id, hsys, tx: pre_h.tx };
     let hself = actor_handle.clone();
     let actor = Actor{ state, hself };
 

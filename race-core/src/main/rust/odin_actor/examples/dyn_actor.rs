@@ -32,7 +32,7 @@ struct Child<A: MsgReceiver<ChildResponse>> {
 impl_actor! { match msg for Actor<Child<A>,ChildMsg> where A: MsgReceiver<ChildResponse> as 
     ChildRequest => cont! {
         sleep(secs(1)).await;
-        let reply = if msg.data == 42 {"I know the answer"} else {"I don't know the answer"};
+        let reply = if msg.data == 42 {"although I'm just a kid I know the answer"} else {"I don't know the answer, I'm just a kid"};
         self.parent.send_msg( ChildResponse(String::from(reply))).await.unwrap()
     }
 }
@@ -49,23 +49,13 @@ struct Parent {
 }
 
 impl Parent {
-    fn new ()->Self {
-        Parent { child_handle: None }
-    }
-
-    async fn create_child_actor (&self, hself: &ActorHandle<ParentMsg>, hsys: &ActorSystemHandle)->Option<ActorHandle<ChildMsg>> {
-        if let Ok(child_handle) = spawn_actor!( hsys, "child", Child {parent: hself.clone()}).await {
-            println!("created child actor: {:?}", child_handle);
-            Some(child_handle)
-        } else {
-            None
-        }
-    }
+    fn new ()->Self { Parent { child_handle: None } }
 }
 
 impl_actor! { match msg for Actor<Parent,ParentMsg> as 
     _Start_ => cont! { 
-        if let Some(child_handle) = self.create_child_actor( &self.hself, &self.hsys()).await {
+        if let Ok(child_handle) = spawn_dyn_actor!( self.hself, "child", Child{parent: self.hself.clone()}, 8).await {
+            println!("created child actor: {:?}", child_handle);
             child_handle.send_msg(ChildRequest {data:42}).await.unwrap()
         }
     }
