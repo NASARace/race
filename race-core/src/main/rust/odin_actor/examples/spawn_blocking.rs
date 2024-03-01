@@ -57,7 +57,7 @@ impl_actor! { match msg for Actor<Spawner,SpawnerMsg> as
         println!("tick {}", self.count);
         if self.count > 15 { 
             println!("spawner had enough, terminating..");
-            self.hsys.request_termination(millis(500)).await; 
+            self.hsys().request_termination(millis(500)).await; 
         }
     }
     Spawn => cont! {

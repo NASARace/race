@@ -65,7 +65,7 @@ impl Parent {
 
 impl_actor! { match msg for Actor<Parent,ParentMsg> as 
     _Start_ => cont! { 
-        if let Some(child_handle) = self.create_child_actor( &self.hself, &self.hsys).await {
+        if let Some(child_handle) = self.create_child_actor( &self.hself, &self.hsys()).await {
             child_handle.send_msg(ChildRequest {data:42}).await.unwrap()
         }
     }

@@ -22,7 +22,7 @@ impl_actor! { match msg for Actor<Greeter,GreeterMsg> as
 
         if msg.0 != "me" {
             let myself = self.hself.clone();
-            self.exec( move|| { myself.try_send_msg(Greet("me")); })?;
+            self.exec( move|| { myself.try_send_msg(Greet("me")); });
         }
     }
 }
@@ -37,7 +37,7 @@ async fn main() ->Result<()> {
 
     actor_handle.send_msg( Greet("world")).await?;
 
-    actor_system.process_requests().await?;
-
+    sleep( secs(1)).await;
+    actor_system.terminate_and_wait( millis(20)).await?;
     Ok(())
 }

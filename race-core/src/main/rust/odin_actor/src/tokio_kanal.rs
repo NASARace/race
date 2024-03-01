@@ -199,7 +199,7 @@ impl <S,M> Actor <S,M> where S: Send + 'static, M: MsgTypeConstraints {
         self.hself.hsys.send_msg( ActorSystemRequest::RequestTermination, to).await
     }
 
-    fn exec (&self, f: impl Fn() + Send + 'static)->Result<()> {
+    pub fn exec (&self, f: impl Fn() + Send + 'static)->Result<()> {
         self.hself.try_send_actor_msg( _Exec_(Box::new(f)).into())
     }
 }
@@ -331,6 +331,10 @@ impl <M> ActorHandle <M> where M: MsgTypeConstraints {
 
     pub fn start_repeat_timer (&self, id: i64, timer_interval: Duration) -> AbortHandle {
         repeat_timer_for( self.clone(), id, timer_interval)
+    }
+
+    pub fn exec (&self, f: impl Fn() + Send + 'static)->Result<()> {
+        self.try_send_actor_msg( _Exec_(Box::new(f)).into())
     }
 
 }

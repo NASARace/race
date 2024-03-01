@@ -110,7 +110,7 @@ async fn main()->Result<()> {
     let mut actor_system = ActorSystem::new("benchmark_cb");
 
     let pre_prov = PreActorHandle::new("provider",8);
-    let cli = spawn_actor!( actor_system, "client", client::Client::new(max_rounds, ActorHandle::from(&pre_prov)))?;
+    let cli = spawn_actor!( actor_system, "client", client::Client::new(max_rounds, pre_prov.as_actor_handle(&actor_system)))?;
 
     define_actor_action_list!{ for actor_handle in ProviderActions (data: &u64):
         client::ClientMsg => actor_handle.try_send_msg( client::Update(*data))

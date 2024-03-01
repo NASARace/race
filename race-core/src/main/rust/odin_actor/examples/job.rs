@@ -35,14 +35,14 @@ impl_actor! { match msg for Actor<OnceGreeter,GreeterMsg> as
             println!("scheduling job to run in 2 sec..");
             scheduler.schedule_once( secs(2), {
                 let hself = self.hself.clone(); 
-                move ||{
+                move |_|{
                     println!("now sending message from scheduled job");
                     hself.try_send_msg( Greet("myself"));
                 }
             });
 
             // alternative using syntactic sugar from odin_macro::fn_mut!(..)
-            scheduler.schedule_repeated( secs(3), secs(1), fn_mut!( (hself=self.hself.clone(), mut tick=1) => {
+            scheduler.schedule_repeated( secs(3), secs(1), fn_mut!( (hself=self.hself.clone(), mut tick=1) => |_ctx| {
                 hself.try_send_msg(Tick(tick));
                 tick += 1
             }));

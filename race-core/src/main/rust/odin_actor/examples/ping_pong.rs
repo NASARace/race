@@ -64,7 +64,7 @@ async fn main ()->Result<()> {
     let mut actor_system = ActorSystem::new("main");
 
     let pre_hpong = PreActorHandle::new( "ponger", 8);
-    let hping = spawn_actor!( actor_system, "pinger", Pinger{ponger: ActorHandle::from( &pre_hpong)})?;
+    let hping = spawn_actor!( actor_system, "pinger", Pinger{ponger: pre_hpong.as_actor_handle(&actor_system)})?;
     let hpong = spawn_pre_actor!( actor_system, pre_hpong, Ponger{pinger: hping})?;
 
     actor_system.timeout_start_all(millis(20)).await?;
