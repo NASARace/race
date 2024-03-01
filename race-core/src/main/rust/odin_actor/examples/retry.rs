@@ -83,10 +83,12 @@ impl_actor! { match msg for Actor<Provider<A1,A2>,ProviderMsg>
 /// client example, modeling a web server that manages web socket connections
 pub struct WsServer<A> where A: ActorActionList<TAddr> {
     connections: Vec<TAddr>,
-    new_request_action: A // action to be triggered when server gets a new (external) connection request
+    new_request_action: A,// action to be triggered when server gets a new (external) connection request
+
+    n_exec: usize
 }
 impl <A> WsServer<A> where A: ActorActionList<TAddr> {
-    pub fn new (new_request_action: A)->Self { WsServer{connections: Vec::new(), new_request_action} }
+    pub fn new (new_request_action: A)->Self { WsServer{connections: Vec::new(), new_request_action, n_exec:0} }
 }
 
 // these message types are too 'WsServer' specific to be forced upon a generic, reusable Provider
@@ -97,11 +99,19 @@ impl <A> WsServer<A> where A: ActorActionList<TAddr> {
 
 #[derive(Debug,Clone)] struct ExecNewRequest { addr: TAddr }
 
-define_actor_msg_type! { WsServerMsg = PublishUpdate | SendSnapshot | ExecNewRequest }
+#[derive(Debug)] struct DelayMsg{} // just used to flood the WsServer queue and create backpressure
+
+#[derive(Debug)] struct FloodMsg{} // just used to flood the WsServer queue and create backpressure
+
+define_actor_msg_type! { WsServerMsg = PublishUpdate | SendSnapshot | ExecNewRequest | DelayMsg | FloodMsg }
 
 impl_actor! { match msg for Actor<WsServer<A>,WsServerMsg> where A: ActorActionList<TAddr> as
     ExecNewRequest => cont! { // mockup simulating a new external connection event from 'addr'
         println!("{} send connection request for {:?}", self.id().yellow(), msg.addr);
+
+        self.n_exec += 1;
+        if self.n_exec == 2 { self.hself.try_send_msg( DelayMsg{}); }
+        
         self.new_request_action.execute( &msg.addr).await;
     }
     PublishUpdate => cont! {
@@ -115,6 +125,16 @@ impl_actor! { match msg for Actor<WsServer<A>,WsServerMsg> where A: ActorActionL
         self.connections.push(msg.addr.clone());
         println!("{} sending snapshot data '{}' to connection '{}'", self.id().yellow(), msg.ws_msg, msg.addr);
     }
+
+    //--- these are just traffic simulators
+    DelayMsg => cont! { 
+        self.hself.send_msg(FloodMsg{}).await; // make sure there is something in the queue before we delay our receiver loop
+        println!("{} doing something lengthy..", self.id().red());
+        sleep( secs(1)).await
+    }
+    FloodMsg => cont! {
+        // nothing to do here - this is just a message to flood our queue
+    }
 }
 
 /* #endregion client */
@@ -126,13 +146,10 @@ async fn main ()->Result<()> {
 
     //--- 1: set up the client (WsServer)
     define_actor_action_list! { for actor_handle in NewRequestAction (addr: &TAddr) :
-        ProviderMsg => {
-            let client_data = addr.clone(); 
-            actor_handle.try_send_msg( ExecSnapshotAction{client_data})
-        }
+        ProviderMsg => actor_handle.try_send_msg( ExecSnapshotAction{client_data: addr.clone()})
     }
     let client = spawn_actor!( actor_system, "client", 
-        WsServer::new( NewRequestAction( pre_provider.as_actor_handle(&actor_system)))
+        WsServer::new( NewRequestAction( pre_provider.as_actor_handle(&actor_system))), 1 // give it a really small queue
     )?;
 
     //--- 2: set up the provider (data source)
@@ -143,8 +160,8 @@ async fn main ()->Result<()> {
         WsServerMsg => {
             ///////////////// this is the main change compared to alist.rs
             match actor_handle.try_send_msg( SendSnapshot{ addr: addr.clone(), ws_msg: format!("{v:?}")}) {
-                //Err(OdinActorError::ReceiverFull) => {
-                Err(e) => {
+                Err(OdinActorError::ReceiverFull) => {
+                    println!("{} queue full, retry..", actor_handle.id.red());
                     // this is a critical msg - retry if it failed. While we could directly resend the SendSnapshot()
                     // to the client this would be suboptimal since the provider data has most likely changed
                     // at the time this will succeed, which means all updates in-between original request and success
