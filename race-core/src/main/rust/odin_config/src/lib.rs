@@ -16,168 +16,195 @@
  */
 #![allow(unused)]
 
+pub mod prelude;
+
 pub mod errors;
-use crate::errors::{OdinConfigError,Result as ConfigResult};
+use crate::errors::{OdinConfigError,ConfigResult};
+type Result<T> = crate::errors::ConfigResult<T>;
 
-use std::{path::{Path,PathBuf}, fs::File, io::{Read, Write}, time::Duration, sync::OnceLock};
-use ron;
-use serde::{
-    Deserialize,Serialize,
-    Deserializer,Serializer,
-    de::DeserializeOwned
-};
-use parse_duration::parse;
-use directories::ProjectDirs;
-use odin_common::fs::ensure_dir;
+pub mod app;
+use crate::app::*;
 
-#[derive(Debug)]
-pub struct AppMetaData {
-    qualifier: String,
-    organization: String,
-    application: String,
+pub mod pw_cache;
+use crate::pw_cache::*;
 
-    config_dir: PathBuf,
-    cache_dir: PathBuf,
-    data_dir: PathBuf,
-}
+use miniz_oxide::inflate::decompress_to_vec;
+use pgp::MessageDecrypter;
+use std::ffi::OsStr;
+use std::{fs::File,path::Path,any::type_name,io::Read};
+use ron::de::from_bytes;
+use serde::Deserialize;
 
-static APP_METADATA: OnceLock<AppMetaData> = OnceLock::new();
+/// the config_for! macro variants - the main purpose of this crate.
+/// use:
+/// ```
+/// use config::prelude::*;
+/// ...
+/// let my_config: MyConfig = config_for!(my_config)?;
+/// ``` 
+/// Note that we have to use attribute macros so that non-active variants are
+/// removed (they wouldn't compile in case of the embedded_* options, which rely
+/// on a build.rs creating the embedded config source).
+/// 
+/// Note also that users have to import the config prelude
 
-pub fn init_from_os (qualifier: &str, organization: &str, application: Option<&str>)->ConfigResult<()> {
-    let qualifier = String::from(qualifier);
-    let organization = String::from(organization);
-    let application = if let Some(app) = application { String::from(app) } else { app_from_env()? };
-
-    if let Some(project_dirs) = ProjectDirs::from(qualifier.as_str(), organization.as_str(), application.as_str()) {
-        let config_dir = project_dirs.config_dir().to_path_buf();
-        let data_dir = project_dirs.data_dir().to_path_buf();
-        let cache_dir = project_dirs.cache_dir().to_path_buf();
-
-        let app_metadata = AppMetaData { qualifier, organization, application, config_dir, cache_dir, data_dir };
-        APP_METADATA.set( app_metadata).map_err(|e| OdinConfigError::ConfigInitError(format!("application metadata already set")))
-    } else {
-        Err( OdinConfigError::ConfigInitError(format!("no home dir for {}.{}.{}", qualifier,organization,application)))
+#[macro_export]
+#[cfg(feature="config_embedded")]
+macro_rules! config_for {
+    ($id:literal) => {
+        odin_config::config_from_embedded( __c_data__($id).ok_or_else( || odin_config::errors::file_not_found($id))?)
     }
 }
 
-/// watch out - this overrides XDG and should only be used for testing or special installations
-pub fn init_from_project_root_dir (path: impl Into<PathBuf>, qualifier: &str, organization: &str, application: Option<&str>)->ConfigResult<()> {
-    let qualifier = String::from(qualifier);
-    let organization = String::from(organization);
-    let application = if let Some(app) = application { String::from(app) } else { app_from_env()? };
-    let project_dir = path.into().join(&application);
-
-    let config_dir = project_dir.join("config");
-    let data_dir = project_dir.join("data");
-    let cache_dir = project_dir.join("cache");
-
-    let app_metadata = AppMetaData { qualifier, organization, application, config_dir, cache_dir, data_dir };
-    APP_METADATA.set( app_metadata).map_err(|e| OdinConfigError::ConfigInitError(format!("application metadata already set")))
+#[macro_export]
+#[cfg(feature="config_embedded_pgp")]
+macro_rules! config_for {
+    ($id:literal) => {
+        odin_config::config_from_embedded_pgp( &PW_CACHE, __c_data__($id).ok_or_else( || odin_config::errors::file_not_found($id))?)
+    }
 }
 
-fn app_from_env ()->ConfigResult<String> {
-    if let Ok(pb) = std::env::current_exe() {
-        if let Some(fname) = pb.as_path().file_name().and_then(|oss| oss.to_str()) {
-            Ok(String::from(fname))
-        } else {
-            Err( OdinConfigError::ConfigInitError(format!("executable filename cannot be converted: {:?}",pb)))
+#[macro_export]
+#[cfg(feature="config_embedded_pw")]
+macro_rules! config_for {
+    ($id:literal) => {
+        odin_config::config_from_embedded_pw( &PW_CACHE, __c_data__($id).ok_or_else( || odin_config::errors::file_not_found($id))?)
+    }
+}
+
+#[macro_export]
+#[cfg(feature="config_xdg")]
+macro_rules! config_for {
+    ($id:literal) => {
+        odin_config::config_from_xdg_file( &APP, $id)
+    }
+}
+
+// default is relative 'local' dir
+#[macro_export]
+#[cfg(not(any(feature="config_embedded",feature="config_embedded_pgp",feature="config_embedded_pw",feature="config_xdg")))]
+macro_rules! config_for {
+    ($id:literal) => {
+        odin_config::config_from_local_file( $id)
+    }
+}
+
+//--- the use_config!() variants
+
+#[macro_export]
+#[cfg(feature="config_embedded")]
+macro_rules! use_config {
+    () => {
+        include!(concat!(env!("OUT_DIR"), "/config_data"));
+
+        lazy_static::lazy_static! {
+            static ref APP: AppMetaData = AppMetaData::new();
         }
-    } else {
-        Err( OdinConfigError::ConfigInitError("no executable filename".to_string()))
+    };
+}
+
+#[macro_export]
+#[cfg(any(feature="config_embedded_pgp",feature="config_embedded_pw"))]
+macro_rules! use_config {
+    () => {
+        include!(concat!(env!("OUT_DIR"), "/config_data"));
+
+        lazy_static::lazy_static! {
+            static ref APP: AppMetaData = AppMetaData::new();
+            static ref PW_CACHE: odin_config::pw_cache::PwCache = odin_config::pw_cache::PwCache::new("please enter key passphrase", std::time::Duration::from_secs(20));
+        }
+    };
+}
+
+#[macro_export]
+#[cfg(not(any(feature="config_embedded",feature="config_embedded_pgp",feature="config_embedded_pw")))]
+macro_rules! use_config {
+    () => {
+        lazy_static::lazy_static! {
+            static ref APP: AppMetaData = AppMetaData::new();
+        }
     }
 }
 
-pub fn get_app_metadata ()->Option<&'static AppMetaData> { APP_METADATA.get() }
+/* #region config retrievers ******************************************************************************/
 
-pub fn ensure_dirs ()->ConfigResult<()> {
-    if let Some(md) = APP_METADATA.get() {
-        ensure_dir( &md.cache_dir)?;
-        ensure_dir( &md.data_dir)?;
-        ensure_dir( &md.cache_dir)?;
-        Ok(())
+#[cfg(feature="config_embedded")]
+pub fn config_from_embedded<C> (bs: &[u8])->Result<C>  where C: for <'a> Deserialize<'a> {
+    let data = decompress_to_vec( bs)?;
+    Ok(from_bytes(&data)?)
+}
+
+#[cfg(feature="config_xdg")]
+pub fn config_from_xdg_file<C> (app: &AppMetaData, id: &str)->Result<C>   where C: for <'a> Deserialize<'a> {
+    let pn = format!("{id}.ron");
+    let path: &Path = Path::new( &pn);
+    app.load_config(&path)
+}
+
+#[cfg(not(any(feature="config_embedded",feature="config_embedded_gpg",feature="config_xdg")))]
+pub fn config_from_local_file<C> (id: &str)->Result<C>   where C: for <'a> Deserialize<'a> {
+    use errors::file_not_found;
+
+    let pn = format!("./local/config/{}.ron", id);
+    let path: &Path = Path::new( &pn);
+    if !path.is_file() { return Err(file_not_found(path.to_str().unwrap())) }
+
+    let mut file = File::open(path)?;
+    let len = file.metadata().unwrap().len();
+    let mut data: Vec<u8> = Vec::with_capacity(len as usize);
+    file.read_to_end(&mut data).unwrap();
+    
+    Ok(from_bytes(&data)?)
+}
+
+#[cfg(feature="config_embedded_pgp")]
+pub fn config_from_embedded_pgp<C> (pw_cache: &pw_cache::PwCache, bs: &[u8])->Result<C>  where C: for <'a> Deserialize<'a> {
+    use pgp::{Deserializable, composed::{signed_key::SignedSecretKey,message::Message}};
+    use std::{io::Cursor, fs::File};
+    use errors::config_error;
+
+    let mut priv_key_filename = std::env::var("ODIN_KEY")?;
+    if !priv_key_filename.ends_with("_private.asc") { priv_key_filename.push_str("_private.asc") }
+    let mut priv_key_file = File::open(priv_key_filename)?;
+    let (priv_key, _headers) = SignedSecretKey::from_armor_single(&mut priv_key_file)?;
+    priv_key.verify()?;
+
+    let parsed = Message::from_armor_single(Cursor::new(bs))?.0;
+    // unfortunately Message only works with a String pw
+    let (mut decryptor,keys) = pw_cache.with_string_pw( |pw| Ok(parsed.decrypt(|| pw, &[&priv_key])?))?;
+    let decrypted = decryptor.next().ok_or(config_error("invalid embedded PGP data"))??.decompress()?;
+
+    if let Message::Literal(literal_data) = decrypted {
+        Ok(from_bytes(literal_data.data())?)
     } else {
-        Err(OdinConfigError::ConfigNotInitialized)
+        Err(config_error("invalid embedded PGP data"))
     }
 }
 
-pub fn config_dir()->ConfigResult<&'static PathBuf> {
-    if let Some(md) = APP_METADATA.get() {
-        ensure_dir( &md.config_dir)?;
-        Ok(&md.config_dir)
-    } else {
-        Err(OdinConfigError::ConfigNotInitialized)
-    }
+#[cfg(feature="config_embedded_pw")]
+pub fn config_from_embedded_pw<C> (pw_cache: &pw_cache::PwCache, bs: &[u8])->Result<C>  where C: for <'a> Deserialize<'a> {
+    let decrypted: Vec<u8> = pw_cache.with_u8_pw(|pw| {
+        use magic_crypt::MagicCryptTrait;
+        let mc = magic_crypt::new_magic_crypt!(pw,256);
+        Ok(mc.decrypt_bytes_to_bytes(bs))
+    })??;
+
+    Ok(from_bytes(decrypted.as_slice())?)
 }
 
-pub fn data_dir()->ConfigResult<&'static PathBuf> {
-    if let Some(md) = APP_METADATA.get() {
-        ensure_dir( &md.data_dir)?;
-        Ok(&md.data_dir)
-    } else {
-        Err(OdinConfigError::ConfigNotInitialized)
-    }
-}
+/* #endregion config retrievers */
 
-pub fn cache_dir()->ConfigResult<&'static PathBuf> {
-    if let Some(md) = APP_METADATA.get() {
-        ensure_dir( &md.cache_dir)?;
-        Ok(&md.cache_dir)
-    } else {
-        Err(OdinConfigError::ConfigNotInitialized)
-    }
-}
-
-pub fn load_config <C:DeserializeOwned> (pathname: impl AsRef<Path>)->ConfigResult<C> {
-    let path = pathname.as_ref();
-    if !path.is_file() {
-        Err( OdinConfigError::ConfigFileNotFound(path.as_os_str().to_string_lossy().to_string()) )
-    } else {
+/// this is mostly for testing purposes and should not be used in production, which should be based on one of the
+/// feature-gated config lookup options
+pub fn load_config <C:serde::de::DeserializeOwned> (pathname: impl AsRef<OsStr>)->ConfigResult<C> {
+    let path = Path::new(&pathname);
+    if path.is_file() {
         let mut file = File::open(path)?;
-
         let len = file.metadata()?.len();
         let mut contents = String::with_capacity(len as usize);
         file.read_to_string(&mut contents)?;
-
         ron::from_str::<C>(contents.as_str()).map_err(|e| OdinConfigError::ConfigParseError(format!("{:?}", e)))
-    }
-}
-
-pub fn load_from_config_dir <C:DeserializeOwned> (fname: impl AsRef<Path>)->ConfigResult<C> {
-    if let Some(md) = APP_METADATA.get() {
-        let dir = &md.config_dir;
-        if !dir.is_dir() {
-           Err( OdinConfigError::ConfigDirNotFound(dir.as_os_str().to_string_lossy().to_string()) )
-        } else {
-            let mut path_buf = PathBuf::new();
-            path_buf.push(dir);
-            path_buf.push(fname);
-
-            if path_buf.is_file() {
-                load_config(path_buf)
-            } else {
-                Err( OdinConfigError::ConfigFileNotFound(path_buf.as_os_str().to_string_lossy().to_string()) )
-            }
-        }
-
     } else {
-        Err(OdinConfigError::ConfigNotInitialized)
+        Err( OdinConfigError::ConfigFileNotFound(path.as_os_str().to_string_lossy().to_string()) )
     }
-}
-
-pub fn store_config <S: Serialize> (conf: &S, dir: impl AsRef<Path>, fname: impl AsRef<Path>)->ConfigResult<String> {
-    let mut pretty_config = ron::ser::PrettyConfig::default();
-    pretty_config.struct_names = true;
-    pretty_config.compact_arrays = true;
-
-    let serialized = ron::ser::to_string_pretty(conf, pretty_config)?;
-
-    let mut path_buf = PathBuf::new();
-    path_buf.push(dir);
-    path_buf.push(fname);
-    let pathname = path_buf.as_os_str().to_string_lossy().to_string();
-
-    let mut file = std::fs::File::create(path_buf)?;
-    file.write_all(serialized.as_bytes())?;
-
-    Ok(pathname)
 }

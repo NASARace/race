@@ -870,20 +870,29 @@ fn parse_match_arms (input: ParseStream)->Result<Vec::<MsgMatchArm>> {
 
 /* #region actor receive definition ****************************************************************/
 
-/// a wrapper around the body of an [`match_actor_msg_type`] that puts it into an ActorReceiver context
-/// the match arms are the same but the header also needs to specify the actor state type
+/// defines the message related behavior of an actor by creating an [`ActorReceiver`] impl from the provided spec  
 /// 
 /// Example:
 /// ```
-/// impl_actor! { match msg: ResponderMsg for Responder as
-///     Ask<Question,Answer> => ...
+/// impl_actor! { match msg for Actor<MyActor,MyActorMsg> as
+///     _Start_ => ... // do whatever needs to be done for system _Start_ message
+///     Query<Question,Answer> => ... // reply to query
+/// }
+/// ```
+/// which gets translated into:
+/// ```
+/// impl ActorReceiver for Actor<MyActor,MyActorMsg> {
+///   fn receive (&mut self, msg: MyActorMsg)->ReceiveAction {
+///      MyActorMsg::_Start_ => ...
+///      MyActorMsg::Query => ...  // the real variant name gets mangled from the provided type
+///   }
 /// }
 /// ```
 #[proc_macro]
 pub fn impl_actor (item: TokenStream) -> TokenStream {
     let ActorReceive { msg_name, msg_type, state_type, where_clause, match_arms }: ActorReceive = match syn::parse(item) {
         Ok(actor_receive) => actor_receive,
-        Err(e) => panic!( "expected \"match 𝑚𝑠𝑔𝑉𝑎𝑟𝑁𝑎𝑚𝑒 for Actor<𝑆𝑡𝑎𝑡𝑒𝑇𝑦𝑝𝑒,𝑀𝑠𝑔𝑇𝑦𝑝𝑒> 𝑾ℎ𝑒𝑟𝑒𝐶𝑙𝑎𝑢𝑠𝑒﹖ as 𝑀𝑠𝑔𝑇𝑦𝑝𝑒𝑉𝑎𝑟𝑖𝑎𝑛𝑡 => {{..}}, ..\", got {:?}", e)
+        Err(e) => panic!( "expected impl_actor!{{ match «msgVarName» for Actor<«stateType»,«msgType»> [where ..] as «msgTypeVariant» => {{..}},...}}, got {:?}", e)
     };
 
     let variant_names: Vec<Ident> = get_variant_names_from_match_arms(&match_arms);
@@ -1115,17 +1124,17 @@ impl Parse for SpawnPreActor {
 
 /* #region actor lists ***********************************************************/
 
-/// macro to define structs that implement [`ActorMsgList`] 
+/// macro to define structs that implement [`ActorMsgAction`] 
 ///  ```
-///  define_actor_send_msg_list!{ MyMsgList (Msg1) : Actor1Msg, Actor2Msg }
-///  let my_msg_list = MyMsgList( ah1, ah2);
-///  ... async { .. my_msg_list.send_msg( Msg1(42)).await }
+///  define_actor_msg_action_type!{ MyMsgAction = Msg1 for Actor1Msg, Actor2Msg }
+///  let my_msg_action = MyMsgAction( ah1, ah2);
+///  ... async { .. my_msg_action.executeg( Msg1(42)).await }
 ///  ```
 ///  which gets expanded into:    
 ///  ```
-///  struct MyMsgList (ActorHandle<Actor1Msg>,ActorHandle<Actor2Msg>);
-///  impl ActorSendMsgList<Msg1> for MyMsgList {
-///      async fn send_msg(&self,m:Msg1)->Result<()> {
+///  struct MyMsgAction (ActorHandle<Actor1Msg>,ActorHandle<Actor2Msg>);
+///  impl ActorMsgAction<Msg1> for MyMsgAction {
+///      async fn execute(&self,m:Msg1)->Result<()> {
 ///          self.0.send_msg(m.clone()).await?;
 ///          self.1.send_msg(m).await
 ///      }
@@ -1135,7 +1144,7 @@ impl Parse for SpawnPreActor {
 pub fn define_actor_msg_action_type (item: TokenStream)->TokenStream {
     let ActorMsgActionSpec{ name, data_type, msg_types} = match syn::parse(item) {
         Ok(msg_list) => msg_list,
-        Err(e) => panic!( "failed to parse ActorSendMsgList definition {:?}", e)
+        Err(e) => panic!( "expected define_actor_msg_action_type!(«actionType» = «msgVariant» <- «msgType», ...) ,error: {:?}", e)
     };
 
     let max_idx = msg_types.len()-1;
@@ -1146,8 +1155,8 @@ pub fn define_actor_msg_action_type (item: TokenStream)->TokenStream {
 
     let new_item: TokenStream = quote! {
         struct #name ( #( ActorHandle< #msg_types > ),* );
-        impl ActorSendMsgList< #data_type > for #name {
-            async fn send_msg(&self, msg: #data_type)->odin_actor::Result<()> {
+        impl ActorMsgAction< #data_type > for #name {
+            async fn execute(&self, msg: #data_type)->odin_actor::Result<()> {
                 #( #stmts );*
             }
         }
@@ -1185,17 +1194,17 @@ impl Parse for ActorMsgActionSpec {
 
 /// macro to define structs that implement [`ActorActionList`]
 /// ```
-/// define_actor_action_list! { for actor_handle in MyActionList (data:&u64):
+/// define_actor_action_type! { MyAction = actor_handle <- (data:&u64) for
 ///   Actor1Msg => actor_handle.send_msg( Msg1(*data)).await,
 ///   Actor2Msg => actor_handle.try_send_msg( Msg2(*data))
 /// }
-/// let my_action_list = MyActionList( ah1, ah2);
+/// let my_action_list = MyAction( ah1, ah2);
 /// ... async { let my_data: u64; ... my_action_list.execute( &my_data).await }
 /// ```
 /// which gets expanded into
 /// ```
-/// struct MyActionList (ActorHandle<Actor1Msg>,ActorHandle<Actor2Msg>);
-/// impl ActorActionList<u64> for MyActionList {
+/// struct MyAction (ActorHandle<Actor1Msg>,ActorHandle<Actor2Msg>);
+/// impl ActorAction<u64> for MyAction {
 /// async fn execute (&self, data: &u64)->Result<()> {
 ///     let mut actor_handle;
 ///     actor_handle = &self.0; actor_handle.send_msg( Msg1(*data).into()).await?;
@@ -1209,7 +1218,7 @@ impl Parse for ActorMsgActionSpec {
 pub fn define_actor_action_type (item: TokenStream)->TokenStream {
     let ActorActionSpec{ struct_name, handle_name, data_vars, actions} = match syn::parse(item) {
         Ok(action_list) => action_list,
-        Err(e) => panic!( "failed to parse ActorActionList definition {:?}", e)
+        Err(e) => panic!( "expected define_actor_action_type!(«actionType» = «actor_handle» <- («execArg» : «dataType»)), error: {:?}", e)
     };
 
     if data_vars.len() != 1 { panic!("expected single execute(arg) argument") }
@@ -1233,16 +1242,16 @@ pub fn define_actor_action_type (item: TokenStream)->TokenStream {
 }
 
 
-/// macro to define structs that implement [`ActorAction2List`]
-/// this follows the same pattern as [`define_actor_action_list`] with the difference
-/// that we provide two `execute(..)` arguments. One is usually from the receiver state, 
-/// the other one provided by the trigger (message). It is up to the concrete receiver
+/// macro to define structs that implement [`ActorAction2`]
+/// this follows the same pattern as [`define_actor_action_type`] with the difference
+/// that we provide two `execute(..)` arguments. One is from the action owner state, 
+/// the other one provided by the trigger (message). It is up to the concrete owner (actor)
 /// to decide which one is which.
 #[proc_macro]
 pub fn define_actor_action2_type (item: TokenStream)->TokenStream {
     let ActorActionSpec{ struct_name, handle_name, data_vars, actions} = match syn::parse(item) {
         Ok(action_list) => action_list,
-        Err(e) => panic!( "failed to parse ActorActionList definition {:?}", e)
+        Err(e) => panic!( "expected define_actor_action2_type!(«actionType» = «actor_handle» <- («execArg1» : «dataType», «execArg2» : «dataType»)), error: {:?}", e)
     };
 
     if data_vars.len() != 2 { panic!("expected two execute(arg1,arg2) arguments") }
@@ -1331,13 +1340,28 @@ impl Parse for ActorActionArm {
 
 /* #region fnmut *****************************************************************/
 
-/// [([mut] id = expr {, ...}) =>] [| id [: type] {, ...} |] expr )
+// [([mut] id = expr {, ...}) =>] [| id [: type] {, ...} |] expr )
 
+/// syntactic sugar macro that translates
+/// ```
+///   fn_mut!( (mut var1 = foo(), var2 = bar) => |a,b| {
+///      do_something_with_captures_and_args( &var1, &var2, a, b);
+///      var2 = compute_new_var2(..); // possible mutate mut captures
+///   });
+/// ```
+/// into 
+/// ```
+/// {
+///   let mut var1 = foo();
+///   let var2 = bar;
+///   move |a,b| { ... }   
+/// }
+/// ```
 #[proc_macro]
 pub fn fn_mut (item: TokenStream)->TokenStream {
     let FnMutSpec{ var_bindings, args, body} = match syn::parse(item) {
         Ok(spec) => spec,
-        Err(e) => panic!( "failed to parse fn_mut definition {:?}", e)
+        Err(e) => panic!( "expected fn_mut!( [([mut] «id» = «expr» {{, ...}}) =>] [| «id» [: «type»] {{, ...}} |] «expr» ) , error: {:?}", e)
     };
 
     let new_item: TokenStream =quote! {

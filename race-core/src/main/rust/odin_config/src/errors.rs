@@ -14,9 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, OdinConfigError>;
+use thiserror::Error;
+use std::error::Error as StdError;
+
+pub type ConfigResult<T> = std::result::Result<T, OdinConfigError>;
 
 #[derive(Error,Debug)]
 pub enum OdinConfigError {
@@ -25,6 +27,9 @@ pub enum OdinConfigError {
 
     #[error("config not initialized")]
     ConfigNotInitialized,
+
+    #[error("cannot obtain config password")]
+    ConfigPwError,
 
     #[error("config dir not found: {0}")]
     ConfigDirNotFound(String),
@@ -41,7 +46,39 @@ pub enum OdinConfigError {
     #[error("IO error {0}")]
     IOError( #[from] std::io::Error),
 
-    #[error("config serialize/deserialize RON error {0}")]
+    #[error("config RON error {0}")]
     RonError( #[from] ron::Error),
+
+    #[error("config serialize/deserialize RON error {0}")]
+    RonSerdeError( #[from] ron::error::SpannedError),
+
+    #[error("decompression error {0}")]
+    DecompressError(miniz_oxide::inflate::DecompressError),
+
+    #[error("env var error {0}")]
+    EnvError( #[from] std::env::VarError),
+
+    #[error("pgp error {0}")]
+    PgpError( #[from] pgp::errors::Error),
+
+    #[error("config error {0}")]
+    ConfigError(String),
+
+    #[error("decryption error {0}")]
+    DecryptionError( #[from] magic_crypt::MagicCryptError)
 }
 
+pub fn file_not_found(path: &str)->OdinConfigError {
+    OdinConfigError::ConfigFileNotFound( path.to_string())
+}
+
+pub fn config_error (s: impl ToString)->OdinConfigError {
+    OdinConfigError::ConfigError(s.to_string())
+}
+
+// DecompressError does not have an StdError impl (nor can we provide one here)
+impl From<miniz_oxide::inflate::DecompressError> for OdinConfigError {
+    fn from (e: miniz_oxide::inflate::DecompressError)->OdinConfigError {
+        OdinConfigError::DecompressError(e)
+    }
+}

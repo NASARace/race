@@ -32,5 +32,6 @@ conf
 .bsp
 *.lock
 build/
+local/
 __pycache__
 

@@ -68,7 +68,8 @@ impl_actor! { match msg for Actor <Ticker,TickerMsg>  as
 async fn main() ->Result<()> {
     let mut actor_system = ActorSystem::new("main");
 
-    // note this assumes the app is running in the parent workspace dir
+    // note this assumes the app is running in the parent workspace dir 
+    // (normally this would be loaded through the odin_config::config_for!(..) macro)
     let ticker_config = load_config("examples/config/ticker.ron").expect("no valid config for Ticker actor");
     let ticker_handle = spawn_actor!( actor_system, "ticker", Ticker::new( ticker_config))?;
 

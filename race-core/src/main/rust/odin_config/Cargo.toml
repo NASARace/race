@@ -5,6 +5,10 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "gen-key"
+path = "src/bin/gen-key.rs"
+
 [dependencies]
 chrono = { version = "0.4.26", features = ["serde"] }
 ron = "*"
@@ -12,5 +16,31 @@ serde = { version = "*", features = ["derive"] }
 parse_duration = "*"
 thiserror = "*"
 directories = "*"
+miniz_oxide = "*"
+pgp = "*"
+rpassword = "*"
+tokio = { version = "*", features = ["full"] }
+lazy_static = "*"
+secstr = "*"
+magic-crypt = "*"
+
+# gen-key dependencies
+smallvec = "*"
+rand = "*"
+structopt = "*"
+anyhow = "*"
 
 odin_common = { workspace = true }
+
+[build-dependencies]
+miniz_oxide = "*"
+rand = "*"
+pgp = "*"
+magic-crypt = "*"
+
+[features]
+config_embedded = []
+config_embedded_pgp = []
+config_embedded_pw = []
+config_xdg = []
+config_local = []

@@ -1,0 +1,8 @@
+// sample config data. 
+// Note ./local is normally exluded from repositories (in .gitignore) as it can contain sensitive data
+
+MyConfig (
+    uid: "gonzo",
+    access_token: "dubidubidoo&foo",
+    uri: "https://42.42.42.42:4300"
+)

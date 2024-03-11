@@ -156,7 +156,7 @@ pub trait TryMsgReceiver<T>: MsgReceiverConstraints {
 /// a list of ActorHandles implementing MsgReceiver<T> that we async send the same message to.
 /// Use this if the list owner is in control of what message to send.
 /// To create an ActorMsgList use the define_actor_msg_list!() macro
-pub trait ActorSendMsgAction<T>: Send where T: Clone + Debug + Send {
+pub trait ActorMsgAction<T>: Send where T: Clone + Debug + Send {
     fn execute (&self,m:T) -> impl Future<Output=Result<()>> + Send;
 } 
 
