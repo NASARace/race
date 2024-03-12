@@ -3,7 +3,7 @@
 /**
  * example application to check the various config initialization methods:
  * 
- *   (1) config_local: get config files from ./local/config/  
+ *   (1) config_local: get config files from ODIN_LOCAL/config (or ./local/config/ if not defined)  
  *       no features need to be specified when buidling the application
  *       this is the default but should only be used for development
  * 

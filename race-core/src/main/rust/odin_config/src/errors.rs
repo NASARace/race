@@ -52,18 +52,21 @@ pub enum OdinConfigError {
     #[error("config serialize/deserialize RON error {0}")]
     RonSerdeError( #[from] ron::error::SpannedError),
 
+    #[cfg(feature="config_embedded")]
     #[error("decompression error {0}")]
     DecompressError(miniz_oxide::inflate::DecompressError),
 
     #[error("env var error {0}")]
     EnvError( #[from] std::env::VarError),
 
+    #[cfg(feature="config_embedded_pgp")]
     #[error("pgp error {0}")]
     PgpError( #[from] pgp::errors::Error),
 
     #[error("config error {0}")]
     ConfigError(String),
 
+    #[cfg(feature="config_embedded_pw")]
     #[error("decryption error {0}")]
     DecryptionError( #[from] magic_crypt::MagicCryptError)
 }
@@ -76,6 +79,7 @@ pub fn config_error (s: impl ToString)->OdinConfigError {
     OdinConfigError::ConfigError(s.to_string())
 }
 
+#[cfg(feature="config_embedded")]
 // DecompressError does not have an StdError impl (nor can we provide one here)
 impl From<miniz_oxide::inflate::DecompressError> for OdinConfigError {
     fn from (e: miniz_oxide::inflate::DecompressError)->OdinConfigError {

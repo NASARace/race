@@ -1,6 +1,6 @@
 [package]
 name = "odin_config"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -16,13 +16,14 @@ serde = { version = "*", features = ["derive"] }
 parse_duration = "*"
 thiserror = "*"
 directories = "*"
-miniz_oxide = "*"
-pgp = "*"
-rpassword = "*"
+rpassword = { version = "*" }
 tokio = { version = "*", features = ["full"] }
 lazy_static = "*"
-secstr = "*"
-magic-crypt = "*"
+secstr = { version = "*" }
+
+miniz_oxide = { version = "*", optional = true }
+magic-crypt = { version = "*", optional = true }
+pgp = { version = "*", optional = true }
 
 # gen-key dependencies
 smallvec = "*"
@@ -39,8 +40,8 @@ pgp = "*"
 magic-crypt = "*"
 
 [features]
-config_embedded = []
-config_embedded_pgp = []
-config_embedded_pw = []
+config_embedded = ["dep:miniz_oxide"]
+config_embedded_pgp = ["dep:pgp"]
+config_embedded_pw = ["dep:magic-crypt"]
 config_xdg = []
 config_local = []

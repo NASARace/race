@@ -50,12 +50,22 @@ enum ConfigMode {
 
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap(); // this should always be defined by cargo
-    let in_dir = if let Ok(dir) = env::var("IN_DIR") { dir } else { "./local/config".to_string() }; // this is ours and needs a default
+    let in_dir = env::var("IN_DIR").unwrap_or(format!("{}/config", get_local_dir()));
     let out_file: PathBuf = [out_dir.as_str(), "config_data"].iter().collect();
+
+    if !Path::new(in_dir.as_str()).is_dir() { 
+         // nothing to do. Shortcut for apps that don't need config (subsequent config_for!(..) calls will fail though)
+        println!("cargo:warning=ignoring build.rs - no config input dir {in_dir}"); // this should be a real warning this build.rs doesn't do anything
+        println!("cargo:warning=(check IN_DIR or ODIN_LOCAL env vars if this is not expected)");
+        return 
+    }
+
+    println!("cargo:rerun-if-env-changed=IN_DIR");
+    println!("cargo:rerun-if-env-changed=ODIN_LOCAL");
 
     match  get_config_mode() {
         ConfigMode::File => {
-            info!("building in local config mode");
+            info!("building in local config mode using config files from {in_dir}");
             // nothing to do
         }
         ConfigMode::Xdg => {
@@ -114,6 +124,20 @@ fn get_config_mode()->ConfigMode {
     else if cfg!( feature = "config_embedded_pw") { ConfigMode::EmbeddedPw }
     else if cfg!( feature = "config_xdg") { ConfigMode::Xdg } 
     else { ConfigMode::File }
+}
+
+// note - this needs to mirror get_local() from lib.rs (i.e. our runtime behavior)
+fn get_local_dir ()->String { 
+    match std::env::var("ODIN_LOCAL") {
+        Ok(local_root) => {
+            if let Ok(pkg_name) = std::env::var("CARGO_PKG_NAME") {
+                format!("{local_root}/{pkg_name}")
+            } else { // fall back to the current directory - is this safe?
+                std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string()
+            }
+        }
+        _ => "./local".to_string()
+    }
 }
 
 fn get_config_src<F> (config_dir: &Path, process_content: F)->String 

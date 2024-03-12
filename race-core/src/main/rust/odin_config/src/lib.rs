@@ -28,8 +28,12 @@ use crate::app::*;
 pub mod pw_cache;
 use crate::pw_cache::*;
 
+#[cfg(feature="config_embedded")]
 use miniz_oxide::inflate::decompress_to_vec;
+
+#[cfg(feature="config_embedded_pgp")]
 use pgp::MessageDecrypter;
+
 use std::ffi::OsStr;
 use std::{fs::File,path::Path,any::type_name,io::Read};
 use ron::de::from_bytes;
@@ -145,7 +149,7 @@ pub fn config_from_xdg_file<C> (app: &AppMetaData, id: &str)->Result<C>   where 
 pub fn config_from_local_file<C> (id: &str)->Result<C>   where C: for <'a> Deserialize<'a> {
     use errors::file_not_found;
 
-    let pn = format!("./local/config/{}.ron", id);
+    let pn = format!("{}/config/{}.ron", get_local_dir(), id);
     let path: &Path = Path::new( &pn);
     if !path.is_file() { return Err(file_not_found(path.to_str().unwrap())) }
 
@@ -155,6 +159,19 @@ pub fn config_from_local_file<C> (id: &str)->Result<C>   where C: for <'a> Deser
     file.read_to_end(&mut data).unwrap();
     
     Ok(from_bytes(&data)?)
+}
+
+fn get_local_dir ()->String { 
+    match std::env::var("ODIN_LOCAL") {
+        Ok(local_root) => {
+            if let Ok(pkg_name) = std::env::var("CARGO_PKG_NAME") {
+                format!("{local_root}/{pkg_name}")
+            } else { // fall back to the current directory - is this safe?
+                std::env::current_dir().unwrap().file_name().unwrap().to_string_lossy().to_string()
+            }
+        }
+        _ => "./local".to_string()
+    }
 }
 
 #[cfg(feature="config_embedded_pgp")]

@@ -2,15 +2,16 @@ cargo-features = ["edition2024"]
 
 [package]
 name = "odin_actor"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 
-[build]
-rustflags = ["--cfg", "tokio_unstable", "-Ctarget-cpu=native"]
+#[build]
+#rustflags = ["--cfg", "tokio_unstable", "-Ctarget-cpu=native"]
 
 
 [dependencies]
 tokio = { version = "*", features = ["full", "tracing"], optional = true }
+#tokio = { version = "*", features = ["full"], optional = true }
 kanal = { version = "0.1.0-pre8", features = ["async"], optional = true }
 
 thiserror = "*"
