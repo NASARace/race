@@ -66,7 +66,7 @@ trait JpssActor extends PublishingRaceActor with ContinuousTimeRaceActor {
   val overpassBounds = config.getGeoPositionArray("region") // polygon of GeoPositions
   val history = config.getFiniteDurationOrElse("history", 1.day) // for initial request
   val maxScanAngle = Degrees( config.getDoubleOrElse("max-scan", defaultScanAngle)) // max VIIRS scan angle
-  val overpassMargin = config.getDurationTimeOrElse("overpass-margin", Minutes(5))
+  val overpassMargin = config.getDurationTimeOrElse("overpass-margin", Minutes(2))
   val trajectoryTimeStep = config.getDurationTimeOrElse("trajectory-timestep", Seconds(5))
 
   //--- the operational data
